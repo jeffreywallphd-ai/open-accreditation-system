@@ -1,0 +1,4 @@
+package-lock.json
+.env
+.env.*
+!important .env.example
