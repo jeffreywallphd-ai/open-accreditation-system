@@ -1,10 +1,24 @@
 # 04 Integration Architecture
 
+This document defines how the platform integrates with external systems while preserving a canonical internal domain model. It complements the [architecture overview](./README.md#7-integration-principles-and-consistent-handling-of-external-systems), the [bounded-context rules](./03-bounded-contexts.md#context-interaction-rules), and the [entity model reference](./data-model/README.md#entity-model-reference).
+
+Primary integration service: `services/integration-hub`
+
+## Table of contents
+
+- [Purpose](#purpose)
+- [Integration Tenets](#integration-tenets)
+- [Integration Hub Structure](#integration-hub-structure)
+- [Canonical Contracts](#canonical-contracts)
+- [Data Flow Pattern](#data-flow-pattern)
+- [Inbound Integration Lifecycle](#inbound-integration-lifecycle)
+- [Outbound Integration Lifecycle](#outbound-integration-lifecycle)
+- [Operational Controls](#operational-controls)
+- [Anti-Patterns](#anti-patterns)
+
 ## Purpose
 
 This document defines how the platform integrates with external systems while preserving a canonical internal domain model.
-
-Primary integration service: `services/integration-hub`
 
 ## Integration Tenets
 

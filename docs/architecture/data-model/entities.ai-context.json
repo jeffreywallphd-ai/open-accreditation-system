@@ -1,7 +1,7 @@
 {
   "meta": {
     "document": "Open Accreditation System entity model AI context",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "source_docs": [
       "README.md",
       "docs/architecture/README.md",
@@ -14,7 +14,8 @@
       "Logical model only; not a finalized physical schema.",
       "Keep the core domain accreditor-agnostic across AACSB, ABET, HLC, and future frameworks.",
       "Person is the canonical human concept; User is the authenticated platform identity projection of a person.",
-      "EvidenceReference uses a governed polymorphic target pattern with explicit allowed target types.",
+      "EvidenceReference uses a governed polymorphic target pattern with explicit allowed target types and owning-context validation responsibilities.",
+      "Assessment scope is expressed through canonical program/course/section/term/outcome references, not accreditor-specific templates.",
       "AI outputs are advisory and require human review."
     ]
   },
@@ -557,5 +558,163 @@
       "to": "DecisionRecord",
       "cardinality": "1:N"
     }
-  ]
+  ],
+  "temporalModeling": {
+    "mutableInPlace": [
+      "User",
+      "Person",
+      "OrganizationUnit",
+      "Committee",
+      "FacultyProfile",
+      "Program",
+      "Course",
+      "AcademicTerm",
+      "CourseSection",
+      "Narrative"
+    ],
+    "appendOnly": [
+      "AuditEvent",
+      "DecisionRecord",
+      "EvidenceReview",
+      "WorkflowComment",
+      "WorkflowDelegation",
+      "WorkflowEscalationEvent",
+      "SubmissionSnapshot",
+      "SubmissionPackageItem",
+      "QualificationReview",
+      "ImprovementClosureReview"
+    ],
+    "effectiveDatedOrSupersedable": [
+      "EvidenceRequirement",
+      "AssessmentPlan",
+      "AssessmentMeasure",
+      "BenchmarkTarget",
+      "FacultyAppointment",
+      "FacultyDeployment",
+      "FacultyQualification",
+      "QualificationBasis",
+      "ReviewTeamMembership",
+      "CycleMilestone",
+      "EvidenceRetentionPolicy"
+    ],
+    "entityRules": {
+      "NarrativeSection": "Mutable while drafting; preserve submitted/finalized versions through snapshot or explicit version capture.",
+      "AssessmentPlan": "Supersede/version after approval or after governed results depend on it.",
+      "AssessmentMeasure": "Supersede/version after results exist or design changes materially.",
+      "DecisionRecord": "Append-only after issuance; corrections create linked successor records.",
+      "EvidenceRequirement": "Versioned with FrameworkVersion; do not overwrite published requirements in place.",
+      "FacultyDeployment": "Effective-dated and supersedable for historical sufficiency analysis.",
+      "FacultyQualification": "Supersedable determination root; preserve the sequence of qualification states.",
+      "QualificationBasis": "Append-only or explicit successor-basis pattern; never silently rewrite rationale.",
+      "ReviewTeamMembership": "Effective-dated; preserve roster history and role/conflict changes.",
+      "CycleMilestone": "Effective-dated or supersedable; retain replanning history.",
+      "EvidenceReview": "Append-only review history.",
+      "SubmissionSnapshot": "Immutable forever after creation."
+    }
+  },
+  "evidenceReferenceContract": {
+    "allowedTargetEntityTypes": [
+      "AccreditationCycle",
+      "AccreditationScope",
+      "Standard",
+      "Criterion",
+      "CriterionElement",
+      "EvidenceRequirement",
+      "CycleMilestone",
+      "ReviewEvent",
+      "DecisionRecord",
+      "Program",
+      "Course",
+      "CourseSection",
+      "AcademicTerm",
+      "LearningOutcome",
+      "Competency",
+      "AssessmentPlan",
+      "AssessmentMeasure",
+      "AssessmentInstrument",
+      "BenchmarkTarget",
+      "AssessmentResult",
+      "Finding",
+      "ActionPlan",
+      "ImprovementClosureReview",
+      "Narrative",
+      "NarrativeSection",
+      "ReportPackage",
+      "Submission",
+      "SubmissionSnapshot",
+      "SubmissionPackageItem",
+      "FacultyProfile",
+      "FacultyQualification",
+      "FacultyDeployment",
+      "QualificationBasis",
+      "QualificationReview",
+      "Committee"
+    ],
+    "allowedRelationshipTypes": [
+      "supports",
+      "demonstrates",
+      "documents",
+      "measures",
+      "substantiates",
+      "responds-to",
+      "required-by",
+      "included-in",
+      "derived-from",
+      "supersedes",
+      "context-for"
+    ],
+    "validationResponsibility": {
+      "evidence-management": "validate allow-listed targetEntityType and local reference invariants",
+      "targetOwningContext": "validate target existence and state through published application interfaces"
+    },
+    "anchorPathRules": {
+      "requiredFor": [
+        "NarrativeSection",
+        "SubmissionPackageItem"
+      ],
+      "optionalFor": [
+        "CriterionElement",
+        "AssessmentMeasure",
+        "DecisionRecord",
+        "AssessmentInstrument"
+      ],
+      "forbiddenFor": [
+        "AccreditationCycle",
+        "AcademicTerm",
+        "Committee"
+      ]
+    },
+    "extensionRule": "Additive only: update docs, AI context, and target-owning contract together; consumers must tolerate newer unsupported target types."
+  },
+  "assessmentScopeGuidance": {
+    "planTargets": [
+      "Program",
+      "Course",
+      "CourseSection",
+      "LearningOutcome",
+      "AccreditationScope",
+      "AccreditationCycle",
+      "AcademicTerm"
+    ],
+    "measureTargets": [
+      "Program",
+      "Course",
+      "CourseSection",
+      "LearningOutcome",
+      "CriterionElement",
+      "AcademicTerm"
+    ],
+    "validResultsGranularity": [
+      "program-level",
+      "course-level",
+      "section-level",
+      "term-windowed",
+      "outcome-level"
+    ],
+    "invalidPatterns": [
+      "AcademicTerm alone as the only assessment subject in normal cases",
+      "Program plus unrelated CourseSection without explicit curriculum mapping or scope rationale",
+      "Measure/result scope introducing targets not present or implied in the plan"
+    ]
+  }
 }
