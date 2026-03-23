@@ -490,6 +490,17 @@ Do not put core business logic into generic places like:
 
 ---
 
+## 3A. Logical entity model reference
+
+The architecture documents define bounded contexts and ownership rules, but implementation work also needs a shared logical entity model. Use `docs/architecture/data-model/README.md` as the canonical entity reference for:
+
+- logical entities and their fields
+- expected data types and relationship shapes
+- AI coding context for module and schema generation
+- ERD artifacts under `docs/architecture/diagrams/`
+
+The entity model is intentionally logical and accreditor-agnostic. It should evolve with the product vision and bounded-context definitions rather than being treated as a vendor-specific physical schema.
+
 ## 6. How to structure new modules and where new code should go
 
 ### 6.1 Default location for new business functionality
