@@ -1,22 +1,20 @@
 {
   "meta": {
     "document": "Open Accreditation System entity model AI context",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "source_docs": [
       "README.md",
       "docs/architecture/README.md",
-      "docs/architecture/01-system-context.md",
       "docs/architecture/03-bounded-contexts.md",
       "docs/architecture/04-integration-architecture.md",
-      "docs/architecture/05-security-architecture.md",
-      "docs/architecture/06-compliance-control-matrix.md",
-      "docs/architecture/07-data-classification.md",
+      "docs/architecture/data-model/README.md",
       "docs/product/vision-document.md"
     ],
     "notes": [
       "Logical model only; not a finalized physical schema.",
-      "Keep core domain accreditor-agnostic.",
-      "Keep external system details in integration entities, not core business entities.",
+      "Keep the core domain accreditor-agnostic across AACSB, ABET, HLC, and future frameworks.",
+      "Person is the canonical human concept; User is the authenticated platform identity projection of a person.",
+      "EvidenceReference uses a governed polymorphic target pattern with explicit allowed target types.",
       "AI outputs are advisory and require human review."
     ]
   },
@@ -31,6 +29,7 @@
     ],
     "organization-registry": [
       "Institution",
+      "Person",
       "OrganizationUnit",
       "Committee"
     ],
@@ -40,29 +39,61 @@
       "FrameworkVersion",
       "Standard",
       "Criterion",
-      "AccreditationCycle"
+      "CriterionElement",
+      "EvidenceRequirement",
+      "AccreditationCycle",
+      "AccreditationScope",
+      "AccreditationScopeProgram",
+      "AccreditationScopeOrganizationUnit",
+      "CycleMilestone",
+      "ReviewerProfile",
+      "ReviewTeam",
+      "ReviewTeamMembership",
+      "ReviewEvent",
+      "DecisionRecord"
     ],
     "evidence-management": [
       "EvidenceItem",
       "EvidenceArtifact",
-      "EvidenceLink",
-      "EvidenceCollection"
+      "EvidenceCollection",
+      "EvidenceRequest",
+      "EvidenceReview",
+      "EvidenceRetentionPolicy",
+      "EvidenceReference"
     ],
-    "assessment-improvement": [
+    "curriculum-mapping": [
       "Program",
       "Course",
+      "AcademicTerm",
+      "CourseSection",
       "LearningOutcome",
+      "Competency",
+      "ProgramOutcomeMap",
+      "CourseOutcomeMap",
+      "StandardsAlignment"
+    ],
+    "assessment-improvement": [
+      "AssessmentPlan",
+      "AssessmentMeasure",
+      "AssessmentInstrument",
+      "BenchmarkTarget",
       "AssessmentResult",
       "Finding",
       "ActionPlan",
-      "ActionPlanTask"
+      "ActionPlanTask",
+      "ImprovementClosureReview"
     ],
     "workflow-approvals": [
       "WorkflowTemplate",
-      "Submission",
       "WorkflowStep",
+      "Submission",
       "WorkflowAssignment",
-      "WorkflowDecision"
+      "WorkflowDecision",
+      "WorkflowComment",
+      "WorkflowDelegation",
+      "WorkflowEscalationEvent",
+      "SubmissionSnapshot",
+      "SubmissionPackageItem"
     ],
     "narratives-reporting": [
       "Narrative",
@@ -72,14 +103,12 @@
     ],
     "faculty-intelligence": [
       "FacultyProfile",
+      "FacultyAppointment",
+      "FacultyDeployment",
+      "FacultyActivity",
       "FacultyQualification",
-      "FacultyActivity"
-    ],
-    "curriculum-mapping": [
-      "Competency",
-      "ProgramOutcomeMap",
-      "CourseOutcomeMap",
-      "StandardsAlignment"
+      "QualificationBasis",
+      "QualificationReview"
     ],
     "compliance-audit": [
       "AuditEvent",
@@ -97,6 +126,7 @@
   "entityPriorities": {
     "coreSystemOfRecord": [
       "Institution",
+      "Person",
       "OrganizationUnit",
       "User",
       "Accreditor",
@@ -104,34 +134,57 @@
       "FrameworkVersion",
       "Standard",
       "Criterion",
+      "CriterionElement",
       "AccreditationCycle",
+      "AccreditationScope",
+      "CycleMilestone",
+      "ReviewEvent",
+      "DecisionRecord",
       "EvidenceItem",
       "EvidenceArtifact",
-      "Submission",
-      "WorkflowTemplate",
-      "WorkflowStep",
-      "WorkflowAssignment",
-      "WorkflowDecision",
-      "Narrative",
-      "NarrativeSection",
-      "ReportPackage",
+      "EvidenceReference",
+      "Program",
+      "Course",
+      "AcademicTerm",
+      "CourseSection",
+      "LearningOutcome",
+      "AssessmentPlan",
+      "AssessmentMeasure",
+      "BenchmarkTarget",
       "AssessmentResult",
       "Finding",
       "ActionPlan",
+      "Submission",
+      "SubmissionSnapshot",
+      "Narrative",
+      "NarrativeSection",
+      "FacultyProfile",
+      "FacultyQualification",
       "AuditEvent"
     ],
     "joinEntities": [
       "RolePermissionGrant",
       "UserRoleAssignment",
-      "EvidenceLink",
+      "AccreditationScopeProgram",
+      "AccreditationScopeOrganizationUnit",
+      "ReviewTeamMembership",
       "ProgramOutcomeMap",
       "CourseOutcomeMap",
-      "StandardsAlignment"
+      "StandardsAlignment",
+      "SubmissionPackageItem"
     ],
     "supportingGovernance": [
       "Committee",
       "EvidenceCollection",
+      "EvidenceRequest",
+      "EvidenceReview",
+      "EvidenceRetentionPolicy",
+      "WorkflowComment",
+      "WorkflowDelegation",
+      "WorkflowEscalationEvent",
       "ExportJob",
+      "QualificationBasis",
+      "QualificationReview",
       "ControlAttestation",
       "PolicyException",
       "Notification",
@@ -146,13 +199,33 @@
   "relationships": [
     {
       "from": "Institution",
+      "to": "Person",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "Institution",
       "to": "OrganizationUnit",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "Institution",
+      "to": "Committee",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "Institution",
+      "to": "Program",
       "cardinality": "1:N"
     },
     {
       "from": "Institution",
       "to": "User",
       "cardinality": "1:N"
+    },
+    {
+      "from": "Person",
+      "to": "User",
+      "cardinality": "1:0..1"
     },
     {
       "from": "Role",
@@ -165,18 +238,8 @@
       "cardinality": "1:N"
     },
     {
-      "from": "Institution",
-      "to": "Program",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "Institution",
-      "to": "AccreditationCycle",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "Institution",
-      "to": "SourceSystem",
+      "from": "User",
+      "to": "UserRoleAssignment",
       "cardinality": "1:N"
     },
     {
@@ -200,28 +263,78 @@
       "cardinality": "1:N"
     },
     {
+      "from": "Criterion",
+      "to": "CriterionElement",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "FrameworkVersion",
+      "to": "EvidenceRequirement",
+      "cardinality": "1:N"
+    },
+    {
       "from": "FrameworkVersion",
       "to": "AccreditationCycle",
       "cardinality": "1:N"
     },
     {
       "from": "AccreditationCycle",
-      "to": "EvidenceItem",
+      "to": "AccreditationScope",
       "cardinality": "1:N"
     },
     {
-      "from": "EvidenceItem",
-      "to": "EvidenceArtifact",
+      "from": "AccreditationScope",
+      "to": "AccreditationScopeProgram",
       "cardinality": "1:N"
     },
     {
-      "from": "EvidenceItem",
-      "to": "EvidenceLink",
+      "from": "AccreditationScope",
+      "to": "AccreditationScopeOrganizationUnit",
       "cardinality": "1:N"
     },
     {
       "from": "Program",
-      "to": "Course",
+      "to": "AccreditationScopeProgram",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "OrganizationUnit",
+      "to": "AccreditationScopeOrganizationUnit",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "AccreditationCycle",
+      "to": "CycleMilestone",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "AccreditationCycle",
+      "to": "ReviewEvent",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "AccreditationCycle",
+      "to": "DecisionRecord",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "AccreditationCycle",
+      "to": "ReviewTeam",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "Person",
+      "to": "ReviewerProfile",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "ReviewTeam",
+      "to": "ReviewTeamMembership",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "Person",
+      "to": "ReviewTeamMembership",
       "cardinality": "1:N"
     },
     {
@@ -230,7 +343,42 @@
       "cardinality": "1:N"
     },
     {
-      "from": "AccreditationCycle",
+      "from": "Course",
+      "to": "CourseSection",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "AcademicTerm",
+      "to": "CourseSection",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "Program",
+      "to": "ProgramOutcomeMap",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "Course",
+      "to": "CourseOutcomeMap",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "AssessmentPlan",
+      "to": "AssessmentMeasure",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "AssessmentMeasure",
+      "to": "AssessmentInstrument",
+      "cardinality": "N:1"
+    },
+    {
+      "from": "AssessmentMeasure",
+      "to": "BenchmarkTarget",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "AssessmentMeasure",
       "to": "AssessmentResult",
       "cardinality": "1:N"
     },
@@ -247,6 +395,36 @@
     {
       "from": "ActionPlan",
       "to": "ActionPlanTask",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "ActionPlan",
+      "to": "ImprovementClosureReview",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "EvidenceItem",
+      "to": "EvidenceArtifact",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "EvidenceItem",
+      "to": "EvidenceReference",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "EvidenceItem",
+      "to": "EvidenceReview",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "EvidenceRetentionPolicy",
+      "to": "EvidenceItem",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "EvidenceRequest",
+      "to": "EvidenceItem",
       "cardinality": "1:N"
     },
     {
@@ -270,6 +448,31 @@
       "cardinality": "1:N"
     },
     {
+      "from": "Submission",
+      "to": "WorkflowComment",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "Submission",
+      "to": "WorkflowDelegation",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "Submission",
+      "to": "WorkflowEscalationEvent",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "Submission",
+      "to": "SubmissionSnapshot",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "SubmissionSnapshot",
+      "to": "SubmissionPackageItem",
+      "cardinality": "1:N"
+    },
+    {
       "from": "AccreditationCycle",
       "to": "Narrative",
       "cardinality": "1:N"
@@ -290,13 +493,38 @@
       "cardinality": "1:N"
     },
     {
+      "from": "Person",
+      "to": "FacultyProfile",
+      "cardinality": "1:N"
+    },
+    {
       "from": "FacultyProfile",
-      "to": "FacultyQualification",
+      "to": "FacultyAppointment",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "FacultyProfile",
+      "to": "FacultyDeployment",
       "cardinality": "1:N"
     },
     {
       "from": "FacultyProfile",
       "to": "FacultyActivity",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "FacultyProfile",
+      "to": "FacultyQualification",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "FacultyQualification",
+      "to": "QualificationBasis",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "FacultyQualification",
+      "to": "QualificationReview",
       "cardinality": "1:N"
     },
     {
@@ -317,6 +545,16 @@
     {
       "from": "WorkflowAssignment",
       "to": "Notification",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "ReviewerProfile",
+      "to": "ReviewTeamMembership",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "ReviewEvent",
+      "to": "DecisionRecord",
       "cardinality": "1:N"
     }
   ]

@@ -9,265 +9,445 @@
       <data key="label">Institution</data>
       <data key="group">org</data>
       <data key="x">40</data>
-      <data key="y">40</data>
+      <data key="y">60</data>
+    </node>
+    <node id="Person">
+      <data key="label">Person</data>
+      <data key="group">org</data>
+      <data key="x">40</data>
+      <data key="y">140</data>
     </node>
     <node id="OrganizationUnit">
       <data key="label">OrganizationUnit</data>
       <data key="group">org</data>
       <data key="x">40</data>
-      <data key="y">140</data>
-    </node>
-    <node id="User">
-      <data key="label">User</data>
-      <data key="group">identity</data>
-      <data key="x">40</data>
-      <data key="y">240</data>
+      <data key="y">220</data>
     </node>
     <node id="Committee">
       <data key="label">Committee</data>
       <data key="group">org</data>
       <data key="x">40</data>
-      <data key="y">340</data>
+      <data key="y">300</data>
+    </node>
+    <node id="User">
+      <data key="label">User</data>
+      <data key="group">identity</data>
+      <data key="x">40</data>
+      <data key="y">380</data>
     </node>
     <node id="Accreditor">
       <data key="label">Accreditor</data>
       <data key="group">framework</data>
-      <data key="x">260</data>
-      <data key="y">40</data>
-    </node>
-    <node id="Framework">
-      <data key="label">Framework</data>
-      <data key="group">framework</data>
-      <data key="x">260</data>
-      <data key="y">140</data>
+      <data key="x">280</data>
+      <data key="y">60</data>
     </node>
     <node id="FrameworkVersion">
       <data key="label">FrameworkVersion</data>
       <data key="group">framework</data>
-      <data key="x">260</data>
-      <data key="y">240</data>
-    </node>
-    <node id="Standard">
-      <data key="label">Standard</data>
-      <data key="group">framework</data>
-      <data key="x">260</data>
-      <data key="y">340</data>
+      <data key="x">280</data>
+      <data key="y">140</data>
     </node>
     <node id="Criterion">
       <data key="label">Criterion</data>
       <data key="group">framework</data>
-      <data key="x">260</data>
-      <data key="y">440</data>
+      <data key="x">280</data>
+      <data key="y">220</data>
     </node>
-    <node id="Cycle">
-      <data key="label">Cycle</data>
+    <node id="CriterionElement">
+      <data key="label">CriterionElement</data>
       <data key="group">framework</data>
-      <data key="x">260</data>
+      <data key="x">280</data>
+      <data key="y">300</data>
+    </node>
+    <node id="AccreditationCycle">
+      <data key="label">AccreditationCycle</data>
+      <data key="group">framework</data>
+      <data key="x">280</data>
+      <data key="y">380</data>
+    </node>
+    <node id="AccreditationScope">
+      <data key="label">AccreditationScope</data>
+      <data key="group">framework</data>
+      <data key="x">280</data>
+      <data key="y">460</data>
+    </node>
+    <node id="ReviewerProfile">
+      <data key="label">ReviewerProfile</data>
+      <data key="group">framework</data>
+      <data key="x">280</data>
       <data key="y">540</data>
+    </node>
+    <node id="ReviewTeam">
+      <data key="label">ReviewTeam</data>
+      <data key="group">framework</data>
+      <data key="x">280</data>
+      <data key="y">620</data>
+    </node>
+    <node id="ReviewEvent">
+      <data key="label">ReviewEvent</data>
+      <data key="group">framework</data>
+      <data key="x">280</data>
+      <data key="y">700</data>
+    </node>
+    <node id="DecisionRecord">
+      <data key="label">DecisionRecord</data>
+      <data key="group">framework</data>
+      <data key="x">280</data>
+      <data key="y">780</data>
+    </node>
+    <node id="Program">
+      <data key="label">Program</data>
+      <data key="group">curriculum</data>
+      <data key="x">540</data>
+      <data key="y">60</data>
+    </node>
+    <node id="Course">
+      <data key="label">Course</data>
+      <data key="group">curriculum</data>
+      <data key="x">540</data>
+      <data key="y">140</data>
+    </node>
+    <node id="AcademicTerm">
+      <data key="label">AcademicTerm</data>
+      <data key="group">curriculum</data>
+      <data key="x">540</data>
+      <data key="y">220</data>
+    </node>
+    <node id="CourseSection">
+      <data key="label">CourseSection</data>
+      <data key="group">curriculum</data>
+      <data key="x">540</data>
+      <data key="y">300</data>
+    </node>
+    <node id="LearningOutcome">
+      <data key="label">LearningOutcome</data>
+      <data key="group">curriculum</data>
+      <data key="x">540</data>
+      <data key="y">380</data>
     </node>
     <node id="EvidenceItem">
       <data key="label">EvidenceItem</data>
       <data key="group">evidence</data>
-      <data key="x">520</data>
-      <data key="y">40</data>
+      <data key="x">800</data>
+      <data key="y">60</data>
     </node>
-    <node id="EvidenceArtifact">
-      <data key="label">EvidenceArtifact</data>
+    <node id="EvidenceReference">
+      <data key="label">EvidenceReference</data>
       <data key="group">evidence</data>
-      <data key="x">520</data>
+      <data key="x">800</data>
       <data key="y">140</data>
     </node>
-    <node id="EvidenceLink">
-      <data key="label">EvidenceLink</data>
+    <node id="EvidenceRequest">
+      <data key="label">EvidenceRequest</data>
       <data key="group">evidence</data>
-      <data key="x">520</data>
-      <data key="y">240</data>
+      <data key="x">800</data>
+      <data key="y">220</data>
     </node>
-    <node id="Program">
-      <data key="label">Program</data>
-      <data key="group">assessment</data>
-      <data key="x">520</data>
-      <data key="y">340</data>
+    <node id="EvidenceReview">
+      <data key="label">EvidenceReview</data>
+      <data key="group">evidence</data>
+      <data key="x">800</data>
+      <data key="y">300</data>
     </node>
-    <node id="Course">
-      <data key="label">Course</data>
+    <node id="AssessmentPlan">
+      <data key="label">AssessmentPlan</data>
       <data key="group">assessment</data>
-      <data key="x">520</data>
-      <data key="y">440</data>
+      <data key="x">800</data>
+      <data key="y">420</data>
     </node>
-    <node id="LearningOutcome">
-      <data key="label">LearningOutcome</data>
+    <node id="AssessmentMeasure">
+      <data key="label">AssessmentMeasure</data>
       <data key="group">assessment</data>
-      <data key="x">520</data>
-      <data key="y">540</data>
+      <data key="x">800</data>
+      <data key="y">500</data>
+    </node>
+    <node id="BenchmarkTarget">
+      <data key="label">BenchmarkTarget</data>
+      <data key="group">assessment</data>
+      <data key="x">800</data>
+      <data key="y">580</data>
     </node>
     <node id="AssessmentResult">
       <data key="label">AssessmentResult</data>
       <data key="group">assessment</data>
-      <data key="x">760</data>
-      <data key="y">40</data>
+      <data key="x">800</data>
+      <data key="y">660</data>
     </node>
     <node id="Finding">
       <data key="label">Finding</data>
       <data key="group">assessment</data>
-      <data key="x">760</data>
-      <data key="y">140</data>
-    </node>
-    <node id="ActionPlan">
-      <data key="label">ActionPlan</data>
-      <data key="group">assessment</data>
-      <data key="x">760</data>
-      <data key="y">240</data>
-    </node>
-    <node id="WorkflowTemplate">
-      <data key="label">WorkflowTemplate</data>
-      <data key="group">workflow</data>
-      <data key="x">760</data>
-      <data key="y">340</data>
+      <data key="x">800</data>
+      <data key="y">740</data>
     </node>
     <node id="Submission">
       <data key="label">Submission</data>
       <data key="group">workflow</data>
-      <data key="x">760</data>
-      <data key="y">440</data>
+      <data key="x">1060</data>
+      <data key="y">60</data>
     </node>
     <node id="WorkflowDecision">
       <data key="label">WorkflowDecision</data>
       <data key="group">workflow</data>
-      <data key="x">760</data>
-      <data key="y">540</data>
+      <data key="x">1060</data>
+      <data key="y">140</data>
     </node>
-    <node id="Narrative">
-      <data key="label">Narrative</data>
-      <data key="group">reporting</data>
-      <data key="x">1000</data>
-      <data key="y">40</data>
+    <node id="WorkflowComment">
+      <data key="label">WorkflowComment</data>
+      <data key="group">workflow</data>
+      <data key="x">1060</data>
+      <data key="y">220</data>
+    </node>
+    <node id="WorkflowDelegation">
+      <data key="label">WorkflowDelegation</data>
+      <data key="group">workflow</data>
+      <data key="x">1060</data>
+      <data key="y">300</data>
+    </node>
+    <node id="WorkflowEscalationEvent">
+      <data key="label">WorkflowEscalationEvent</data>
+      <data key="group">workflow</data>
+      <data key="x">1060</data>
+      <data key="y">380</data>
+    </node>
+    <node id="SubmissionSnapshot">
+      <data key="label">SubmissionSnapshot</data>
+      <data key="group">workflow</data>
+      <data key="x">1060</data>
+      <data key="y">460</data>
     </node>
     <node id="NarrativeSection">
       <data key="label">NarrativeSection</data>
       <data key="group">reporting</data>
-      <data key="x">1000</data>
-      <data key="y">140</data>
+      <data key="x">1060</data>
+      <data key="y">580</data>
     </node>
     <node id="ReportPackage">
       <data key="label">ReportPackage</data>
       <data key="group">reporting</data>
-      <data key="x">1000</data>
-      <data key="y">240</data>
+      <data key="x">1060</data>
+      <data key="y">660</data>
+    </node>
+    <node id="FacultyProfile">
+      <data key="label">FacultyProfile</data>
+      <data key="group">faculty</data>
+      <data key="x">1320</data>
+      <data key="y">60</data>
+    </node>
+    <node id="FacultyAppointment">
+      <data key="label">FacultyAppointment</data>
+      <data key="group">faculty</data>
+      <data key="x">1320</data>
+      <data key="y">140</data>
+    </node>
+    <node id="FacultyDeployment">
+      <data key="label">FacultyDeployment</data>
+      <data key="group">faculty</data>
+      <data key="x">1320</data>
+      <data key="y">220</data>
+    </node>
+    <node id="FacultyQualification">
+      <data key="label">FacultyQualification</data>
+      <data key="group">faculty</data>
+      <data key="x">1320</data>
+      <data key="y">300</data>
+    </node>
+    <node id="QualificationBasis">
+      <data key="label">QualificationBasis</data>
+      <data key="group">faculty</data>
+      <data key="x">1320</data>
+      <data key="y">380</data>
+    </node>
+    <node id="QualificationReview">
+      <data key="label">QualificationReview</data>
+      <data key="group">faculty</data>
+      <data key="x">1320</data>
+      <data key="y">460</data>
+    </node>
+    <node id="ActionPlan">
+      <data key="label">ActionPlan</data>
+      <data key="group">assessment</data>
+      <data key="x">1320</data>
+      <data key="y">580</data>
+    </node>
+    <node id="ImprovementClosureReview">
+      <data key="label">ImprovementClosureReview</data>
+      <data key="group">assessment</data>
+      <data key="x">1320</data>
+      <data key="y">660</data>
     </node>
     <node id="AuditEvent">
       <data key="label">AuditEvent</data>
       <data key="group">compliance</data>
-      <data key="x">1000</data>
-      <data key="y">340</data>
+      <data key="x">1320</data>
+      <data key="y">740</data>
     </node>
     <node id="SourceSystem">
       <data key="label">SourceSystem</data>
-      <data key="group">integration</data>
-      <data key="x">1000</data>
-      <data key="y">440</data>
+      <data key="group">support</data>
+      <data key="x">1320</data>
+      <data key="y">820</data>
     </node>
     <node id="SyncJob">
       <data key="label">SyncJob</data>
-      <data key="group">integration</data>
-      <data key="x">1000</data>
-      <data key="y">540</data>
+      <data key="group">support</data>
+      <data key="x">1320</data>
+      <data key="y">900</data>
     </node>
-    <edge id="e1" source="Institution" target="OrganizationUnit">
+    <edge id="e1" source="Institution" target="Person">
       <data key="label">1:N</data>
     </edge>
-    <edge id="e2" source="Institution" target="User">
+    <edge id="e2" source="Institution" target="OrganizationUnit">
       <data key="label">1:N</data>
     </edge>
-    <edge id="e3" source="Institution" target="Committee">
+    <edge id="e3" source="Institution" target="Program">
       <data key="label">1:N</data>
     </edge>
-    <edge id="e4" source="Institution" target="Cycle">
+    <edge id="e4" source="Institution" target="User">
       <data key="label">1:N</data>
     </edge>
-    <edge id="e5" source="Institution" target="Program">
+    <edge id="e5" source="Person" target="User">
+      <data key="label">1:0..1</data>
+    </edge>
+    <edge id="e6" source="Person" target="ReviewerProfile">
       <data key="label">1:N</data>
     </edge>
-    <edge id="e6" source="Institution" target="SourceSystem">
+    <edge id="e7" source="Person" target="FacultyProfile">
       <data key="label">1:N</data>
     </edge>
-    <edge id="e7" source="Accreditor" target="Framework">
+    <edge id="e8" source="Accreditor" target="FrameworkVersion">
+      <data key="label">1:N via framework</data>
+    </edge>
+    <edge id="e9" source="FrameworkVersion" target="Criterion">
+      <data key="label">1:N via standard</data>
+    </edge>
+    <edge id="e10" source="Criterion" target="CriterionElement">
       <data key="label">1:N</data>
     </edge>
-    <edge id="e8" source="Framework" target="FrameworkVersion">
+    <edge id="e11" source="FrameworkVersion" target="AccreditationCycle">
       <data key="label">1:N</data>
     </edge>
-    <edge id="e9" source="FrameworkVersion" target="Standard">
+    <edge id="e12" source="AccreditationCycle" target="AccreditationScope">
       <data key="label">1:N</data>
     </edge>
-    <edge id="e10" source="Standard" target="Criterion">
+    <edge id="e13" source="AccreditationScope" target="Program">
+      <data key="label">N:M</data>
+    </edge>
+    <edge id="e14" source="AccreditationScope" target="OrganizationUnit">
+      <data key="label">N:M</data>
+    </edge>
+    <edge id="e15" source="AccreditationCycle" target="ReviewTeam">
       <data key="label">1:N</data>
     </edge>
-    <edge id="e11" source="FrameworkVersion" target="Cycle">
+    <edge id="e16" source="ReviewerProfile" target="ReviewTeam">
+      <data key="label">via membership</data>
+    </edge>
+    <edge id="e17" source="AccreditationCycle" target="ReviewEvent">
       <data key="label">1:N</data>
     </edge>
-    <edge id="e12" source="Cycle" target="EvidenceItem">
+    <edge id="e18" source="AccreditationCycle" target="DecisionRecord">
       <data key="label">1:N</data>
     </edge>
-    <edge id="e13" source="EvidenceItem" target="EvidenceArtifact">
+    <edge id="e19" source="ReviewEvent" target="DecisionRecord">
       <data key="label">1:N</data>
     </edge>
-    <edge id="e14" source="EvidenceItem" target="EvidenceLink">
+    <edge id="e20" source="Course" target="CourseSection">
       <data key="label">1:N</data>
     </edge>
-    <edge id="e15" source="Program" target="Course">
+    <edge id="e21" source="AcademicTerm" target="CourseSection">
       <data key="label">1:N</data>
     </edge>
-    <edge id="e16" source="Program" target="LearningOutcome">
+    <edge id="e22" source="Program" target="LearningOutcome">
       <data key="label">1:N</data>
     </edge>
-    <edge id="e17" source="Cycle" target="AssessmentResult">
+    <edge id="e23" source="Program" target="AssessmentPlan">
+      <data key="label">1:N scope</data>
+    </edge>
+    <edge id="e24" source="LearningOutcome" target="AssessmentPlan">
+      <data key="label">1:N scope</data>
+    </edge>
+    <edge id="e25" source="AccreditationCycle" target="EvidenceItem">
       <data key="label">1:N</data>
     </edge>
-    <edge id="e18" source="LearningOutcome" target="AssessmentResult">
+    <edge id="e26" source="EvidenceItem" target="EvidenceReference">
       <data key="label">1:N</data>
     </edge>
-    <edge id="e19" source="AssessmentResult" target="Finding">
+    <edge id="e27" source="EvidenceRequest" target="EvidenceItem">
       <data key="label">1:N</data>
     </edge>
-    <edge id="e20" source="Finding" target="ActionPlan">
+    <edge id="e28" source="EvidenceItem" target="EvidenceReview">
       <data key="label">1:N</data>
     </edge>
-    <edge id="e21" source="Cycle" target="WorkflowTemplate">
+    <edge id="e29" source="AssessmentPlan" target="AssessmentMeasure">
       <data key="label">1:N</data>
     </edge>
-    <edge id="e22" source="WorkflowTemplate" target="Submission">
+    <edge id="e30" source="AssessmentMeasure" target="BenchmarkTarget">
       <data key="label">1:N</data>
     </edge>
-    <edge id="e23" source="Submission" target="WorkflowDecision">
+    <edge id="e31" source="AssessmentMeasure" target="AssessmentResult">
       <data key="label">1:N</data>
     </edge>
-    <edge id="e24" source="Cycle" target="Narrative">
+    <edge id="e32" source="AssessmentResult" target="Finding">
       <data key="label">1:N</data>
     </edge>
-    <edge id="e25" source="Narrative" target="NarrativeSection">
+    <edge id="e33" source="Finding" target="ActionPlan">
       <data key="label">1:N</data>
     </edge>
-    <edge id="e26" source="Cycle" target="ReportPackage">
+    <edge id="e34" source="ActionPlan" target="ImprovementClosureReview">
       <data key="label">1:N</data>
     </edge>
-    <edge id="e27" source="Submission" target="AuditEvent">
+    <edge id="e35" source="AccreditationCycle" target="Submission">
       <data key="label">1:N</data>
     </edge>
-    <edge id="e28" source="SourceSystem" target="SyncJob">
+    <edge id="e36" source="Submission" target="WorkflowDecision">
       <data key="label">1:N</data>
     </edge>
-    <edge id="e29" source="EvidenceLink" target="NarrativeSection">
-      <data key="label">N:1</data>
-    </edge>
-    <edge id="e30" source="Criterion" target="NarrativeSection">
+    <edge id="e37" source="Submission" target="WorkflowComment">
       <data key="label">1:N</data>
     </edge>
-    <edge id="e31" source="Criterion" target="EvidenceLink">
+    <edge id="e38" source="Submission" target="WorkflowDelegation">
       <data key="label">1:N</data>
     </edge>
-    <edge id="e32" source="Program" target="Cycle">
-      <data key="label">N:M scope</data>
+    <edge id="e39" source="Submission" target="WorkflowEscalationEvent">
+      <data key="label">1:N</data>
+    </edge>
+    <edge id="e40" source="Submission" target="SubmissionSnapshot">
+      <data key="label">1:N</data>
+    </edge>
+    <edge id="e41" source="AccreditationCycle" target="NarrativeSection">
+      <data key="label">1:N via narrative</data>
+    </edge>
+    <edge id="e42" source="SubmissionSnapshot" target="ReportPackage">
+      <data key="label">feeds</data>
+    </edge>
+    <edge id="e43" source="EvidenceReference" target="NarrativeSection">
+      <data key="label">targets</data>
+    </edge>
+    <edge id="e44" source="EvidenceReference" target="Finding">
+      <data key="label">targets</data>
+    </edge>
+    <edge id="e45" source="EvidenceReference" target="FacultyQualification">
+      <data key="label">targets</data>
+    </edge>
+    <edge id="e46" source="FacultyProfile" target="FacultyAppointment">
+      <data key="label">1:N</data>
+    </edge>
+    <edge id="e47" source="FacultyProfile" target="FacultyDeployment">
+      <data key="label">1:N</data>
+    </edge>
+    <edge id="e48" source="FacultyProfile" target="FacultyQualification">
+      <data key="label">1:N</data>
+    </edge>
+    <edge id="e49" source="FacultyQualification" target="QualificationBasis">
+      <data key="label">1:N</data>
+    </edge>
+    <edge id="e50" source="FacultyQualification" target="QualificationReview">
+      <data key="label">1:N</data>
+    </edge>
+    <edge id="e51" source="Submission" target="AuditEvent">
+      <data key="label">1:N</data>
+    </edge>
+    <edge id="e52" source="SourceSystem" target="SyncJob">
+      <data key="label">1:N</data>
     </edge>
   </graph>
 </graphml>
