@@ -1,13 +1,228 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="740" viewBox="0 0 1200 740">
+<svg xmlns="http://www.w3.org/2000/svg" width="1560" height="1000" viewBox="0 0 1560 1000">
   <defs>
     <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
       <path d="M0,0 L0,6 L9,3 z" fill="#6b7280" />
     </marker>
   </defs>
-  <rect width="1200" height="740" fill="#ffffff" />
-  <text x="40" y="24" font-size="22" font-weight="bold" fill="#111827" font-family="Arial, sans-serif">Open Accreditation System - logical entity relationship diagram</text>
-  <text x="40" y="46" font-size="12" fill="#4b5563" font-family="Arial, sans-serif">High-signal ERD showing primary governed entities and core relationships derived from repository architecture.</text>
-  <line x1="120" y1="96" x2="120" y2="140" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)" /><text x="120.0" y="114.0" font-size="11" fill="#374151" text-anchor="middle">1:N</text><line x1="120" y1="96" x2="120" y2="240" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)" /><text x="120.0" y="164.0" font-size="11" fill="#374151" text-anchor="middle">1:N</text><line x1="120" y1="96" x2="120" y2="340" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)" /><text x="120.0" y="214.0" font-size="11" fill="#374151" text-anchor="middle">1:N</text><line x1="200" y1="68" x2="260" y2="568" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)" /><text x="230.0" y="314.0" font-size="11" fill="#374151" text-anchor="middle">1:N</text><line x1="200" y1="68" x2="520" y2="368" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)" /><text x="360.0" y="214.0" font-size="11" fill="#374151" text-anchor="middle">1:N</text><line x1="200" y1="68" x2="1000" y2="468" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)" /><text x="600.0" y="264.0" font-size="11" fill="#374151" text-anchor="middle">1:N</text><line x1="340" y1="96" x2="340" y2="140" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)" /><text x="340.0" y="114.0" font-size="11" fill="#374151" text-anchor="middle">1:N</text><line x1="340" y1="196" x2="340" y2="240" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)" /><text x="340.0" y="214.0" font-size="11" fill="#374151" text-anchor="middle">1:N</text><line x1="340" y1="296" x2="340" y2="340" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)" /><text x="340.0" y="314.0" font-size="11" fill="#374151" text-anchor="middle">1:N</text><line x1="340" y1="396" x2="340" y2="440" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)" /><text x="340.0" y="414.0" font-size="11" fill="#374151" text-anchor="middle">1:N</text><line x1="340" y1="296" x2="340" y2="540" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)" /><text x="340.0" y="414.0" font-size="11" fill="#374151" text-anchor="middle">1:N</text><line x1="420" y1="568" x2="520" y2="68" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)" /><text x="470.0" y="314.0" font-size="11" fill="#374151" text-anchor="middle">1:N</text><line x1="600" y1="96" x2="600" y2="140" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)" /><text x="600.0" y="114.0" font-size="11" fill="#374151" text-anchor="middle">1:N</text><line x1="600" y1="96" x2="600" y2="240" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)" /><text x="600.0" y="164.0" font-size="11" fill="#374151" text-anchor="middle">1:N</text><line x1="600" y1="396" x2="600" y2="440" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)" /><text x="600.0" y="414.0" font-size="11" fill="#374151" text-anchor="middle">1:N</text><line x1="600" y1="396" x2="600" y2="540" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)" /><text x="600.0" y="464.0" font-size="11" fill="#374151" text-anchor="middle">1:N</text><line x1="420" y1="568" x2="760" y2="68" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)" /><text x="590.0" y="314.0" font-size="11" fill="#374151" text-anchor="middle">1:N</text><line x1="680" y1="568" x2="760" y2="68" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)" /><text x="720.0" y="314.0" font-size="11" fill="#374151" text-anchor="middle">1:N</text><line x1="840" y1="96" x2="840" y2="140" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)" /><text x="840.0" y="114.0" font-size="11" fill="#374151" text-anchor="middle">1:N</text><line x1="840" y1="196" x2="840" y2="240" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)" /><text x="840.0" y="214.0" font-size="11" fill="#374151" text-anchor="middle">1:N</text><line x1="420" y1="568" x2="760" y2="368" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)" /><text x="590.0" y="464.0" font-size="11" fill="#374151" text-anchor="middle">1:N</text><line x1="840" y1="396" x2="840" y2="440" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)" /><text x="840.0" y="414.0" font-size="11" fill="#374151" text-anchor="middle">1:N</text><line x1="840" y1="496" x2="840" y2="540" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)" /><text x="840.0" y="514.0" font-size="11" fill="#374151" text-anchor="middle">1:N</text><line x1="420" y1="568" x2="1000" y2="68" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)" /><text x="710.0" y="314.0" font-size="11" fill="#374151" text-anchor="middle">1:N</text><line x1="1080" y1="96" x2="1080" y2="140" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)" /><text x="1080.0" y="114.0" font-size="11" fill="#374151" text-anchor="middle">1:N</text><line x1="420" y1="568" x2="1000" y2="268" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)" /><text x="710.0" y="414.0" font-size="11" fill="#374151" text-anchor="middle">1:N</text><line x1="920" y1="468" x2="1000" y2="368" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)" /><text x="960.0" y="414.0" font-size="11" fill="#374151" text-anchor="middle">1:N</text><line x1="1080" y1="496" x2="1080" y2="540" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)" /><text x="1080.0" y="514.0" font-size="11" fill="#374151" text-anchor="middle">1:N</text><line x1="680" y1="268" x2="1000" y2="168" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)" /><text x="840.0" y="214.0" font-size="11" fill="#374151" text-anchor="middle">N:1</text><line x1="420" y1="468" x2="1000" y2="168" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)" /><text x="710.0" y="314.0" font-size="11" fill="#374151" text-anchor="middle">1:N</text><line x1="420" y1="468" x2="520" y2="268" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)" /><text x="470.0" y="364.0" font-size="11" fill="#374151" text-anchor="middle">1:N</text><line x1="600" y1="396" x2="340" y2="540" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)" /><text x="470.0" y="464.0" font-size="11" fill="#374151" text-anchor="middle">N:M scope</text>
-  <rect x="40" y="40" width="160" height="56" rx="10" ry="10" fill="#e8f0fe" stroke="#374151" stroke-width="1.5" /><text x="120" y="72" font-size="14" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">Institution</text><rect x="40" y="140" width="160" height="56" rx="10" ry="10" fill="#e8f0fe" stroke="#374151" stroke-width="1.5" /><text x="120" y="172" font-size="14" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">OrganizationUnit</text><rect x="40" y="240" width="160" height="56" rx="10" ry="10" fill="#f3e8ff" stroke="#374151" stroke-width="1.5" /><text x="120" y="272" font-size="14" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">User</text><rect x="40" y="340" width="160" height="56" rx="10" ry="10" fill="#e8f0fe" stroke="#374151" stroke-width="1.5" /><text x="120" y="372" font-size="14" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">Committee</text><rect x="260" y="40" width="160" height="56" rx="10" ry="10" fill="#fff4e5" stroke="#374151" stroke-width="1.5" /><text x="340" y="72" font-size="14" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">Accreditor</text><rect x="260" y="140" width="160" height="56" rx="10" ry="10" fill="#fff4e5" stroke="#374151" stroke-width="1.5" /><text x="340" y="172" font-size="14" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">Framework</text><rect x="260" y="240" width="160" height="56" rx="10" ry="10" fill="#fff4e5" stroke="#374151" stroke-width="1.5" /><text x="340" y="272" font-size="14" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">FrameworkVersion</text><rect x="260" y="340" width="160" height="56" rx="10" ry="10" fill="#fff4e5" stroke="#374151" stroke-width="1.5" /><text x="340" y="372" font-size="14" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">Standard</text><rect x="260" y="440" width="160" height="56" rx="10" ry="10" fill="#fff4e5" stroke="#374151" stroke-width="1.5" /><text x="340" y="472" font-size="14" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">Criterion</text><rect x="260" y="540" width="160" height="56" rx="10" ry="10" fill="#fff4e5" stroke="#374151" stroke-width="1.5" /><text x="340" y="572" font-size="14" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">Cycle</text><rect x="520" y="40" width="160" height="56" rx="10" ry="10" fill="#e6f4ea" stroke="#374151" stroke-width="1.5" /><text x="600" y="72" font-size="14" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">EvidenceItem</text><rect x="520" y="140" width="160" height="56" rx="10" ry="10" fill="#e6f4ea" stroke="#374151" stroke-width="1.5" /><text x="600" y="172" font-size="14" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">EvidenceArtifact</text><rect x="520" y="240" width="160" height="56" rx="10" ry="10" fill="#e6f4ea" stroke="#374151" stroke-width="1.5" /><text x="600" y="272" font-size="14" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">EvidenceLink</text><rect x="520" y="340" width="160" height="56" rx="10" ry="10" fill="#fce8e6" stroke="#374151" stroke-width="1.5" /><text x="600" y="372" font-size="14" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">Program</text><rect x="520" y="440" width="160" height="56" rx="10" ry="10" fill="#fce8e6" stroke="#374151" stroke-width="1.5" /><text x="600" y="472" font-size="14" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">Course</text><rect x="520" y="540" width="160" height="56" rx="10" ry="10" fill="#fce8e6" stroke="#374151" stroke-width="1.5" /><text x="600" y="572" font-size="14" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">LearningOutcome</text><rect x="760" y="40" width="160" height="56" rx="10" ry="10" fill="#fce8e6" stroke="#374151" stroke-width="1.5" /><text x="840" y="72" font-size="14" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">AssessmentResult</text><rect x="760" y="140" width="160" height="56" rx="10" ry="10" fill="#fce8e6" stroke="#374151" stroke-width="1.5" /><text x="840" y="172" font-size="14" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">Finding</text><rect x="760" y="240" width="160" height="56" rx="10" ry="10" fill="#fce8e6" stroke="#374151" stroke-width="1.5" /><text x="840" y="272" font-size="14" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">ActionPlan</text><rect x="760" y="340" width="160" height="56" rx="10" ry="10" fill="#e8eaed" stroke="#374151" stroke-width="1.5" /><text x="840" y="372" font-size="14" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">WorkflowTemplate</text><rect x="760" y="440" width="160" height="56" rx="10" ry="10" fill="#e8eaed" stroke="#374151" stroke-width="1.5" /><text x="840" y="472" font-size="14" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">Submission</text><rect x="760" y="540" width="160" height="56" rx="10" ry="10" fill="#e8eaed" stroke="#374151" stroke-width="1.5" /><text x="840" y="572" font-size="14" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">WorkflowDecision</text><rect x="1000" y="40" width="160" height="56" rx="10" ry="10" fill="#fff0f6" stroke="#374151" stroke-width="1.5" /><text x="1080" y="72" font-size="14" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">Narrative</text><rect x="1000" y="140" width="160" height="56" rx="10" ry="10" fill="#fff0f6" stroke="#374151" stroke-width="1.5" /><text x="1080" y="172" font-size="14" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">NarrativeSection</text><rect x="1000" y="240" width="160" height="56" rx="10" ry="10" fill="#fff0f6" stroke="#374151" stroke-width="1.5" /><text x="1080" y="272" font-size="14" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">ReportPackage</text><rect x="1000" y="340" width="160" height="56" rx="10" ry="10" fill="#f1f3f4" stroke="#374151" stroke-width="1.5" /><text x="1080" y="372" font-size="14" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">AuditEvent</text><rect x="1000" y="440" width="160" height="56" rx="10" ry="10" fill="#e0f7fa" stroke="#374151" stroke-width="1.5" /><text x="1080" y="472" font-size="14" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">SourceSystem</text><rect x="1000" y="540" width="160" height="56" rx="10" ry="10" fill="#e0f7fa" stroke="#374151" stroke-width="1.5" /><text x="1080" y="572" font-size="14" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">SyncJob</text>
-  <rect x="40" y="640" width="18" height="18" fill="#e8f0fe" stroke="#374151" stroke-width="1" /><text x="66" y="654" font-size="12" fill="#111827" font-family="Arial, sans-serif">Organization / Identity</text><rect x="280" y="640" width="18" height="18" fill="#fff4e5" stroke="#374151" stroke-width="1" /><text x="306" y="654" font-size="12" fill="#111827" font-family="Arial, sans-serif">Frameworks</text><rect x="520" y="640" width="18" height="18" fill="#e6f4ea" stroke="#374151" stroke-width="1" /><text x="546" y="654" font-size="12" fill="#111827" font-family="Arial, sans-serif">Evidence</text><rect x="40" y="668" width="18" height="18" fill="#fce8e6" stroke="#374151" stroke-width="1" /><text x="66" y="682" font-size="12" fill="#111827" font-family="Arial, sans-serif">Assessment</text><rect x="280" y="668" width="18" height="18" fill="#e8eaed" stroke="#374151" stroke-width="1" /><text x="306" y="682" font-size="12" fill="#111827" font-family="Arial, sans-serif">Workflow</text><rect x="520" y="668" width="18" height="18" fill="#fff0f6" stroke="#374151" stroke-width="1" /><text x="546" y="682" font-size="12" fill="#111827" font-family="Arial, sans-serif">Reporting</text><rect x="40" y="696" width="18" height="18" fill="#e0f7fa" stroke="#374151" stroke-width="1" /><text x="66" y="710" font-size="12" fill="#111827" font-family="Arial, sans-serif">Integration / Compliance</text>
+  <rect width="1560" height="1000" fill="#ffffff" />
+  <text x="40" y="28" font-size="22" font-weight="bold" fill="#111827" font-family="Arial, sans-serif">Open Accreditation System - logical entity relationship diagram</text>
+  <text x="40" y="50" font-size="12" fill="#4b5563" font-family="Arial, sans-serif">High-signal ERD focused on people, cycle operations, evidence governance, assessment, workflow, narrative, and faculty qualification relationships.</text>
+  <line x1="135.0" y1="110" x2="135.0" y2="140" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="135.0" y="121.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="135.0" y1="110" x2="135.0" y2="220" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="135.0" y="161.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="230" y1="85.0" x2="540" y2="85.0" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="385.0" y="81.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="135.0" y1="110" x2="135.0" y2="380" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="135.0" y="241.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="135.0" y1="190" x2="135.0" y2="380" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="135.0" y="281.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:0..1</text>
+  <line x1="135.0" y1="190" x2="375.0" y2="540" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="255.0" y="361.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="230" y1="165.0" x2="1320" y2="85.0" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="775.0" y="121.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="375.0" y1="110" x2="375.0" y2="140" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="375.0" y="121.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N via framework</text>
+  <line x1="375.0" y1="190" x2="375.0" y2="220" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="375.0" y="201.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N via standard</text>
+  <line x1="375.0" y1="270" x2="375.0" y2="300" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="375.0" y="281.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="375.0" y1="190" x2="375.0" y2="380" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="375.0" y="281.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="375.0" y1="430" x2="375.0" y2="460" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="375.0" y="441.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="375.0" y1="460" x2="635.0" y2="110" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="505.0" y="281.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">N:M</text>
+  <line x1="375.0" y1="460" x2="135.0" y2="270" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="255.0" y="361.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">N:M</text>
+  <line x1="375.0" y1="430" x2="375.0" y2="620" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="375.0" y="521.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="375.0" y1="590" x2="375.0" y2="620" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="375.0" y="601.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">via membership</text>
+  <line x1="375.0" y1="430" x2="375.0" y2="700" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="375.0" y="561.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="375.0" y1="430" x2="375.0" y2="780" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="375.0" y="601.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="375.0" y1="750" x2="375.0" y2="780" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="375.0" y="761.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="635.0" y1="190" x2="635.0" y2="300" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="635.0" y="241.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="635.0" y1="270" x2="635.0" y2="300" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="635.0" y="281.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="635.0" y1="110" x2="635.0" y2="380" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="635.0" y="241.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="635.0" y1="110" x2="895.0" y2="420" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="765.0" y="261.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N scope</text>
+  <line x1="730" y1="405.0" x2="800" y2="445.0" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="765.0" y="421.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N scope</text>
+  <line x1="470" y1="405.0" x2="800" y2="85.0" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="635.0" y="241.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="895.0" y1="110" x2="895.0" y2="140" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="895.0" y="121.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="895.0" y1="220" x2="895.0" y2="110" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="895.0" y="161.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="895.0" y1="110" x2="895.0" y2="300" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="895.0" y="201.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="895.0" y1="470" x2="895.0" y2="500" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="895.0" y="481.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="895.0" y1="550" x2="895.0" y2="580" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="895.0" y="561.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="895.0" y1="550" x2="895.0" y2="660" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="895.0" y="601.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="895.0" y1="710" x2="895.0" y2="740" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="895.0" y="721.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="990" y1="765.0" x2="1320" y2="605.0" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="1155.0" y="681.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="1415.0" y1="630" x2="1415.0" y2="660" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="1415.0" y="641.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="470" y1="405.0" x2="1060" y2="85.0" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="765.0" y="241.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="1155.0" y1="110" x2="1155.0" y2="140" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="1155.0" y="121.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="1155.0" y1="110" x2="1155.0" y2="220" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="1155.0" y="161.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="1155.0" y1="110" x2="1155.0" y2="300" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="1155.0" y="201.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="1155.0" y1="110" x2="1155.0" y2="380" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="1155.0" y="241.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="1155.0" y1="110" x2="1155.0" y2="460" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="1155.0" y="281.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="470" y1="405.0" x2="1060" y2="605.0" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="765.0" y="501.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N via narrative</text>
+  <line x1="1155.0" y1="510" x2="1155.0" y2="660" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="1155.0" y="581.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">feeds</text>
+  <line x1="895.0" y1="190" x2="1155.0" y2="580" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="1025.0" y="381.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">targets</text>
+  <line x1="895.0" y1="190" x2="895.0" y2="740" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="895.0" y="461.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">targets</text>
+  <line x1="990" y1="165.0" x2="1320" y2="325.0" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="1155.0" y="241.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">targets</text>
+  <line x1="1415.0" y1="110" x2="1415.0" y2="140" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="1415.0" y="121.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="1415.0" y1="110" x2="1415.0" y2="220" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="1415.0" y="161.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="1415.0" y1="110" x2="1415.0" y2="300" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="1415.0" y="201.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="1415.0" y1="350" x2="1415.0" y2="380" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="1415.0" y="361.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="1415.0" y1="350" x2="1415.0" y2="460" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="1415.0" y="401.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="1155.0" y1="110" x2="1415.0" y2="740" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="1285.0" y="421.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <line x1="1415.0" y1="870" x2="1415.0" y2="900" stroke="#6b7280" stroke-width="1.3" marker-end="url(#arrow)" />
+  <text x="1415.0" y="881.0" font-size="9" fill="#374151" text-anchor="middle" font-family="Arial, sans-serif">1:N</text>
+  <rect x="40" y="60" width="190" height="50" rx="10" ry="10" fill="#e8f0fe" stroke="#374151" stroke-width="1.2" />
+  <text x="135.0" y="90" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">Institution</text>
+  <rect x="40" y="140" width="190" height="50" rx="10" ry="10" fill="#e8f0fe" stroke="#374151" stroke-width="1.2" />
+  <text x="135.0" y="170" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">Person</text>
+  <rect x="40" y="220" width="190" height="50" rx="10" ry="10" fill="#e8f0fe" stroke="#374151" stroke-width="1.2" />
+  <text x="135.0" y="250" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">OrganizationUnit</text>
+  <rect x="40" y="300" width="190" height="50" rx="10" ry="10" fill="#e8f0fe" stroke="#374151" stroke-width="1.2" />
+  <text x="135.0" y="330" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">Committee</text>
+  <rect x="40" y="380" width="190" height="50" rx="10" ry="10" fill="#f3e8ff" stroke="#374151" stroke-width="1.2" />
+  <text x="135.0" y="410" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">User</text>
+  <rect x="280" y="60" width="190" height="50" rx="10" ry="10" fill="#fff4e5" stroke="#374151" stroke-width="1.2" />
+  <text x="375.0" y="90" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">Accreditor</text>
+  <rect x="280" y="140" width="190" height="50" rx="10" ry="10" fill="#fff4e5" stroke="#374151" stroke-width="1.2" />
+  <text x="375.0" y="170" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">FrameworkVersion</text>
+  <rect x="280" y="220" width="190" height="50" rx="10" ry="10" fill="#fff4e5" stroke="#374151" stroke-width="1.2" />
+  <text x="375.0" y="250" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">Criterion</text>
+  <rect x="280" y="300" width="190" height="50" rx="10" ry="10" fill="#fff4e5" stroke="#374151" stroke-width="1.2" />
+  <text x="375.0" y="330" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">CriterionElement</text>
+  <rect x="280" y="380" width="190" height="50" rx="10" ry="10" fill="#fff4e5" stroke="#374151" stroke-width="1.2" />
+  <text x="375.0" y="410" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">AccreditationCycle</text>
+  <rect x="280" y="460" width="190" height="50" rx="10" ry="10" fill="#fff4e5" stroke="#374151" stroke-width="1.2" />
+  <text x="375.0" y="490" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">AccreditationScope</text>
+  <rect x="280" y="540" width="190" height="50" rx="10" ry="10" fill="#fff4e5" stroke="#374151" stroke-width="1.2" />
+  <text x="375.0" y="570" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">ReviewerProfile</text>
+  <rect x="280" y="620" width="190" height="50" rx="10" ry="10" fill="#fff4e5" stroke="#374151" stroke-width="1.2" />
+  <text x="375.0" y="650" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">ReviewTeam</text>
+  <rect x="280" y="700" width="190" height="50" rx="10" ry="10" fill="#fff4e5" stroke="#374151" stroke-width="1.2" />
+  <text x="375.0" y="730" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">ReviewEvent</text>
+  <rect x="280" y="780" width="190" height="50" rx="10" ry="10" fill="#fff4e5" stroke="#374151" stroke-width="1.2" />
+  <text x="375.0" y="810" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">DecisionRecord</text>
+  <rect x="540" y="60" width="190" height="50" rx="10" ry="10" fill="#fde7e9" stroke="#374151" stroke-width="1.2" />
+  <text x="635.0" y="90" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">Program</text>
+  <rect x="540" y="140" width="190" height="50" rx="10" ry="10" fill="#fde7e9" stroke="#374151" stroke-width="1.2" />
+  <text x="635.0" y="170" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">Course</text>
+  <rect x="540" y="220" width="190" height="50" rx="10" ry="10" fill="#fde7e9" stroke="#374151" stroke-width="1.2" />
+  <text x="635.0" y="250" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">AcademicTerm</text>
+  <rect x="540" y="300" width="190" height="50" rx="10" ry="10" fill="#fde7e9" stroke="#374151" stroke-width="1.2" />
+  <text x="635.0" y="330" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">CourseSection</text>
+  <rect x="540" y="380" width="190" height="50" rx="10" ry="10" fill="#fde7e9" stroke="#374151" stroke-width="1.2" />
+  <text x="635.0" y="410" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">LearningOutcome</text>
+  <rect x="800" y="60" width="190" height="50" rx="10" ry="10" fill="#e6f4ea" stroke="#374151" stroke-width="1.2" />
+  <text x="895.0" y="90" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">EvidenceItem</text>
+  <rect x="800" y="140" width="190" height="50" rx="10" ry="10" fill="#e6f4ea" stroke="#374151" stroke-width="1.2" />
+  <text x="895.0" y="170" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">EvidenceReference</text>
+  <rect x="800" y="220" width="190" height="50" rx="10" ry="10" fill="#e6f4ea" stroke="#374151" stroke-width="1.2" />
+  <text x="895.0" y="250" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">EvidenceRequest</text>
+  <rect x="800" y="300" width="190" height="50" rx="10" ry="10" fill="#e6f4ea" stroke="#374151" stroke-width="1.2" />
+  <text x="895.0" y="330" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">EvidenceReview</text>
+  <rect x="800" y="420" width="190" height="50" rx="10" ry="10" fill="#fce8e6" stroke="#374151" stroke-width="1.2" />
+  <text x="895.0" y="450" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">AssessmentPlan</text>
+  <rect x="800" y="500" width="190" height="50" rx="10" ry="10" fill="#fce8e6" stroke="#374151" stroke-width="1.2" />
+  <text x="895.0" y="530" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">AssessmentMeasure</text>
+  <rect x="800" y="580" width="190" height="50" rx="10" ry="10" fill="#fce8e6" stroke="#374151" stroke-width="1.2" />
+  <text x="895.0" y="610" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">BenchmarkTarget</text>
+  <rect x="800" y="660" width="190" height="50" rx="10" ry="10" fill="#fce8e6" stroke="#374151" stroke-width="1.2" />
+  <text x="895.0" y="690" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">AssessmentResult</text>
+  <rect x="800" y="740" width="190" height="50" rx="10" ry="10" fill="#fce8e6" stroke="#374151" stroke-width="1.2" />
+  <text x="895.0" y="770" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">Finding</text>
+  <rect x="1060" y="60" width="190" height="50" rx="10" ry="10" fill="#e8eaed" stroke="#374151" stroke-width="1.2" />
+  <text x="1155.0" y="90" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">Submission</text>
+  <rect x="1060" y="140" width="190" height="50" rx="10" ry="10" fill="#e8eaed" stroke="#374151" stroke-width="1.2" />
+  <text x="1155.0" y="170" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">WorkflowDecision</text>
+  <rect x="1060" y="220" width="190" height="50" rx="10" ry="10" fill="#e8eaed" stroke="#374151" stroke-width="1.2" />
+  <text x="1155.0" y="250" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">WorkflowComment</text>
+  <rect x="1060" y="300" width="190" height="50" rx="10" ry="10" fill="#e8eaed" stroke="#374151" stroke-width="1.2" />
+  <text x="1155.0" y="330" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">WorkflowDelegation</text>
+  <rect x="1060" y="380" width="190" height="50" rx="10" ry="10" fill="#e8eaed" stroke="#374151" stroke-width="1.2" />
+  <text x="1155.0" y="410" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">WorkflowEscalationEvent</text>
+  <rect x="1060" y="460" width="190" height="50" rx="10" ry="10" fill="#e8eaed" stroke="#374151" stroke-width="1.2" />
+  <text x="1155.0" y="490" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">SubmissionSnapshot</text>
+  <rect x="1060" y="580" width="190" height="50" rx="10" ry="10" fill="#fff0f6" stroke="#374151" stroke-width="1.2" />
+  <text x="1155.0" y="610" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">NarrativeSection</text>
+  <rect x="1060" y="660" width="190" height="50" rx="10" ry="10" fill="#fff0f6" stroke="#374151" stroke-width="1.2" />
+  <text x="1155.0" y="690" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">ReportPackage</text>
+  <rect x="1320" y="60" width="190" height="50" rx="10" ry="10" fill="#f3f8e8" stroke="#374151" stroke-width="1.2" />
+  <text x="1415.0" y="90" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">FacultyProfile</text>
+  <rect x="1320" y="140" width="190" height="50" rx="10" ry="10" fill="#f3f8e8" stroke="#374151" stroke-width="1.2" />
+  <text x="1415.0" y="170" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">FacultyAppointment</text>
+  <rect x="1320" y="220" width="190" height="50" rx="10" ry="10" fill="#f3f8e8" stroke="#374151" stroke-width="1.2" />
+  <text x="1415.0" y="250" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">FacultyDeployment</text>
+  <rect x="1320" y="300" width="190" height="50" rx="10" ry="10" fill="#f3f8e8" stroke="#374151" stroke-width="1.2" />
+  <text x="1415.0" y="330" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">FacultyQualification</text>
+  <rect x="1320" y="380" width="190" height="50" rx="10" ry="10" fill="#f3f8e8" stroke="#374151" stroke-width="1.2" />
+  <text x="1415.0" y="410" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">QualificationBasis</text>
+  <rect x="1320" y="460" width="190" height="50" rx="10" ry="10" fill="#f3f8e8" stroke="#374151" stroke-width="1.2" />
+  <text x="1415.0" y="490" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">QualificationReview</text>
+  <rect x="1320" y="580" width="190" height="50" rx="10" ry="10" fill="#fce8e6" stroke="#374151" stroke-width="1.2" />
+  <text x="1415.0" y="610" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">ActionPlan</text>
+  <rect x="1320" y="660" width="190" height="50" rx="10" ry="10" fill="#fce8e6" stroke="#374151" stroke-width="1.2" />
+  <text x="1415.0" y="690" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">ImprovementClosureReview</text>
+  <rect x="1320" y="740" width="190" height="50" rx="10" ry="10" fill="#f1f3f4" stroke="#374151" stroke-width="1.2" />
+  <text x="1415.0" y="770" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">AuditEvent</text>
+  <rect x="1320" y="820" width="190" height="50" rx="10" ry="10" fill="#e0f7fa" stroke="#374151" stroke-width="1.2" />
+  <text x="1415.0" y="850" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">SourceSystem</text>
+  <rect x="1320" y="900" width="190" height="50" rx="10" ry="10" fill="#e0f7fa" stroke="#374151" stroke-width="1.2" />
+  <text x="1415.0" y="930" font-size="13" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">SyncJob</text>
+  <rect x="40" y="965" width="18" height="18" fill="#e8f0fe" stroke="#374151" stroke-width="1" />
+  <text x="66" y="979" font-size="12" fill="#111827" font-family="Arial, sans-serif">Organization / Identity</text>
+  <rect x="210" y="965" width="18" height="18" fill="#fff4e5" stroke="#374151" stroke-width="1" />
+  <text x="236" y="979" font-size="12" fill="#111827" font-family="Arial, sans-serif">Frameworks / Cycle Ops</text>
+  <rect x="380" y="965" width="18" height="18" fill="#fde7e9" stroke="#374151" stroke-width="1" />
+  <text x="406" y="979" font-size="12" fill="#111827" font-family="Arial, sans-serif">Curriculum</text>
+  <rect x="550" y="965" width="18" height="18" fill="#e6f4ea" stroke="#374151" stroke-width="1" />
+  <text x="576" y="979" font-size="12" fill="#111827" font-family="Arial, sans-serif">Evidence</text>
+  <rect x="720" y="965" width="18" height="18" fill="#fce8e6" stroke="#374151" stroke-width="1" />
+  <text x="746" y="979" font-size="12" fill="#111827" font-family="Arial, sans-serif">Assessment</text>
+  <rect x="890" y="965" width="18" height="18" fill="#e8eaed" stroke="#374151" stroke-width="1" />
+  <text x="916" y="979" font-size="12" fill="#111827" font-family="Arial, sans-serif">Workflow</text>
+  <rect x="1060" y="965" width="18" height="18" fill="#fff0f6" stroke="#374151" stroke-width="1" />
+  <text x="1086" y="979" font-size="12" fill="#111827" font-family="Arial, sans-serif">Reporting</text>
+  <rect x="1230" y="965" width="18" height="18" fill="#f3f8e8" stroke="#374151" stroke-width="1" />
+  <text x="1256" y="979" font-size="12" fill="#111827" font-family="Arial, sans-serif">Faculty</text>
+  <rect x="1400" y="965" width="18" height="18" fill="#e0f7fa" stroke="#374151" stroke-width="1" />
+  <text x="1426" y="979" font-size="12" fill="#111827" font-family="Arial, sans-serif">Compliance / Support</text>
 </svg>

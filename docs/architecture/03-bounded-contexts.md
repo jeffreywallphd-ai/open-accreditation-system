@@ -28,92 +28,114 @@ Defined contexts:
 
 Owns:
 
-- platform identity references, role bindings, access attributes
-- policy evaluation inputs and permission resolution contracts
+- authenticated platform identities (`User`) and non-human workload identities (`ServicePrincipal`)
+- roles, permissions, and scoped role assignments
+- access attributes used for policy evaluation
 
 Depends on:
 
+- canonical `Person` and institutional scope references from `organization-registry`
+- cycle/review-team scope references from `accreditation-frameworks`
 - external identity providers via infrastructure adapters
 
 ### `organization-registry`
 
 Owns:
 
-- institutional hierarchy and canonical organization references
+- tenant institutions and canonical people (`Person`)
+- institutional hierarchy (`OrganizationUnit`) and governance bodies (`Committee`)
+- stable organization/person references used by every other context
 
 Depends on:
 
-- integration-fed organization data from canonical mappings
+- integration-fed canonical person/organization data from mapping boundaries
 
 ### `accreditation-frameworks`
 
 Owns:
 
-- standards, criteria, cycle templates, and accreditor extension points
+- accreditors, frameworks, framework versions, standards, criteria, and `CriterionElement`
+- accreditation engagements: `AccreditationCycle`, `AccreditationScope`, `CycleMilestone`, `ReviewEvent`, and `DecisionRecord`
+- reviewer operations: `ReviewerProfile`, `ReviewTeam`, and `ReviewTeamMembership`
+- framework-defined `EvidenceRequirement` metadata and extension points
 
 Depends on:
 
+- canonical program and organization references from `curriculum-mapping` and `organization-registry`
 - rule-pack definitions and mapping metadata
 
 ### `evidence-management`
 
 Owns:
 
-- evidence metadata, provenance, linkage, and lifecycle states
+- governed evidence metadata, artifacts, provenance, requests, reviews, and retention policies
+- `EvidenceReference` citation/linking rules into other bounded contexts
 - references to artifacts in `storage/evidence` and `storage/quarantined`
 
 Depends on:
 
 - object storage adapters
 - integration import provenance
+- allowed target aggregate contracts from other bounded contexts
 
 ### `assessment-improvement`
 
 Owns:
 
-- findings, action plans, assessment outcomes, and closure loops
+- `AssessmentPlan`, `AssessmentMeasure`, `AssessmentInstrument`, `BenchmarkTarget`, and `AssessmentResult`
+- findings, action plans, action-plan tasks, and `ImprovementClosureReview`
+- continuous-improvement rules that trace outcomes back to measures and targets
 
 Depends on:
 
-- curriculum mappings and evidence references
+- curriculum mappings and canonical academic structures
+- evidence references and accreditation alignment targets
 
 ### `workflow-approvals`
 
 Owns:
 
-- submission workflow state, assignments, approvals, and escalations
+- workflow templates, runtime submissions, assignments, and decisions
+- workflow comments, delegations, escalation events, and immutable submission snapshots/packages
+- approval routing and review auditability
 
 Depends on:
 
 - identity and organization scoping
-- evidence and reporting states
+- evidence, reporting, assessment, and accreditation-cycle targets
 
 ### `narratives-reporting`
 
 Owns:
 
-- narrative sections, report assembly state, export packages
+- narrative sections, report assembly state, export packages, and rendering jobs
+- section-level alignment to standards, criteria, or criterion elements
 
 Depends on:
 
-- approved evidence and workflow milestones
-- optional AI draft suggestions (advisory)
+- approved evidence and workflow package state
+- optional AI draft suggestions (advisory only)
 
 ### `faculty-intelligence`
 
 Owns:
 
-- accreditation-oriented faculty profile projections and analytics views
+- accreditation-oriented faculty profiles and activities
+- faculty appointments, deployments, qualification basis, qualification status, and qualification reviews
+- faculty analytics surfaces used for accreditation sufficiency/qualification analysis
 
 Depends on:
 
-- canonical faculty/person/activity feeds from integration boundary
+- canonical faculty/person/activity feeds from the integration boundary
+- curriculum, evidence, and framework references
 
 ### `curriculum-mapping`
 
 Owns:
 
-- outcome, competency, course, and program mapping surfaces
+- canonical academic structure: `Program`, `Course`, `AcademicTerm`, `CourseSection`, `LearningOutcome`, and `Competency`
+- program/course/outcome mappings and standards alignments
+- mapping review status and traceability
 
 Depends on:
 
@@ -124,7 +146,8 @@ Depends on:
 
 Owns:
 
-- audit query views, control attestations, policy exception records
+- audit query views, immutable audit events, control attestations, and policy exception records
+- compliance monitoring views spanning other contexts
 
 Depends on:
 
@@ -146,6 +169,7 @@ Depends on:
 - contexts do not import each other's infrastructure internals
 - vendor/system payloads stay outside core domain contexts
 - cross-context coordination is explicit in use cases, events, or orchestration layers
+- `Person` remains the canonical human concept; `User`, `ReviewerProfile`, and `FacultyProfile` are context-specific projections
 
 ## Internal Layering Standard Per Context
 
