@@ -1,0 +1,323 @@
+{
+  "meta": {
+    "document": "Open Accreditation System entity model AI context",
+    "version": "1.0.0",
+    "source_docs": [
+      "README.md",
+      "docs/architecture/README.md",
+      "docs/architecture/01-system-context.md",
+      "docs/architecture/03-bounded-contexts.md",
+      "docs/architecture/04-integration-architecture.md",
+      "docs/architecture/05-security-architecture.md",
+      "docs/architecture/06-compliance-control-matrix.md",
+      "docs/architecture/07-data-classification.md",
+      "docs/product/vision-document.md"
+    ],
+    "notes": [
+      "Logical model only; not a finalized physical schema.",
+      "Keep core domain accreditor-agnostic.",
+      "Keep external system details in integration entities, not core business entities.",
+      "AI outputs are advisory and require human review."
+    ]
+  },
+  "boundedContexts": {
+    "identity-access": [
+      "User",
+      "Role",
+      "Permission",
+      "RolePermissionGrant",
+      "UserRoleAssignment",
+      "ServicePrincipal"
+    ],
+    "organization-registry": [
+      "Institution",
+      "OrganizationUnit",
+      "Committee"
+    ],
+    "accreditation-frameworks": [
+      "Accreditor",
+      "AccreditationFramework",
+      "FrameworkVersion",
+      "Standard",
+      "Criterion",
+      "AccreditationCycle"
+    ],
+    "evidence-management": [
+      "EvidenceItem",
+      "EvidenceArtifact",
+      "EvidenceLink",
+      "EvidenceCollection"
+    ],
+    "assessment-improvement": [
+      "Program",
+      "Course",
+      "LearningOutcome",
+      "AssessmentResult",
+      "Finding",
+      "ActionPlan",
+      "ActionPlanTask"
+    ],
+    "workflow-approvals": [
+      "WorkflowTemplate",
+      "Submission",
+      "WorkflowStep",
+      "WorkflowAssignment",
+      "WorkflowDecision"
+    ],
+    "narratives-reporting": [
+      "Narrative",
+      "NarrativeSection",
+      "ReportPackage",
+      "ExportJob"
+    ],
+    "faculty-intelligence": [
+      "FacultyProfile",
+      "FacultyQualification",
+      "FacultyActivity"
+    ],
+    "curriculum-mapping": [
+      "Competency",
+      "ProgramOutcomeMap",
+      "CourseOutcomeMap",
+      "StandardsAlignment"
+    ],
+    "compliance-audit": [
+      "AuditEvent",
+      "ControlAttestation",
+      "PolicyException"
+    ],
+    "supporting-services": [
+      "SourceSystem",
+      "IntegrationMapping",
+      "SyncJob",
+      "Notification",
+      "AIArtifact"
+    ]
+  },
+  "entityPriorities": {
+    "coreSystemOfRecord": [
+      "Institution",
+      "OrganizationUnit",
+      "User",
+      "Accreditor",
+      "AccreditationFramework",
+      "FrameworkVersion",
+      "Standard",
+      "Criterion",
+      "AccreditationCycle",
+      "EvidenceItem",
+      "EvidenceArtifact",
+      "Submission",
+      "WorkflowTemplate",
+      "WorkflowStep",
+      "WorkflowAssignment",
+      "WorkflowDecision",
+      "Narrative",
+      "NarrativeSection",
+      "ReportPackage",
+      "AssessmentResult",
+      "Finding",
+      "ActionPlan",
+      "AuditEvent"
+    ],
+    "joinEntities": [
+      "RolePermissionGrant",
+      "UserRoleAssignment",
+      "EvidenceLink",
+      "ProgramOutcomeMap",
+      "CourseOutcomeMap",
+      "StandardsAlignment"
+    ],
+    "supportingGovernance": [
+      "Committee",
+      "EvidenceCollection",
+      "ExportJob",
+      "ControlAttestation",
+      "PolicyException",
+      "Notification",
+      "AIArtifact"
+    ],
+    "integrationBoundary": [
+      "SourceSystem",
+      "IntegrationMapping",
+      "SyncJob"
+    ]
+  },
+  "relationships": [
+    {
+      "from": "Institution",
+      "to": "OrganizationUnit",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "Institution",
+      "to": "User",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "Role",
+      "to": "RolePermissionGrant",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "Permission",
+      "to": "RolePermissionGrant",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "Institution",
+      "to": "Program",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "Institution",
+      "to": "AccreditationCycle",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "Institution",
+      "to": "SourceSystem",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "Accreditor",
+      "to": "AccreditationFramework",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "AccreditationFramework",
+      "to": "FrameworkVersion",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "FrameworkVersion",
+      "to": "Standard",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "Standard",
+      "to": "Criterion",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "FrameworkVersion",
+      "to": "AccreditationCycle",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "AccreditationCycle",
+      "to": "EvidenceItem",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "EvidenceItem",
+      "to": "EvidenceArtifact",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "EvidenceItem",
+      "to": "EvidenceLink",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "Program",
+      "to": "Course",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "Program",
+      "to": "LearningOutcome",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "AccreditationCycle",
+      "to": "AssessmentResult",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "AssessmentResult",
+      "to": "Finding",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "Finding",
+      "to": "ActionPlan",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "ActionPlan",
+      "to": "ActionPlanTask",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "WorkflowTemplate",
+      "to": "WorkflowStep",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "WorkflowTemplate",
+      "to": "Submission",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "Submission",
+      "to": "WorkflowAssignment",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "Submission",
+      "to": "WorkflowDecision",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "AccreditationCycle",
+      "to": "Narrative",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "Narrative",
+      "to": "NarrativeSection",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "AccreditationCycle",
+      "to": "ReportPackage",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "ReportPackage",
+      "to": "ExportJob",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "FacultyProfile",
+      "to": "FacultyQualification",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "FacultyProfile",
+      "to": "FacultyActivity",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "SourceSystem",
+      "to": "IntegrationMapping",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "SourceSystem",
+      "to": "SyncJob",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "Submission",
+      "to": "AuditEvent",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "WorkflowAssignment",
+      "to": "Notification",
+      "cardinality": "1:N"
+    }
+  ]
+}
