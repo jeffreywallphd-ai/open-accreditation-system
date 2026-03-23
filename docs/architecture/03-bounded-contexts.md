@@ -1,8 +1,30 @@
 # 03 Bounded Contexts
 
+This document defines the target bounded contexts for the core platform, how they map to the repository, and the aggregate ownership rules that future implementation should preserve. Use it with the [architecture overview](./README.md#architecture-reference), the [integration architecture](./04-integration-architecture.md#04-integration-architecture), and the [entity model reference](./data-model/README.md#entity-model-reference).
+
+## Table of contents
+
+- [Purpose](#purpose)
+- [Core context map](#core-context-map)
+- [Ownership matrix](#ownership-matrix)
+  - [`identity-access`](#identity-access)
+  - [`organization-registry`](#organization-registry)
+  - [`accreditation-frameworks`](#accreditation-frameworks)
+  - [`evidence-management`](#evidence-management)
+  - [`assessment-improvement`](#assessment-improvement)
+  - [`workflow-approvals`](#workflow-approvals)
+  - [`narratives-reporting`](#narratives-reporting)
+  - [`faculty-intelligence`](#faculty-intelligence)
+  - [`curriculum-mapping`](#curriculum-mapping)
+  - [`compliance-audit`](#compliance-audit)
+  - [`shared`](#shared)
+- [Context interaction rules](#context-interaction-rules)
+- [Internal layering standard per context](#internal-layering-standard-per-context)
+- [Fit guidance for new work](#fit-guidance-for-new-work)
+
 ## Purpose
 
-This document defines the target bounded contexts for the core platform and how they map to the repository. It is the reference for deciding where new domain behavior belongs.
+This is the reference for deciding where new domain behavior belongs. It makes aggregate ownership explicit so data-model decisions in [the entity model reference](./data-model/README.md#bounded-context-entity-baseline) do not drift during implementation or AI-assisted code generation.
 
 ## Core Context Map
 
@@ -26,150 +48,323 @@ Defined contexts:
 
 ### `identity-access`
 
-Owns:
+**Owns**
 
 - authenticated platform identities (`User`) and non-human workload identities (`ServicePrincipal`)
 - roles, permissions, and scoped role assignments
 - access attributes used for policy evaluation
 
-Depends on:
+**Depends on**
 
 - canonical `Person` and institutional scope references from `organization-registry`
 - cycle/review-team scope references from `accreditation-frameworks`
 - external identity providers via infrastructure adapters
 
+**Aggregate model**
+
+- Aggregate roots: `User`, `Role`, `ServicePrincipal`
+- Owned children:
+  - `Role` owns `RolePermissionGrant` records
+  - `User` owns `UserRoleAssignment` records
+- External referencing rules:
+  - `RolePermissionGrant` and `UserRoleAssignment` may be referenced by audit/event records but should not be treated as independent write targets from other contexts
+- Mutability rules:
+  - `User` is mutable in place for current account status and access attributes
+  - `UserRoleAssignment` is supersedable/effective-dated; do not rewrite past scope periods
+  - `RolePermissionGrant` is mutable by governed administration but changes must be audit logged
+  - `ServicePrincipal` is mutable in place for credential rotation metadata, never for impersonating humans
+
 ### `organization-registry`
 
-Owns:
+**Owns**
 
 - tenant institutions and canonical people (`Person`)
 - institutional hierarchy (`OrganizationUnit`) and governance bodies (`Committee`)
 - stable organization/person references used by every other context
 
-Depends on:
+**Depends on**
 
 - integration-fed canonical person/organization data from mapping boundaries
 
+**Aggregate model**
+
+- Aggregate roots: `Institution`, `Person`, `OrganizationUnit`, `Committee`
+- Owned children: none in this phase beyond hierarchy self-references and aliases managed internally
+- External referencing rules:
+  - all four roots may be referenced externally by stable IDs
+  - hierarchy links are not independent aggregates and are managed only through `OrganizationUnit`
+- Mutability rules:
+  - `Institution`, `Person`, `OrganizationUnit`, and `Committee` are mutable in place for current state
+  - important identity, status, and hierarchy changes should remain audit visible
+
+**Aggregate notes**
+
+- `Person` is the canonical human entity. Other contexts may project it into `User`, `ReviewerProfile`, or `FacultyProfile`, but must not redefine the canonical person record.
+- Committee roster governance is anticipated but deferred; see the deferred entity notes in the [entity model reference](./data-model/README.md#deferred-later-phase-entities).
+
 ### `accreditation-frameworks`
 
-Owns:
+**Owns**
 
 - accreditors, frameworks, framework versions, standards, criteria, and `CriterionElement`
 - accreditation engagements: `AccreditationCycle`, `AccreditationScope`, `CycleMilestone`, `ReviewEvent`, and `DecisionRecord`
 - reviewer operations: `ReviewerProfile`, `ReviewTeam`, and `ReviewTeamMembership`
 - framework-defined `EvidenceRequirement` metadata and extension points
 
-Depends on:
+**Depends on**
 
 - canonical program and organization references from `curriculum-mapping` and `organization-registry`
 - rule-pack definitions and mapping metadata
 
+**Aggregate model**
+
+- Aggregate roots: `Accreditor`, `AccreditationFramework`, `FrameworkVersion`, `AccreditationCycle`, `ReviewTeam`, `ReviewerProfile`
+- Owned children:
+  - `FrameworkVersion` owns `Standard`, `Criterion`, `CriterionElement`, and `EvidenceRequirement`
+  - `AccreditationCycle` owns `AccreditationScope`, `CycleMilestone`, `ReviewEvent`, and cycle-level `DecisionRecord`
+  - `AccreditationScope` owns `AccreditationScopeProgram` and `AccreditationScopeOrganizationUnit`
+  - `ReviewTeam` owns `ReviewTeamMembership`
+  - `ReviewEvent` may own event-scoped `DecisionRecord` entries
+- External referencing rules:
+  - `Standard`, `Criterion`, `CriterionElement`, `EvidenceRequirement`, `AccreditationScope`, `CycleMilestone`, `ReviewEvent`, and `DecisionRecord` may be referenced externally by ID for alignment, evidence, workflow, and reporting
+  - only the owning root context may mutate them
+- Mutability rules:
+  - framework structure under `FrameworkVersion` is supersedable/versioned, not overwritten in place once published for active use
+  - `AccreditationCycle` is mutable in place for current operational state
+  - `CycleMilestone`, `ReviewEvent`, and `ReviewTeamMembership` are effective-dated/supersedable with audit history
+  - `DecisionRecord` is append-only after issuance except for explicit superseding or correction links
+
+**Aggregate notes**
+
+- `ReviewTeamMembership` is sufficient in v1 for team roster, responsibility scope, and primary reviewer-role semantics. Finer-grained event participation or task assignment is deferred to `ReviewEventParticipant` and `ReviewerAssignment` if needed later.
+- `ReviewEvent` references a participating `ReviewTeam`, but the team remains the authority for roster membership; event-specific participation beyond the team roster is a later-phase extension.
+
 ### `evidence-management`
 
-Owns:
+**Owns**
 
 - governed evidence metadata, artifacts, provenance, requests, reviews, and retention policies
 - `EvidenceReference` citation/linking rules into other bounded contexts
 - references to artifacts in `storage/evidence` and `storage/quarantined`
 
-Depends on:
+**Depends on**
 
 - object storage adapters
 - integration import provenance
 - allowed target aggregate contracts from other bounded contexts
 
+**Aggregate model**
+
+- Aggregate roots: `EvidenceItem`, `EvidenceCollection`, `EvidenceRequest`, `EvidenceRetentionPolicy`
+- Owned children:
+  - `EvidenceItem` owns `EvidenceArtifact`, `EvidenceReference`, and `EvidenceReview`
+- External referencing rules:
+  - `EvidenceItem` and `EvidenceCollection` may be referenced across contexts
+  - `EvidenceReference` and `EvidenceReview` may be read externally for traceability but are not independent write targets outside this context
+- Mutability rules:
+  - `EvidenceItem` is mutable in place for current metadata and lifecycle state
+  - `EvidenceArtifact` is append-only per stored artifact/version
+  - `EvidenceReference` is append-only/supersedable, never silently rewritten
+  - `EvidenceReview` is append-only for completed review actions
+  - `EvidenceRequest` is mutable in place for open/fulfilled/cancelled state, with immutable status-change history captured by events
+  - `EvidenceRetentionPolicy` is supersedable/versioned
+
 ### `assessment-improvement`
 
-Owns:
+**Owns**
 
 - `AssessmentPlan`, `AssessmentMeasure`, `AssessmentInstrument`, `BenchmarkTarget`, and `AssessmentResult`
 - findings, action plans, action-plan tasks, and `ImprovementClosureReview`
 - continuous-improvement rules that trace outcomes back to measures and targets
 
-Depends on:
+**Depends on**
 
 - curriculum mappings and canonical academic structures
 - evidence references and accreditation alignment targets
 
+**Aggregate model**
+
+- Aggregate roots: `AssessmentPlan`, `AssessmentInstrument`, `AssessmentResult`, `Finding`, `ActionPlan`
+- Owned children:
+  - `AssessmentPlan` owns `AssessmentMeasure` and plan-scoped `BenchmarkTarget`
+  - `ActionPlan` owns `ActionPlanTask` and `ImprovementClosureReview`
+- External referencing rules:
+  - `AssessmentPlan`, `AssessmentMeasure`, `BenchmarkTarget`, `AssessmentResult`, `Finding`, and `ActionPlan` may be referenced externally by ID
+  - `ActionPlanTask` and `ImprovementClosureReview` are read externally for traceability, but written only via `ActionPlan`
+- Mutability rules:
+  - `AssessmentPlan`, `AssessmentMeasure`, and `BenchmarkTarget` are supersedable/version-aware
+  - `AssessmentInstrument` is mutable in place for working drafts, versioned when reused materially across governed periods
+  - `AssessmentResult` and `Finding` are append-only after finalization, with correction via superseding records
+  - `ImprovementClosureReview` is append-only
+
+**Aggregate notes**
+
+- `AssessmentMeasure` is not a top-level ownership root in the write model even if it is frequently queried independently. It remains owned by `AssessmentPlan` so scope and outcome alignment cannot drift.
+
 ### `workflow-approvals`
 
-Owns:
+**Owns**
 
 - workflow templates, runtime submissions, assignments, and decisions
 - workflow comments, delegations, escalation events, and immutable submission snapshots/packages
 - approval routing and review auditability
 
-Depends on:
+**Depends on**
 
 - identity and organization scoping
 - evidence, reporting, assessment, and accreditation-cycle targets
 
+**Aggregate model**
+
+- Aggregate roots: `WorkflowTemplate`, `Submission`
+- Owned children:
+  - `WorkflowTemplate` owns `WorkflowStep`
+  - `Submission` owns `WorkflowAssignment`, `WorkflowDecision`, `WorkflowComment`, `WorkflowDelegation`, `WorkflowEscalationEvent`, and `SubmissionSnapshot`
+  - `SubmissionSnapshot` owns `SubmissionPackageItem`
+- External referencing rules:
+  - `Submission` and `SubmissionSnapshot` may be referenced externally by ID
+  - child records may be cited for auditability but are not independent write targets
+- Mutability rules:
+  - `WorkflowTemplate` and `WorkflowStep` are mutable draft definitions, versioned when published for runtime use
+  - `WorkflowAssignment` is append-only for reassignment history
+  - `WorkflowDecision`, `WorkflowComment`, `WorkflowDelegation`, and `WorkflowEscalationEvent` are append-only facts
+  - `SubmissionSnapshot` and `SubmissionPackageItem` are immutable after creation
+
 ### `narratives-reporting`
 
-Owns:
+**Owns**
 
 - narrative sections, report assembly state, export packages, and rendering jobs
 - section-level alignment to standards, criteria, or criterion elements
 
-Depends on:
+**Depends on**
 
 - approved evidence and workflow package state
 - optional AI draft suggestions (advisory only)
 
+**Aggregate model**
+
+- Aggregate roots: `Narrative`, `ReportPackage`, `ExportJob`
+- Owned children:
+  - `Narrative` owns `NarrativeSection`
+- External referencing rules:
+  - `Narrative` and `NarrativeSection` may be targeted by evidence references and workflow packages
+  - `NarrativeSection` is externally referencable by stable ID but remains owned by `Narrative`
+- Mutability rules:
+  - `Narrative` is mutable in place for current authoring state
+  - `NarrativeSection` is mutable while drafting and supersedable/version-captured once submitted or snapshot-bound
+  - `ReportPackage` is mutable until finalized
+  - `ExportJob` is append-only per execution attempt
+
 ### `faculty-intelligence`
 
-Owns:
+**Owns**
 
 - accreditation-oriented faculty profiles and activities
 - faculty appointments, deployments, qualification basis, qualification status, and qualification reviews
 - faculty analytics surfaces used for accreditation sufficiency/qualification analysis
 
-Depends on:
+**Depends on**
 
 - canonical faculty/person/activity feeds from the integration boundary
 - curriculum, evidence, and framework references
 
+**Aggregate model**
+
+- Aggregate roots: `FacultyProfile`, `FacultyQualification`
+- Owned children:
+  - `FacultyProfile` owns `FacultyAppointment`, `FacultyDeployment`, and `FacultyActivity`
+  - `FacultyQualification` owns `QualificationBasis` and `QualificationReview`
+- External referencing rules:
+  - `FacultyProfile`, `FacultyQualification`, `FacultyDeployment`, and `QualificationBasis` may be referenced externally for evidence, workflow, and analytics
+  - child records are still written only via their owning aggregate
+- Mutability rules:
+  - `FacultyProfile` is mutable in place for current projection state
+  - `FacultyAppointment` and `FacultyDeployment` are effective-dated/supersedable
+  - `FacultyActivity` is append-only by activity occurrence
+  - `FacultyQualification` is supersedable
+  - `QualificationBasis` and `QualificationReview` are append-only
+
 ### `curriculum-mapping`
 
-Owns:
+**Owns**
 
 - canonical academic structure: `Program`, `Course`, `AcademicTerm`, `CourseSection`, `LearningOutcome`, and `Competency`
 - program/course/outcome mappings and standards alignments
 - mapping review status and traceability
 
-Depends on:
+**Depends on**
 
 - canonical course/program/person data
 - accreditor-framework mappings
 
+**Aggregate model**
+
+- Aggregate roots: `Program`, `Course`, `AcademicTerm`, `CourseSection`, `LearningOutcome`, `Competency`
+- Owned children:
+  - `Program` owns `ProgramOutcomeMap`
+  - `Course` owns `CourseOutcomeMap`
+  - `StandardsAlignment` is owned by the aligning aggregate that publishes it
+- External referencing rules:
+  - all roots may be referenced externally by stable ID
+  - mapping children may be referenced externally for traceability, but are not written outside this context
+- Mutability rules:
+  - `Program`, `Course`, `AcademicTerm`, `CourseSection`, `LearningOutcome`, and `Competency` are mutable in place for current canonical state
+  - outcome maps and alignments are supersedable/version-aware
+
+**Aggregate notes**
+
+- `CourseSection` is treated as a root because many other contexts need stable delivery-level references without traversing course internals.
+- `AcademicTerm` is also a root because it serves as a shared temporal scope for curriculum, assessment, and faculty deployment.
+
 ### `compliance-audit`
 
-Owns:
+**Owns**
 
 - audit query views, immutable audit events, control attestations, and policy exception records
 - compliance monitoring views spanning other contexts
 
-Depends on:
+**Depends on**
 
 - event and state signals from all contexts
 
+**Aggregate model**
+
+- Aggregate roots: `AuditEvent`, `ControlAttestation`, `PolicyException`
+- Owned children: none in this phase
+- External referencing rules:
+  - all roots may be referenced for governance and reporting
+- Mutability rules:
+  - `AuditEvent` is append-only
+  - `ControlAttestation` and `PolicyException` are append-only with superseding records for renewals or revisions
+
 ### `shared`
 
-Owns:
+**Owns**
 
 - stable cross-cutting primitives only (no business policy ownership)
 
-Depends on:
+**Depends on**
 
 - nothing that introduces domain leakage
+
+**Aggregate model**
+
+- Aggregate roots: none; shared is not a business domain
+- Owned children: none
+- External referencing rules:
+  - shared types may be imported only when they are generic primitives or transport-neutral helper constructs
+- Mutability rules:
+  - shared contracts should be low-volatility and versioned deliberately
 
 ## Context Interaction Rules
 
 - dependencies flow through application interfaces and published contracts
 - contexts do not import each other's infrastructure internals
-- vendor/system payloads stay outside core domain contexts
+- vendor/system payloads stay outside core domain contexts and follow the [integration architecture canonical-contract rules](./04-integration-architecture.md#canonical-contracts)
 - cross-context coordination is explicit in use cases, events, or orchestration layers
 - `Person` remains the canonical human concept; `User`, `ReviewerProfile`, and `FacultyProfile` are context-specific projections
+- aggregate children may be referenced externally by stable IDs for traceability, but ownership and mutation stay with the defining bounded context
 
 ## Internal Layering Standard Per Context
 
@@ -198,4 +393,4 @@ Put work in an existing context unless a new bounded context is justified by:
 - cohesive invariants
 - low coupling to current contexts
 
-Do not create contexts based only on ticket size or team convenience.
+Do not create contexts based only on ticket size or team convenience. When uncertain, anchor the decision to the aggregate ownership described here and the entity semantics in the [entity model reference](./data-model/README.md#modeling-decisions-and-tradeoffs).
