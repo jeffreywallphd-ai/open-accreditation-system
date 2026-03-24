@@ -77,6 +77,7 @@ Current Phase 3 completion details:
 - workflow submits an explicit readiness policy (`requiredReadinessLevel`, `requireAnyEvidenceForDecision`, currentness and collection-sufficiency flags)
 - evidence-management evaluates readiness using evidence-owned semantics only (completeness, active status, usability, supersession/currentness)
 - collection/set sufficiency is evaluated through evidence-owned set membership (`EvidenceItem.evidenceSetIds`) and workflow-owned set keys (`ReviewCycle.evidenceSetIds`), without embedding workflow state in evidence records
+- workflow-approvals transitions do not use permissive fallbacks; governed workflow decisions require the readiness contract evaluation result
 
 ## Data Flow Pattern
 

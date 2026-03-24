@@ -6,6 +6,11 @@ import { reviewCycleStatus, reviewWorkflowState } from '../domain/value-objects/
 
 export class WorkflowApprovalsService {
   constructor(deps) {
+    if (!deps?.evidenceReadiness || typeof deps.evidenceReadiness.evaluateWorkflowEvidenceReadiness !== 'function') {
+      throw new ValidationError(
+        'WorkflowApprovalsService requires evidenceReadiness with evaluateWorkflowEvidenceReadiness',
+      );
+    }
     this.cycles = deps.cycles;
     this.workflows = deps.workflows;
     this.institutions = deps.institutions;
@@ -164,7 +169,7 @@ export class WorkflowApprovalsService {
   }
 
   async #assertEvidenceReferencesBelongToWorkflowInstitution(workflow, cycle) {
-    if (!this.evidenceReadiness || workflow.evidenceItemIds.length === 0) {
+    if (workflow.evidenceItemIds.length === 0) {
       return;
     }
     const summary = await this.evidenceReadiness.evaluateWorkflowEvidenceReadiness({
@@ -198,38 +203,6 @@ export class WorkflowApprovalsService {
   }
 
   async #evaluateWorkflowEvidence(workflow, nextState) {
-    if (!this.evidenceReadiness) {
-      return {
-        requiredCount: workflow.evidenceItemIds.length,
-        foundCount: workflow.evidenceItemIds.length,
-        requiredUsableEvidenceCount: 0,
-        usableEvidenceItemCount: workflow.evidenceItemIds.length,
-        missingEvidenceItemIds: [],
-        outOfInstitutionScopeEvidenceItemIds: [],
-        incompleteEvidenceItemIds: [],
-        inactiveEvidenceItemIds: [],
-        unusableEvidenceItemIds: [],
-        nonCurrentEvidenceItemIds: [],
-        supersededEvidenceItemIds: [],
-        evidenceCollectionId: workflow.evidenceCollectionId ?? null,
-        collectionContextStatus: workflow.evidenceCollectionId ? 'not-evaluated' : 'not-applicable',
-        collectionUsableEvidenceCount: 0,
-        hasAnyEvidence: workflow.evidenceItemIds.length > 0,
-        anyEvidenceRequirementSatisfied: true,
-        collectionRequirementSatisfied: true,
-        referencedEvidenceRequirementSatisfied: true,
-        readinessPolicy: {
-          requiredReadinessLevel: 'usable',
-          requireAnyEvidenceForDecision: false,
-          requireCurrentReferencedEvidence: true,
-          minimumReferencedUsableEvidenceCount: workflow.evidenceItemIds.length,
-          requireCollectionScopedUsableEvidence: false,
-          minimumCollectionUsableEvidenceCount: 0,
-        },
-        isSufficient: true,
-      };
-    }
-
     const readinessPolicy = buildEvidenceReadinessPolicyForTransition(workflow.state, nextState, workflow);
     return this.evidenceReadiness.evaluateWorkflowEvidenceReadiness({
       institutionId: workflow.institutionId,

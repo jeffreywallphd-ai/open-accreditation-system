@@ -56,6 +56,17 @@ export async function runTests(): Promise<void> {
     evidenceManagement,
   });
 
+  assert.throws(
+    () =>
+      new WorkflowApprovalsService({
+        cycles,
+        workflows,
+        institutions,
+      } as any),
+    ValidationError,
+    'workflow application service should require evidence readiness contract',
+  );
+
   const service = new WorkflowApprovalsService({
     cycles,
     workflows,
@@ -262,6 +273,15 @@ export async function runTests(): Promise<void> {
     workflow.id,
     reviewWorkflowState.SUBMITTED,
     workflowActorRole.ADMIN,
+  );
+
+  const persistedSubmittedWorkflow = await workflows.getById(workflow.id);
+  assert.ok(persistedSubmittedWorkflow);
+  persistedSubmittedWorkflow!.transitionHistory[0].reason = 'tampered reason';
+  await assert.rejects(
+    () => workflows.save(persistedSubmittedWorkflow!),
+    ValidationError,
+    'workflow transition history should be append-only at repository boundary',
   );
 
   const cycleWorkflows = await getWorkflowStateForCycle.execute(cycle.id);

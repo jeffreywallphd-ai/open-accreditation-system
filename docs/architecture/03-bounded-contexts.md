@@ -285,6 +285,14 @@ Defined contexts:
 - Approval/submission readiness policies now evaluate: referenced evidence presence/usability/currentness, superseded evidence exclusion, and target-scoped collection sufficiency (for example report-section scoped readiness) without duplicating evidence lifecycle rules in workflow.
 - Governed decision transitions (`approved`, `submitted`) require a positive readiness evaluation and require evidence presence via referenced items and/or collection-scoped usable evidence.
 - `ReviewWorkflow` is unique per (`reviewCycleId`, `targetType`, `targetId`) so cycle-target state retrieval remains deterministic.
+- The `workflow-approvals` application layer exposes explicit use cases:
+  - `createReviewCycle`
+  - `startReviewCycle`
+  - `completeReviewCycle`
+  - `createWorkflowInstance`
+  - `transitionWorkflowState`
+  - `getWorkflowState` (cycle-wide and cycle-target variants)
+- The workflow application service requires the evidence-readiness contract and does not allow governed transitions (`approved`, `submitted`) to bypass evidence evaluation.
 
 ### `narratives-reporting`
 

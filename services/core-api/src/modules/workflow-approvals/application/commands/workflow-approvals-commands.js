@@ -48,3 +48,23 @@ export class TransitionReviewWorkflowStateCommand {
   }
 }
 
+export class CreateWorkflowInstanceCommand {
+  constructor(service) {
+    this.service = service;
+  }
+
+  async execute(input) {
+    return this.service.createWorkflowInstance(input);
+  }
+}
+
+export class TransitionWorkflowStateCommand {
+  constructor(service) {
+    this.service = service;
+  }
+
+  async execute(reviewWorkflowId, nextState, actorRole, options = {}) {
+    return this.service.transitionWorkflowState(reviewWorkflowId, nextState, actorRole, options);
+  }
+}
+
