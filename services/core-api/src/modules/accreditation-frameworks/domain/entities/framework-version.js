@@ -345,6 +345,7 @@ export class FrameworkVersion {
     }
 
     this.#assertStructuralIntegrity();
+    this.#assertPublicationReadiness();
 
     this.status = frameworkVersionStatus.PUBLISHED;
     this.publishedAt = publishedAt;
@@ -442,16 +443,22 @@ export class FrameworkVersion {
       }
     }
 
+    if (this.status === frameworkVersionStatus.PUBLISHED) {
+      this.#assertPublicationReadiness();
+    }
+  }
+
+  #assertPublicationReadiness() {
     for (const standard of this.standards) {
       const standardCriteria = this.criteria.filter((item) => item.standardId === standard.id);
-      if (this.status === frameworkVersionStatus.PUBLISHED && standardCriteria.length === 0) {
+      if (standardCriteria.length === 0) {
         throw new ValidationError(`Standard must include at least one Criterion before publication: ${standard.id}`);
       }
     }
 
     for (const criterion of this.criteria) {
       const criterionElements = this.criterionElements.filter((item) => item.criterionId === criterion.id);
-      if (this.status === frameworkVersionStatus.PUBLISHED && criterionElements.length === 0) {
+      if (criterionElements.length === 0) {
         throw new ValidationError(`Criterion must include at least one CriterionElement before publication: ${criterion.id}`);
       }
     }
