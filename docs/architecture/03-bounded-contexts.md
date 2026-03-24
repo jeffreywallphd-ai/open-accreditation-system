@@ -128,6 +128,7 @@ Defined contexts:
 - External referencing rules:
   - `Standard`, `Criterion`, `CriterionElement`, `EvidenceRequirement`, `AccreditationScope`, `CycleMilestone`, `ReviewEvent`, and `DecisionRecord` may be referenced externally by ID for alignment, evidence, workflow, and reporting
   - only the owning root context may mutate them
+  - program/organization scope IDs are validated through published `curriculum-mapping` and `organization-registry` application interfaces, never by direct cross-context persistence access
 - Mutability rules:
   - framework structure under `FrameworkVersion` is supersedable/versioned, not overwritten in place once published for active use
   - `AccreditationCycle` is mutable in place for current operational state

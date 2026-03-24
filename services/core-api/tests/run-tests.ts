@@ -1,9 +1,11 @@
 import { runTests as runDomainTests } from './unit/foundational-domain-invariants.test.js';
+import { runTests as runAccreditationFrameworkTests } from './unit/accreditation-frameworks-domain-slice.test.js';
 import { runTests as runPersistenceTests } from './integration/persistence-foundation.integration.test.js';
 import { runTests as runHttpTests } from './integration/http-foundation.integration.test.js';
 
 const suites: Array<[string, () => Promise<void>]> = [
   ['domain invariants', runDomainTests],
+  ['accreditation frameworks slice', runAccreditationFrameworkTests],
   ['persistence integration', runPersistenceTests],
   ['http integration', runHttpTests],
 ];
