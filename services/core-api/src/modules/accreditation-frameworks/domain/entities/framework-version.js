@@ -209,6 +209,8 @@ export class FrameworkVersion {
     );
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
+
+    this.#assertStructuralIntegrity();
   }
 
   static create(input) {
@@ -342,21 +344,7 @@ export class FrameworkVersion {
       throw new ValidationError('FrameworkVersion must include at least one Criterion before publication');
     }
 
-    assertArrayUnique(this.standards, (item) => item.code, 'Standard.code must be unique within a FrameworkVersion');
-
-    for (const standard of this.standards) {
-      const standardCriteria = this.criteria.filter((item) => item.standardId === standard.id);
-      if (standardCriteria.length === 0) {
-        throw new ValidationError(`Standard must include at least one Criterion before publication: ${standard.id}`);
-      }
-    }
-
-    for (const criterion of this.criteria) {
-      const criterionElements = this.criterionElements.filter((item) => item.criterionId === criterion.id);
-      if (criterionElements.length === 0) {
-        throw new ValidationError(`Criterion must include at least one CriterionElement before publication: ${criterion.id}`);
-      }
-    }
+    this.#assertStructuralIntegrity();
 
     this.status = frameworkVersionStatus.PUBLISHED;
     this.publishedAt = publishedAt;
@@ -376,6 +364,96 @@ export class FrameworkVersion {
   #assertStructureMutable() {
     if (this.status !== frameworkVersionStatus.DRAFT) {
       throw new ValidationError('FrameworkVersion structure is immutable unless status is draft');
+    }
+  }
+
+  #assertStructuralIntegrity() {
+    assertArrayUnique(this.standards, (item) => item.code, 'Standard.code must be unique within a FrameworkVersion');
+    assertArrayUnique(
+      this.criteria.map((item) => `${item.standardId}::${item.code}`),
+      (item) => item,
+      'Criterion.code must be unique within its parent Standard',
+    );
+    assertArrayUnique(
+      this.criterionElements.map((item) => `${item.criterionId}::${item.code}`),
+      (item) => item,
+      'CriterionElement.code must be unique within its parent Criterion',
+    );
+    assertArrayUnique(
+      this.evidenceRequirements,
+      (item) => item.requirementCode,
+      'EvidenceRequirement.requirementCode must be unique within a FrameworkVersion',
+    );
+
+    for (const standard of this.standards) {
+      if (standard.frameworkVersionId !== this.id) {
+        throw new ValidationError(`Standard.frameworkVersionId must match FrameworkVersion.id: ${standard.id}`);
+      }
+    }
+
+    for (const criterion of this.criteria) {
+      if (criterion.frameworkVersionId !== this.id) {
+        throw new ValidationError(`Criterion.frameworkVersionId must match FrameworkVersion.id: ${criterion.id}`);
+      }
+      if (!this.standards.some((item) => item.id === criterion.standardId)) {
+        throw new ValidationError(`Criterion.standardId not found in FrameworkVersion: ${criterion.standardId}`);
+      }
+    }
+
+    for (const criterionElement of this.criterionElements) {
+      if (criterionElement.frameworkVersionId !== this.id) {
+        throw new ValidationError(
+          `CriterionElement.frameworkVersionId must match FrameworkVersion.id: ${criterionElement.id}`,
+        );
+      }
+      if (!this.criteria.some((item) => item.id === criterionElement.criterionId)) {
+        throw new ValidationError(`CriterionElement.criterionId not found in FrameworkVersion: ${criterionElement.criterionId}`);
+      }
+    }
+
+    for (const evidenceRequirement of this.evidenceRequirements) {
+      if (evidenceRequirement.frameworkVersionId !== this.id) {
+        throw new ValidationError(
+          `EvidenceRequirement.frameworkVersionId must match FrameworkVersion.id: ${evidenceRequirement.id}`,
+        );
+      }
+
+      if (
+        evidenceRequirement.criterionId &&
+        !this.criteria.some((item) => item.id === evidenceRequirement.criterionId)
+      ) {
+        throw new ValidationError(
+          `EvidenceRequirement.criterionId not found in FrameworkVersion: ${evidenceRequirement.criterionId}`,
+        );
+      }
+
+      if (evidenceRequirement.criterionElementId) {
+        const element = this.criterionElements.find((item) => item.id === evidenceRequirement.criterionElementId);
+        if (!element) {
+          throw new ValidationError(
+            `EvidenceRequirement.criterionElementId not found in FrameworkVersion: ${evidenceRequirement.criterionElementId}`,
+          );
+        }
+        if (evidenceRequirement.criterionId && element.criterionId !== evidenceRequirement.criterionId) {
+          throw new ValidationError(
+            'EvidenceRequirement.criterionId must match CriterionElement.criterionId when both set',
+          );
+        }
+      }
+    }
+
+    for (const standard of this.standards) {
+      const standardCriteria = this.criteria.filter((item) => item.standardId === standard.id);
+      if (this.status === frameworkVersionStatus.PUBLISHED && standardCriteria.length === 0) {
+        throw new ValidationError(`Standard must include at least one Criterion before publication: ${standard.id}`);
+      }
+    }
+
+    for (const criterion of this.criteria) {
+      const criterionElements = this.criterionElements.filter((item) => item.criterionId === criterion.id);
+      if (this.status === frameworkVersionStatus.PUBLISHED && criterionElements.length === 0) {
+        throw new ValidationError(`Criterion must include at least one CriterionElement before publication: ${criterion.id}`);
+      }
     }
   }
 }

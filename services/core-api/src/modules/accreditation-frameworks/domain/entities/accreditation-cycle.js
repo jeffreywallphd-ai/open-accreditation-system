@@ -228,6 +228,8 @@ export class AccreditationCycle {
     );
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
+
+    this.#assertAggregateIntegrity();
   }
 
   static create(input) {
@@ -255,6 +257,7 @@ export class AccreditationCycle {
     }
     this.status = accreditationCycleStatus.ACTIVE;
     this.updatedAt = nowIso();
+    this.#assertAggregateIntegrity();
     return this;
   }
 
@@ -284,6 +287,7 @@ export class AccreditationCycle {
 
     this.scopes.push(scope);
     this.updatedAt = nowIso();
+    this.#assertAggregateIntegrity();
     return scope;
   }
 
@@ -303,6 +307,7 @@ export class AccreditationCycle {
 
     this.milestones.push(milestone);
     this.updatedAt = nowIso();
+    this.#assertAggregateIntegrity();
     return milestone;
   }
 
@@ -325,6 +330,7 @@ export class AccreditationCycle {
 
     this.reviewEvents.push(reviewEvent);
     this.updatedAt = nowIso();
+    this.#assertAggregateIntegrity();
     return reviewEvent;
   }
 
@@ -358,6 +364,69 @@ export class AccreditationCycle {
     this.decisionRecords.push(decision);
     this.status = accreditationCycleStatus.DECISION_ISSUED;
     this.updatedAt = nowIso();
+    this.#assertAggregateIntegrity();
     return decision;
+  }
+
+  #assertAggregateIntegrity() {
+    for (const scope of this.scopes) {
+      if (scope.accreditationCycleId !== this.id) {
+        throw new ValidationError(`AccreditationScope.accreditationCycleId must match AccreditationCycle.id: ${scope.id}`);
+      }
+      if (!isDateInRange(scope.effectiveStartDate, this.cycleStartDate, this.cycleEndDate)) {
+        throw new ValidationError('AccreditationScope.effectiveStartDate must be within AccreditationCycle dates');
+      }
+      if (!isDateInRange(scope.effectiveEndDate, this.cycleStartDate, this.cycleEndDate)) {
+        throw new ValidationError('AccreditationScope.effectiveEndDate must be within AccreditationCycle dates');
+      }
+    }
+
+    for (const milestone of this.milestones) {
+      if (milestone.accreditationCycleId !== this.id) {
+        throw new ValidationError(`CycleMilestone.accreditationCycleId must match AccreditationCycle.id: ${milestone.id}`);
+      }
+      if (!isDateInRange(milestone.dueDate, this.cycleStartDate, this.cycleEndDate)) {
+        throw new ValidationError('CycleMilestone.dueDate must be within AccreditationCycle dates');
+      }
+      if (milestone.scopeId && !this.scopes.some((item) => item.id === milestone.scopeId)) {
+        throw new ValidationError(`CycleMilestone.scopeId not found in AccreditationCycle: ${milestone.scopeId}`);
+      }
+    }
+
+    for (const reviewEvent of this.reviewEvents) {
+      if (reviewEvent.accreditationCycleId !== this.id) {
+        throw new ValidationError(`ReviewEvent.accreditationCycleId must match AccreditationCycle.id: ${reviewEvent.id}`);
+      }
+      if (!isDateInRange(reviewEvent.startDate, this.cycleStartDate, this.cycleEndDate)) {
+        throw new ValidationError('ReviewEvent.startDate must be within AccreditationCycle dates');
+      }
+      if (!isDateInRange(reviewEvent.endDate, this.cycleStartDate, this.cycleEndDate)) {
+        throw new ValidationError('ReviewEvent.endDate must be within AccreditationCycle dates');
+      }
+      if (reviewEvent.scopeId && !this.scopes.some((item) => item.id === reviewEvent.scopeId)) {
+        throw new ValidationError(`ReviewEvent.scopeId not found in AccreditationCycle: ${reviewEvent.scopeId}`);
+      }
+    }
+
+    const supersededIds = new Set();
+    for (const decision of this.decisionRecords) {
+      if (decision.accreditationCycleId !== this.id) {
+        throw new ValidationError(`DecisionRecord.accreditationCycleId must match AccreditationCycle.id: ${decision.id}`);
+      }
+      if (decision.reviewEventId && !this.reviewEvents.some((item) => item.id === decision.reviewEventId)) {
+        throw new ValidationError(`DecisionRecord.reviewEventId not found in AccreditationCycle: ${decision.reviewEventId}`);
+      }
+      if (decision.supersedesDecisionRecordId) {
+        if (!this.decisionRecords.some((item) => item.id === decision.supersedesDecisionRecordId)) {
+          throw new ValidationError(
+            `DecisionRecord.supersedesDecisionRecordId not found: ${decision.supersedesDecisionRecordId}`,
+          );
+        }
+        if (supersededIds.has(decision.supersedesDecisionRecordId)) {
+          throw new ValidationError('DecisionRecord already superseded and cannot be superseded twice');
+        }
+        supersededIds.add(decision.supersedesDecisionRecordId);
+      }
+    }
   }
 }

@@ -8,6 +8,12 @@ import {
   InMemoryScopeReferenceAdapter,
 } from '../../src/modules/accreditation-frameworks/infrastructure/persistence/in-memory-accreditation-frameworks-repositories.js';
 import { ValidationError } from '../../src/modules/shared/kernel/errors.js';
+import { FrameworkVersion } from '../../src/modules/accreditation-frameworks/domain/entities/framework-version.js';
+import { AccreditationCycle } from '../../src/modules/accreditation-frameworks/domain/entities/accreditation-cycle.js';
+import {
+  accreditationCycleStatus,
+  frameworkVersionStatus,
+} from '../../src/modules/accreditation-frameworks/domain/value-objects/accreditation-statuses.js';
 
 function createService() {
   return new AccreditationFrameworksService({
@@ -76,6 +82,28 @@ export async function runTests(): Promise<void> {
     statement: 'The institution aligns strategy with mission.',
   });
   const element = withElement.criterionElements[0];
+
+  const withSecondCriterion = await service.addCriterion(version.id, {
+    standardId: standard.id,
+    code: 'CR2',
+    title: 'Resource Strategy',
+    sequence: 2,
+  });
+  const secondCriterion = withSecondCriterion.criteria.find((item) => item.code === 'CR2');
+  if (!secondCriterion) {
+    throw new Error('expected second criterion');
+  }
+
+  const withSecondElement = await service.addCriterionElement(version.id, {
+    criterionId: secondCriterion.id,
+    code: 'CE2',
+    title: 'Resource Alignment',
+    statement: 'Resources align with strategy.',
+  });
+  const secondElement = withSecondElement.criterionElements.find((item) => item.code === 'CE2');
+  if (!secondElement) {
+    throw new Error('expected second criterion element');
+  }
 
   await assert.rejects(
     () =>
@@ -224,4 +252,96 @@ export async function runTests(): Promise<void> {
       }),
     ValidationError,
   );
+
+  await assert.rejects(
+    () =>
+      service.addEvidenceRequirement(version.id, {
+        requirementCode: 'ER-CROSS',
+        title: 'Cross Parent Target',
+        requirementType: 'document',
+        criterionId: criterion.id,
+        criterionElementId: secondElement.id,
+      }),
+    ValidationError,
+  );
+
+  await assert.rejects(
+    () =>
+      new FrameworkVersion({
+        id: 'fwv_integrity',
+        frameworkId: 'fw_a',
+        versionTag: '2026.2',
+        status: frameworkVersionStatus.DRAFT,
+        standards: [
+          {
+            id: 'std_integrity',
+            frameworkVersionId: 'fwv_integrity',
+            code: 'S1',
+            title: 'Standard 1',
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          },
+        ],
+        criteria: [
+          {
+            id: 'crit_cross',
+            frameworkVersionId: 'fwv_integrity',
+            standardId: 'std_other',
+            code: 'C1',
+            title: 'Criterion 1',
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          },
+        ],
+        criterionElements: [],
+        evidenceRequirements: [],
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      }),
+    ValidationError,
+  );
+
+  await assert.rejects(
+    () =>
+      new AccreditationCycle({
+        id: 'cycle_integrity',
+        frameworkVersionId: version.id,
+        institutionId: 'inst_1',
+        name: 'Invalid Rehydrated Cycle',
+        cycleStartDate: '2026-01-01',
+        cycleEndDate: '2026-12-31',
+        status: accreditationCycleStatus.ACTIVE,
+        scopes: [
+          {
+            id: 'scope_cross',
+            accreditationCycleId: 'cycle_other',
+            name: 'Cross Cycle Scope',
+            scopeType: 'program-cluster',
+            status: 'draft',
+            programIds: ['prog_1'],
+            organizationUnitIds: [],
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          },
+        ],
+        milestones: [],
+        reviewEvents: [],
+        decisionRecords: [],
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      }),
+    ValidationError,
+  );
+
+  const mutableVersion = await service.createFrameworkVersion({
+    frameworkId: framework.id,
+    versionTag: '2026.3',
+  });
+  const readOne = await service.getFrameworkVersionById(mutableVersion.id);
+  if (!readOne) {
+    throw new Error('expected framework version');
+  }
+  readOne.versionTag = 'tampered';
+  const readTwo = await service.getFrameworkVersionById(mutableVersion.id);
+  assert.equal(readTwo?.versionTag, '2026.3');
 }

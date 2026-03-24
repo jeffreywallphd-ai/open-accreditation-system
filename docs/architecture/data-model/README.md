@@ -938,6 +938,7 @@ This section is the implementation contract for the first domain slice under `se
 - `CriterionElement` must reference a `Criterion` in the same framework version.
 - `EvidenceRequirement` must target a valid `criterionId` or `criterionElementId` in the same framework version.
 - If `EvidenceRequirement` carries both `criterionId` and `criterionElementId`, the element must belong to the same criterion.
+- Aggregate rehydration from persistence must enforce the same parent/child ownership checks as command-time mutations.
 
 ### Cycle/scope/milestone/review/decision invariants
 
@@ -947,6 +948,7 @@ This section is the implementation contract for the first domain slice under `se
 - `CycleMilestone.scopeId` and `ReviewEvent.scopeId` must reference existing scope records in the same cycle.
 - `DecisionRecord` issuance is not allowed while the cycle is in `draft`.
 - `DecisionRecord` corrections/supersessions must reference an existing prior decision in the same cycle, and the same decision cannot be superseded twice.
+- Aggregate rehydration from persistence must reject cross-cycle child records and invalid scope/event/decision references.
 
 ### Cross-context reference rules for this slice
 

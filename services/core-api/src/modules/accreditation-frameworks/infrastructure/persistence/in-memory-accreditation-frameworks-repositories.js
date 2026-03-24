@@ -6,6 +6,10 @@ import {
 } from '../../domain/repositories/repositories.js';
 import { ScopeReferencePort } from '../../application/scope-reference-port.js';
 import { ValidationError } from '../../../shared/kernel/errors.js';
+import { Accreditor } from '../../domain/entities/accreditor.js';
+import { AccreditationFramework } from '../../domain/entities/accreditation-framework.js';
+import { FrameworkVersion } from '../../domain/entities/framework-version.js';
+import { AccreditationCycle } from '../../domain/entities/accreditation-cycle.js';
 
 function matchesFilter(item, filter) {
   return Object.entries(filter).every(([key, value]) => {
@@ -23,16 +27,20 @@ export class InMemoryAccreditorRepository extends AccreditorRepository {
   }
 
   async save(accreditor) {
-    this.items.set(accreditor.id, accreditor);
-    return accreditor;
+    const persisted = structuredClone(accreditor);
+    this.items.set(accreditor.id, persisted);
+    return new Accreditor(structuredClone(persisted));
   }
 
   async getById(id) {
-    return this.items.get(id) ?? null;
+    const item = this.items.get(id);
+    return item ? new Accreditor(structuredClone(item)) : null;
   }
 
   async findByFilter(filter = {}) {
-    return [...this.items.values()].filter((item) => matchesFilter(item, filter));
+    return [...this.items.values()]
+      .filter((item) => matchesFilter(item, filter))
+      .map((item) => new Accreditor(structuredClone(item)));
   }
 }
 
@@ -43,16 +51,20 @@ export class InMemoryAccreditationFrameworkRepository extends AccreditationFrame
   }
 
   async save(framework) {
-    this.items.set(framework.id, framework);
-    return framework;
+    const persisted = structuredClone(framework);
+    this.items.set(framework.id, persisted);
+    return new AccreditationFramework(structuredClone(persisted));
   }
 
   async getById(id) {
-    return this.items.get(id) ?? null;
+    const item = this.items.get(id);
+    return item ? new AccreditationFramework(structuredClone(item)) : null;
   }
 
   async findByFilter(filter = {}) {
-    return [...this.items.values()].filter((item) => matchesFilter(item, filter));
+    return [...this.items.values()]
+      .filter((item) => matchesFilter(item, filter))
+      .map((item) => new AccreditationFramework(structuredClone(item)));
   }
 }
 
@@ -63,22 +75,27 @@ export class InMemoryFrameworkVersionRepository extends FrameworkVersionReposito
   }
 
   async save(frameworkVersion) {
-    this.items.set(frameworkVersion.id, frameworkVersion);
-    return frameworkVersion;
+    const persisted = structuredClone(frameworkVersion);
+    this.items.set(frameworkVersion.id, persisted);
+    return new FrameworkVersion(structuredClone(persisted));
   }
 
   async getById(id) {
-    return this.items.get(id) ?? null;
+    const item = this.items.get(id);
+    return item ? new FrameworkVersion(structuredClone(item)) : null;
   }
 
   async getByFrameworkIdAndVersionTag(frameworkId, versionTag) {
-    return (
-      [...this.items.values()].find((item) => item.frameworkId === frameworkId && item.versionTag === versionTag) ?? null
-    );
+    const item =
+      [...this.items.values()].find((stored) => stored.frameworkId === frameworkId && stored.versionTag === versionTag) ??
+      null;
+    return item ? new FrameworkVersion(structuredClone(item)) : null;
   }
 
   async findByFilter(filter = {}) {
-    return [...this.items.values()].filter((item) => matchesFilter(item, filter));
+    return [...this.items.values()]
+      .filter((item) => matchesFilter(item, filter))
+      .map((item) => new FrameworkVersion(structuredClone(item)));
   }
 }
 
@@ -89,16 +106,20 @@ export class InMemoryAccreditationCycleRepository extends AccreditationCycleRepo
   }
 
   async save(cycle) {
-    this.items.set(cycle.id, cycle);
-    return cycle;
+    const persisted = structuredClone(cycle);
+    this.items.set(cycle.id, persisted);
+    return new AccreditationCycle(structuredClone(persisted));
   }
 
   async getById(id) {
-    return this.items.get(id) ?? null;
+    const item = this.items.get(id);
+    return item ? new AccreditationCycle(structuredClone(item)) : null;
   }
 
   async findByFilter(filter = {}) {
-    return [...this.items.values()].filter((item) => matchesFilter(item, filter));
+    return [...this.items.values()]
+      .filter((item) => matchesFilter(item, filter))
+      .map((item) => new AccreditationCycle(structuredClone(item)));
   }
 }
 
