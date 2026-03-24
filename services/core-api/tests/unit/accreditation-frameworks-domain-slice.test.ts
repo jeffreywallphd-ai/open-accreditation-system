@@ -11,7 +11,7 @@ import {
 } from '../../src/modules/accreditation-frameworks/infrastructure/persistence/in-memory-accreditation-frameworks-repositories.js';
 import { ValidationError } from '../../src/modules/shared/kernel/errors.js';
 import { FrameworkVersion } from '../../src/modules/accreditation-frameworks/domain/entities/framework-version.js';
-import { AccreditationCycle } from '../../src/modules/accreditation-frameworks/domain/entities/accreditation-cycle.js';
+import { AccreditationCycle, AccreditationScope } from '../../src/modules/accreditation-frameworks/domain/entities/accreditation-cycle.js';
 import {
   accreditationCycleStatus,
   frameworkVersionStatus,
@@ -237,10 +237,9 @@ export async function runTests(): Promise<void> {
 
   const firstDecision = withDecision.decisionRecords[0];
 
-  const withSupersedingDecision = await service.issueDecisionRecord(cycle.id, {
+  const withSupersedingDecision = await service.supersedeDecisionRecord(cycle.id, firstDecision.id, {
     decisionType: 'commission-correction',
     outcome: 'accredited-with-conditions',
-    supersedesDecisionRecordId: firstDecision.id,
     issuedAt: '2026-10-10T00:00:00.000Z',
   });
 
@@ -257,6 +256,29 @@ export async function runTests(): Promise<void> {
         decisionType: 'invalid-double-supersede',
         outcome: 'denied',
         supersedesDecisionRecordId: firstDecision.id,
+      }),
+    ValidationError,
+  );
+
+  await assert.rejects(
+    () =>
+      new AccreditationScope({
+        id: 'scope_invalid',
+        accreditationCycleId: cycle.id,
+        name: 'Invalid Scope Child',
+        scopeType: 'program-cluster',
+        status: 'draft',
+        scopePrograms: [
+          {
+            id: 'scope_prog_invalid',
+            accreditationScopeId: 'scope_other',
+            programId: 'prog_1',
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          },
+        ],
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
       }),
     ValidationError,
   );

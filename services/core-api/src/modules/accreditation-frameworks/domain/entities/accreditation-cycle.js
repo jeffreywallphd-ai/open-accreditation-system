@@ -31,6 +31,56 @@ function ensureUnique(values, message) {
   }
 }
 
+export class AccreditationScopeProgram {
+  constructor(props) {
+    assertRequired(props.id, 'AccreditationScopeProgram.id');
+    assertRequired(props.accreditationScopeId, 'AccreditationScopeProgram.accreditationScopeId');
+    assertRequired(props.programId, 'AccreditationScopeProgram.programId');
+
+    this.id = props.id;
+    this.accreditationScopeId = props.accreditationScopeId;
+    this.programId = props.programId;
+    this.createdAt = props.createdAt;
+    this.updatedAt = props.updatedAt;
+  }
+
+  static create(input) {
+    const now = nowIso();
+    return new AccreditationScopeProgram({
+      id: input.id ?? createId('scope_prog'),
+      accreditationScopeId: input.accreditationScopeId,
+      programId: input.programId,
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+}
+
+export class AccreditationScopeOrganizationUnit {
+  constructor(props) {
+    assertRequired(props.id, 'AccreditationScopeOrganizationUnit.id');
+    assertRequired(props.accreditationScopeId, 'AccreditationScopeOrganizationUnit.accreditationScopeId');
+    assertRequired(props.organizationUnitId, 'AccreditationScopeOrganizationUnit.organizationUnitId');
+
+    this.id = props.id;
+    this.accreditationScopeId = props.accreditationScopeId;
+    this.organizationUnitId = props.organizationUnitId;
+    this.createdAt = props.createdAt;
+    this.updatedAt = props.updatedAt;
+  }
+
+  static create(input) {
+    const now = nowIso();
+    return new AccreditationScopeOrganizationUnit({
+      id: input.id ?? createId('scope_org'),
+      accreditationScopeId: input.accreditationScopeId,
+      organizationUnitId: input.organizationUnitId,
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+}
+
 export class AccreditationScope {
   constructor(props) {
     assertRequired(props.id, 'AccreditationScope.id');
@@ -46,17 +96,41 @@ export class AccreditationScope {
     this.scopeType = props.scopeType;
     this.description = props.description ?? null;
     this.status = props.status;
-    this.programIds = props.programIds ?? [];
-    this.organizationUnitIds = props.organizationUnitIds ?? [];
+    this.scopePrograms = (props.scopePrograms ?? []).map((item) =>
+      item instanceof AccreditationScopeProgram ? item : new AccreditationScopeProgram(item),
+    );
+    this.scopeOrganizationUnits = (props.scopeOrganizationUnits ?? []).map((item) =>
+      item instanceof AccreditationScopeOrganizationUnit ? item : new AccreditationScopeOrganizationUnit(item),
+    );
     this.effectiveStartDate = props.effectiveStartDate ?? null;
     this.effectiveEndDate = props.effectiveEndDate ?? null;
     this.scopeOrder = props.scopeOrder ?? 0;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
+
+    if (this.scopePrograms.length === 0 && this.scopeOrganizationUnits.length === 0) {
+      const legacyProgramIds = [...(props.programIds ?? [])];
+      const legacyOrganizationUnitIds = [...(props.organizationUnitIds ?? [])];
+      this.scopePrograms = legacyProgramIds.map((programId) =>
+        AccreditationScopeProgram.create({
+          accreditationScopeId: this.id,
+          programId,
+        }),
+      );
+      this.scopeOrganizationUnits = legacyOrganizationUnitIds.map((organizationUnitId) =>
+        AccreditationScopeOrganizationUnit.create({
+          accreditationScopeId: this.id,
+          organizationUnitId,
+        }),
+      );
+    }
+
+    this.#assertIntegrity();
   }
 
   static create(input) {
     const now = nowIso();
+    const id = input.id ?? createId('scope');
     const programIds = [...(input.programIds ?? [])];
     const organizationUnitIds = [...(input.organizationUnitIds ?? [])];
     if (programIds.length === 0 && organizationUnitIds.length === 0) {
@@ -66,20 +140,66 @@ export class AccreditationScope {
     ensureUnique(organizationUnitIds, 'AccreditationScope organizationUnitIds must be unique');
 
     return new AccreditationScope({
-      id: input.id ?? createId('scope'),
+      id,
       accreditationCycleId: input.accreditationCycleId,
       name: input.name,
       scopeType: input.scopeType,
       description: input.description,
       status: input.status ?? accreditationScopeStatus.DRAFT,
-      programIds,
-      organizationUnitIds,
+      scopePrograms: programIds.map((programId) =>
+        AccreditationScopeProgram.create({
+          accreditationScopeId: id,
+          programId,
+        }),
+      ),
+      scopeOrganizationUnits: organizationUnitIds.map((organizationUnitId) =>
+        AccreditationScopeOrganizationUnit.create({
+          accreditationScopeId: id,
+          organizationUnitId,
+        }),
+      ),
       effectiveStartDate: input.effectiveStartDate,
       effectiveEndDate: input.effectiveEndDate,
       scopeOrder: input.scopeOrder,
       createdAt: now,
       updatedAt: now,
     });
+  }
+
+  get programIds() {
+    return this.scopePrograms.map((item) => item.programId);
+  }
+
+  get organizationUnitIds() {
+    return this.scopeOrganizationUnits.map((item) => item.organizationUnitId);
+  }
+
+  #assertIntegrity() {
+    const programIds = this.programIds;
+    const organizationUnitIds = this.organizationUnitIds;
+
+    if (programIds.length === 0 && organizationUnitIds.length === 0) {
+      throw new ValidationError('AccreditationScope must include at least one programId or organizationUnitId');
+    }
+
+    ensureUnique(programIds, 'AccreditationScope programIds must be unique');
+    ensureUnique(organizationUnitIds, 'AccreditationScope organizationUnitIds must be unique');
+
+    for (const scopeProgram of this.scopePrograms) {
+      if (scopeProgram.accreditationScopeId !== this.id) {
+        throw new ValidationError(
+          `AccreditationScopeProgram.accreditationScopeId must match AccreditationScope.id: ${scopeProgram.id}`,
+        );
+      }
+    }
+
+    for (const scopeOrganizationUnit of this.scopeOrganizationUnits) {
+      if (scopeOrganizationUnit.accreditationScopeId !== this.id) {
+        throw new ValidationError(
+          `AccreditationScopeOrganizationUnit.accreditationScopeId must match AccreditationScope.id: ${scopeOrganizationUnit.id}`,
+        );
+      }
+    }
   }
 }
 
@@ -366,6 +486,13 @@ export class AccreditationCycle {
     this.updatedAt = nowIso();
     this.#assertAggregateIntegrity();
     return decision;
+  }
+
+  supersedeDecision(supersededDecisionRecordId, input) {
+    return this.issueDecision({
+      ...input,
+      supersedesDecisionRecordId: supersededDecisionRecordId,
+    });
   }
 
   #assertAggregateIntegrity() {

@@ -294,11 +294,10 @@ export async function runTests(): Promise<void> {
 
     const supersedeResponse = await app.inject({
       method: 'POST',
-      url: `/accreditation-frameworks/cycles/${cycle.id}/decision-records`,
+      url: `/accreditation-frameworks/cycles/${cycle.id}/decision-records/${firstDecision.id}/supersede`,
       payload: {
         decisionType: 'commission-correction',
         outcome: 'accredited-with-conditions',
-        supersedesDecisionRecordId: firstDecision.id,
         issuedAt: '2026-10-15T00:00:00.000Z',
       },
     });

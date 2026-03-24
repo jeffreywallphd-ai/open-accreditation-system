@@ -82,6 +82,40 @@ export class SqliteAccreditationCycleRepository extends AccreditationCycleReposi
             updatedAt: scope.updatedAt,
           },
         );
+
+        for (const scopeProgram of scope.scopePrograms ?? []) {
+          this.database.run(
+            `INSERT INTO accreditation_frameworks_scope_programs
+             (id, accreditation_scope_id, program_id, created_at, updated_at)
+             VALUES (@id, @accreditationScopeId, @programId, @createdAt, @updatedAt)
+             ON CONFLICT(id) DO UPDATE SET
+               accreditation_scope_id=excluded.accreditation_scope_id, program_id=excluded.program_id, updated_at=excluded.updated_at`,
+            {
+              id: scopeProgram.id,
+              accreditationScopeId: scopeProgram.accreditationScopeId,
+              programId: scopeProgram.programId,
+              createdAt: scopeProgram.createdAt,
+              updatedAt: scopeProgram.updatedAt,
+            },
+          );
+        }
+
+        for (const scopeOrganizationUnit of scope.scopeOrganizationUnits ?? []) {
+          this.database.run(
+            `INSERT INTO accreditation_frameworks_scope_organization_units
+             (id, accreditation_scope_id, organization_unit_id, created_at, updated_at)
+             VALUES (@id, @accreditationScopeId, @organizationUnitId, @createdAt, @updatedAt)
+             ON CONFLICT(id) DO UPDATE SET
+               accreditation_scope_id=excluded.accreditation_scope_id, organization_unit_id=excluded.organization_unit_id, updated_at=excluded.updated_at`,
+            {
+              id: scopeOrganizationUnit.id,
+              accreditationScopeId: scopeOrganizationUnit.accreditationScopeId,
+              organizationUnitId: scopeOrganizationUnit.organizationUnitId,
+              createdAt: scopeOrganizationUnit.createdAt,
+              updatedAt: scopeOrganizationUnit.updatedAt,
+            },
+          );
+        }
       }
 
       for (const milestone of cycle.milestones) {
@@ -207,21 +241,50 @@ export class SqliteAccreditationCycleRepository extends AccreditationCycleReposi
       cycleStartDate: row.cycle_start_date,
       cycleEndDate: row.cycle_end_date,
       status: row.status,
-      scopes: scopes.map((item) => ({
-        id: item.id,
-        accreditationCycleId: item.accreditation_cycle_id,
-        name: item.name,
-        scopeType: item.scope_type,
-        description: item.description,
-        status: item.status,
-        programIds: parseJson(item.program_ids_json),
-        organizationUnitIds: parseJson(item.organization_unit_ids_json),
-        effectiveStartDate: item.effective_start_date,
-        effectiveEndDate: item.effective_end_date,
-        scopeOrder: item.scope_order,
-        createdAt: item.created_at,
-        updatedAt: item.updated_at,
-      })),
+      scopes: scopes.map((item) => {
+        const scopePrograms = this.database.all(
+          `SELECT * FROM accreditation_frameworks_scope_programs
+           WHERE accreditation_scope_id = @scopeId
+           ORDER BY created_at ASC`,
+          { scopeId: item.id },
+        );
+        const scopeOrganizationUnits = this.database.all(
+          `SELECT * FROM accreditation_frameworks_scope_organization_units
+           WHERE accreditation_scope_id = @scopeId
+           ORDER BY created_at ASC`,
+          { scopeId: item.id },
+        );
+
+        return {
+          id: item.id,
+          accreditationCycleId: item.accreditation_cycle_id,
+          name: item.name,
+          scopeType: item.scope_type,
+          description: item.description,
+          status: item.status,
+          scopePrograms: scopePrograms.map((scopeProgram) => ({
+            id: scopeProgram.id,
+            accreditationScopeId: scopeProgram.accreditation_scope_id,
+            programId: scopeProgram.program_id,
+            createdAt: scopeProgram.created_at,
+            updatedAt: scopeProgram.updated_at,
+          })),
+          scopeOrganizationUnits: scopeOrganizationUnits.map((scopeOrganizationUnit) => ({
+            id: scopeOrganizationUnit.id,
+            accreditationScopeId: scopeOrganizationUnit.accreditation_scope_id,
+            organizationUnitId: scopeOrganizationUnit.organization_unit_id,
+            createdAt: scopeOrganizationUnit.created_at,
+            updatedAt: scopeOrganizationUnit.updated_at,
+          })),
+          programIds: parseJson(item.program_ids_json),
+          organizationUnitIds: parseJson(item.organization_unit_ids_json),
+          effectiveStartDate: item.effective_start_date,
+          effectiveEndDate: item.effective_end_date,
+          scopeOrder: item.scope_order,
+          createdAt: item.created_at,
+          updatedAt: item.updated_at,
+        };
+      }),
       milestones: milestones.map((item) => ({
         id: item.id,
         accreditationCycleId: item.accreditation_cycle_id,

@@ -131,6 +131,15 @@ const issueDecisionSchema = z.object({
   supersedesDecisionRecordId: z.string().optional(),
 });
 
+const supersedeDecisionSchema = z.object({
+  id: z.string().optional(),
+  reviewEventId: z.string().optional(),
+  decisionType: z.string().min(1),
+  outcome: z.string().min(1),
+  rationale: z.string().optional(),
+  issuedAt: z.string().optional(),
+});
+
 const createReviewerProfileSchema = z.object({
   id: z.string().optional(),
   personId: z.string().min(1),
@@ -255,6 +264,15 @@ export class AccreditationFrameworksController {
   @Post('cycles/:cycleId/decision-records')
   async issueDecision(@Param('cycleId') cycleId: string, @Body(new ZodValidationPipe(issueDecisionSchema)) body) {
     return { data: await this.service.issueDecisionRecord(cycleId, body) };
+  }
+
+  @Post('cycles/:cycleId/decision-records/:decisionRecordId/supersede')
+  async supersedeDecision(
+    @Param('cycleId') cycleId: string,
+    @Param('decisionRecordId') decisionRecordId: string,
+    @Body(new ZodValidationPipe(supersedeDecisionSchema)) body,
+  ) {
+    return { data: await this.service.supersedeDecisionRecord(cycleId, decisionRecordId, body) };
   }
 
   @Post('reviewer-profiles')

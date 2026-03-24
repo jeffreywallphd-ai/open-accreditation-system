@@ -134,6 +134,12 @@ export class AccreditationFrameworksService {
     return this.cycles.save(cycle);
   }
 
+  async supersedeDecisionRecord(cycleId, supersededDecisionRecordId, input) {
+    const cycle = await this.#requireCycle(cycleId);
+    cycle.supersedeDecision(supersededDecisionRecordId, input);
+    return this.cycles.save(cycle);
+  }
+
   async createReviewerProfile(input) {
     await this.scopeReferences.ensurePersonInInstitution(input.personId, input.institutionId);
     await this.scopeReferences.ensureInstitutionExists(input.institutionId);
@@ -192,11 +198,21 @@ export class AccreditationFrameworksService {
   }
 
   async getAccreditationCycleById(id) {
-    return this.cycles.getById(id);
+    const cycle = await this.cycles.getById(id);
+    if (!cycle) {
+      return null;
+    }
+    await this.#assertCycleReviewEventTeamsBelongToCycle(cycle);
+    return cycle;
   }
 
   async getReviewTeamById(id) {
-    return this.reviewTeams.getById(id);
+    const team = await this.reviewTeams.getById(id);
+    if (!team) {
+      return null;
+    }
+    await this.#assertTeamMembershipsAlignToReviewerProfiles(team);
+    return team;
   }
 
   async #requireFrameworkVersion(id) {
@@ -212,6 +228,7 @@ export class AccreditationFrameworksService {
     if (!cycle) {
       throw new NotFoundError('AccreditationCycle', id);
     }
+    await this.#assertCycleReviewEventTeamsBelongToCycle(cycle);
     return cycle;
   }
 
@@ -228,6 +245,40 @@ export class AccreditationFrameworksService {
     if (!team) {
       throw new NotFoundError('ReviewTeam', id);
     }
+    await this.#assertTeamMembershipsAlignToReviewerProfiles(team);
     return team;
+  }
+
+  async #assertCycleReviewEventTeamsBelongToCycle(cycle) {
+    for (const reviewEvent of cycle.reviewEvents) {
+      if (!reviewEvent.reviewTeamId) {
+        continue;
+      }
+      const reviewTeam = await this.reviewTeams.getById(reviewEvent.reviewTeamId);
+      if (!reviewTeam) {
+        throw new ValidationError(`ReviewEvent.reviewTeamId not found: ${reviewEvent.reviewTeamId}`);
+      }
+      if (reviewTeam.accreditationCycleId !== cycle.id) {
+        throw new ValidationError('ReviewEvent.reviewTeamId must reference a ReviewTeam in the same AccreditationCycle');
+      }
+    }
+  }
+
+  async #assertTeamMembershipsAlignToReviewerProfiles(team) {
+    for (const membership of team.memberships) {
+      if (!membership.reviewerProfileId) {
+        continue;
+      }
+      const profile = await this.reviewerProfiles.getById(membership.reviewerProfileId);
+      if (!profile) {
+        throw new ValidationError(`ReviewTeamMembership.reviewerProfileId not found: ${membership.reviewerProfileId}`);
+      }
+      if (profile.personId !== membership.personId) {
+        throw new ValidationError('ReviewTeamMembership.personId must match ReviewerProfile.personId');
+      }
+      if (profile.institutionId !== team.institutionId) {
+        throw new ValidationError('ReviewTeamMembership.reviewerProfileId must belong to ReviewTeam institution');
+      }
+    }
   }
 }

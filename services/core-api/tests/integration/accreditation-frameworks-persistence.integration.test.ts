@@ -165,10 +165,9 @@ export async function runTests(): Promise<void> {
     });
     initialDecisionId = withDecision.decisionRecords[0].id;
 
-    const withSuperseded = await afr.issueDecisionRecord(cycle.id, {
+    const withSuperseded = await afr.supersedeDecisionRecord(cycle.id, initialDecisionId, {
       decisionType: 'commission-correction',
       outcome: 'accredited-with-conditions',
-      supersedesDecisionRecordId: initialDecisionId,
       issuedAt: '2026-10-15T00:00:00.000Z',
     });
     assert.equal(withSuperseded.decisionRecords.length, 2);
@@ -186,6 +185,8 @@ export async function runTests(): Promise<void> {
     assert.ok(restoredTeam);
     assert.equal(restoredCycle?.decisionRecords.length, 2);
     assert.equal(restoredCycle?.decisionRecords[0].id, initialDecisionId);
+    assert.equal(restoredCycle?.scopes[0].scopePrograms.length, 1);
+    assert.equal(restoredCycle?.scopes[0].scopeOrganizationUnits.length, 1);
     assert.equal(restoredTeam?.memberships.length, 2);
   } finally {
     await secondApp.close();
