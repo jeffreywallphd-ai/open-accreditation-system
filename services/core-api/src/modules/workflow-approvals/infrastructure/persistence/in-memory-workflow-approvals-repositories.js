@@ -1,6 +1,9 @@
 import { ValidationError } from '../../../shared/kernel/errors.js';
 import { ReviewCycleRepository, ReviewWorkflowRepository } from '../../domain/repositories/repositories.js';
-import { ReviewCycle } from '../../domain/entities/review-cycle.js';
+import {
+  buildReviewCycleCriticalFieldsFingerprint,
+  ReviewCycle,
+} from '../../domain/entities/review-cycle.js';
 import { ReviewWorkflow } from '../../domain/entities/review-workflow.js';
 import { reviewCycleStatus } from '../../domain/value-objects/workflow-statuses.js';
 
@@ -141,6 +144,14 @@ export class InMemoryReviewCycleRepository extends ReviewCycleRepository {
   #assertIdentityUnchanged(existing, next) {
     if (existing.institutionId !== next.institutionId || existing.createdAt !== next.createdAt) {
       throw new ValidationError('ReviewCycle identity fields cannot be changed in-place');
+    }
+    if (
+      (existing.status === reviewCycleStatus.COMPLETED || existing.status === reviewCycleStatus.ARCHIVED) &&
+      buildReviewCycleCriticalFieldsFingerprint(existing) !== buildReviewCycleCriticalFieldsFingerprint(next)
+    ) {
+      throw new ValidationError(
+        'ReviewCycle critical fields cannot be modified after status is completed or archived',
+      );
     }
   }
 

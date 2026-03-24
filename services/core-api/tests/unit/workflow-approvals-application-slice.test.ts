@@ -10,12 +10,14 @@ import {
 } from '../../src/modules/evidence-management/domain/value-objects/evidence-classifications.js';
 import { WorkflowApprovalsService } from '../../src/modules/workflow-approvals/application/workflow-approvals-service.js';
 import {
+  CompleteReviewCycleCommand,
   CreateReviewCycleCommand,
   CreateReviewWorkflowCommand,
   StartReviewCycleCommand,
   TransitionReviewWorkflowStateCommand,
 } from '../../src/modules/workflow-approvals/application/commands/workflow-approvals-commands.js';
 import {
+  GetWorkflowStateQuery,
   GetWorkflowStateForCycleQuery,
   GetWorkflowStateForCycleTargetQuery,
 } from '../../src/modules/workflow-approvals/application/queries/workflow-approvals-queries.js';
@@ -63,8 +65,10 @@ export async function runTests(): Promise<void> {
 
   const createReviewCycle = new CreateReviewCycleCommand(service);
   const startReviewCycle = new StartReviewCycleCommand(service);
+  const completeReviewCycle = new CompleteReviewCycleCommand(service);
   const createReviewWorkflow = new CreateReviewWorkflowCommand(service);
   const transitionReviewWorkflowState = new TransitionReviewWorkflowStateCommand(service);
+  const getWorkflowState = new GetWorkflowStateQuery(service);
   const getWorkflowStateForCycle = new GetWorkflowStateForCycleQuery(service);
   const getWorkflowStateForCycleTarget = new GetWorkflowStateForCycleTargetQuery(service);
 
@@ -275,6 +279,12 @@ export async function runTests(): Promise<void> {
   assert.equal(cycleTargetWorkflow?.id, workflow.id);
   assert.equal(cycleTargetWorkflow?.state, reviewWorkflowState.SUBMITTED);
 
+  const genericCycleWorkflows = await getWorkflowState.execute(cycle.id);
+  assert.equal(genericCycleWorkflows.length, 1);
+
+  const genericCycleTargetState = await getWorkflowState.execute(cycle.id, 'report-section', 'section_2_1');
+  assert.equal(genericCycleTargetState?.id, workflow.id);
+
   const supersededPredecessor = await evidenceManagement.createEvidenceItem({
     id: 'ev_superseded_predecessor',
     institutionId: institution.id,
@@ -362,5 +372,26 @@ export async function runTests(): Promise<void> {
   assert.equal(collectionApproved.transitionHistory[1].evidenceSummary.collectionRequirementSatisfied, true);
   assert.equal(collectionApproved.transitionHistory[1].evidenceSummary.collectionUsableEvidenceCount, 1);
   assert.equal(collectionApproved.transitionHistory[1].evidenceSummary.anyEvidenceRequirementSatisfied, true);
+
+  const immutableCycle = await createReviewCycle.execute({
+    institutionId: institution.id,
+    name: 'Immutable Completed Cycle',
+    startDate: '2029-01-01',
+    endDate: '2029-12-31',
+    programIds: ['program_immutable'],
+    organizationUnitIds: ['org_immutable'],
+    evidenceSetIds: ['set_immutable'],
+  });
+  await startReviewCycle.execute(immutableCycle.id);
+  await completeReviewCycle.execute(immutableCycle.id);
+
+  const mutatedCompletedCycle = await cycles.getById(immutableCycle.id);
+  assert.ok(mutatedCompletedCycle);
+  mutatedCompletedCycle!.startDate = '2029-02-01';
+  await assert.rejects(
+    () => cycles.save(mutatedCompletedCycle!),
+    ValidationError,
+    'completed review cycles should reject critical field updates at repository boundary',
+  );
 }
 

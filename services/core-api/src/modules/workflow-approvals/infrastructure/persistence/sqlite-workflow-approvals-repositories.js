@@ -1,6 +1,9 @@
 import { ValidationError } from '../../../shared/kernel/errors.js';
 import { ReviewCycleRepository, ReviewWorkflowRepository } from '../../domain/repositories/repositories.js';
-import { ReviewCycle } from '../../domain/entities/review-cycle.js';
+import {
+  buildReviewCycleCriticalFieldsFingerprint,
+  ReviewCycle,
+} from '../../domain/entities/review-cycle.js';
 import { ReviewWorkflow, WorkflowTransitionRecord } from '../../domain/entities/review-workflow.js';
 import { reviewCycleStatus } from '../../domain/value-objects/workflow-statuses.js';
 
@@ -179,6 +182,20 @@ export class SqliteReviewCycleRepository extends ReviewCycleRepository {
   #assertIdentityUnchanged(existing, next) {
     if (existing.institution_id !== next.institutionId || existing.created_at !== next.createdAt) {
       throw new ValidationError('ReviewCycle identity fields cannot be changed in-place');
+    }
+    if (
+      (existing.status === reviewCycleStatus.COMPLETED || existing.status === reviewCycleStatus.ARCHIVED) &&
+      buildReviewCycleCriticalFieldsFingerprint({
+        startDate: existing.start_date,
+        endDate: existing.end_date,
+        programIds: parseJsonList(existing.program_ids_json),
+        organizationUnitIds: parseJsonList(existing.organization_unit_ids_json),
+        evidenceSetIds: parseJsonList(existing.evidence_set_ids_json),
+      }) !== buildReviewCycleCriticalFieldsFingerprint(next)
+    ) {
+      throw new ValidationError(
+        'ReviewCycle critical fields cannot be modified after status is completed or archived',
+      );
     }
   }
 

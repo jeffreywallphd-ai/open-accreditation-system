@@ -10,6 +10,11 @@ const REVIEW_CYCLE_STATUS_TRANSITIONS = Object.freeze({
   [reviewCycleStatus.ARCHIVED]: new Set(),
 });
 
+const REVIEW_CYCLE_TERMINAL_FOR_CRITICAL_CHANGES = new Set([
+  reviewCycleStatus.COMPLETED,
+  reviewCycleStatus.ARCHIVED,
+]);
+
 function parseDateMillis(value, field) {
   const millis = new Date(value).getTime();
   if (Number.isNaN(millis)) {
@@ -28,6 +33,16 @@ export function buildReviewCycleScopeKey(institutionId, programIds = [], organiz
   const normalizedPrograms = normalizeIdList(programIds);
   const normalizedOrganizationUnits = normalizeIdList(organizationUnitIds);
   return `${institutionId}::programs=${normalizedPrograms.join(',')}::org-units=${normalizedOrganizationUnits.join(',')}`;
+}
+
+export function buildReviewCycleCriticalFieldsFingerprint(cycleLike) {
+  return JSON.stringify({
+    startDate: cycleLike.startDate,
+    endDate: cycleLike.endDate,
+    programIds: normalizeIdList(cycleLike.programIds ?? []),
+    organizationUnitIds: normalizeIdList(cycleLike.organizationUnitIds ?? []),
+    evidenceSetIds: normalizeIdList(cycleLike.evidenceSetIds ?? []),
+  });
 }
 
 export class ReviewCycle {
@@ -109,6 +124,10 @@ export class ReviewCycle {
     if (!allowed.has(nextStatus)) {
       throw new ValidationError(`ReviewCycle cannot ${action} from status=${this.status} to status=${nextStatus}`);
     }
+  }
+
+  canModifyCriticalFields() {
+    return !REVIEW_CYCLE_TERMINAL_FOR_CRITICAL_CHANGES.has(this.status);
   }
 }
 

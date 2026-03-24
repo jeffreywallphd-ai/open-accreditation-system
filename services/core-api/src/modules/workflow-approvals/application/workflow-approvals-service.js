@@ -2,7 +2,7 @@ import { NotFoundError, ValidationError } from '../../shared/kernel/errors.js';
 import { ReviewCycle } from '../domain/entities/review-cycle.js';
 import { ReviewWorkflow } from '../domain/entities/review-workflow.js';
 import { buildEvidenceReadinessPolicyForTransition } from '../domain/policies/workflow-evidence-readiness-policy.js';
-import { reviewCycleStatus } from '../domain/value-objects/workflow-statuses.js';
+import { reviewCycleStatus, reviewWorkflowState } from '../domain/value-objects/workflow-statuses.js';
 
 export class WorkflowApprovalsService {
   constructor(deps) {
@@ -68,7 +68,7 @@ export class WorkflowApprovalsService {
     }
 
     const evidenceSummary = await this.#evaluateWorkflowEvidence(workflow, nextState);
-    workflow.transitionTo(nextState, actorRole, {
+    this.#applyWorkflowTransition(workflow, nextState, actorRole, {
       reason: options.reason,
       evidenceSummary,
     });
@@ -102,6 +102,13 @@ export class WorkflowApprovalsService {
       throw new ValidationError('targetType and targetId are required');
     }
     return this.workflows.getByCycleAndTarget(reviewCycleId, targetType, targetId);
+  }
+
+  async getWorkflowState(reviewCycleId, targetType, targetId) {
+    if (targetType && targetId) {
+      return this.getWorkflowStateForCycleTarget(reviewCycleId, targetType, targetId);
+    }
+    return this.getWorkflowStateForCycle(reviewCycleId);
   }
 
   async #requireInstitution(institutionId) {
@@ -242,6 +249,23 @@ export class WorkflowApprovalsService {
       throw new ValidationError(
         `ReviewWorkflow already exists for cycle-target: cycle=${reviewCycleId} target=${targetType}:${targetId}`,
       );
+    }
+  }
+
+  #applyWorkflowTransition(workflow, nextState, actorRole, options = {}) {
+    switch (nextState) {
+      case reviewWorkflowState.IN_REVIEW:
+        return workflow.submitForReview(actorRole, options);
+      case reviewWorkflowState.REVISION_REQUIRED:
+        return workflow.requestRevision(actorRole, options);
+      case reviewWorkflowState.DRAFT:
+        return workflow.returnToDraft(actorRole, options);
+      case reviewWorkflowState.APPROVED:
+        return workflow.approve(actorRole, options);
+      case reviewWorkflowState.SUBMITTED:
+        return workflow.submitFinal(actorRole, options);
+      default:
+        return workflow.transitionTo(nextState, actorRole, options);
     }
   }
 }

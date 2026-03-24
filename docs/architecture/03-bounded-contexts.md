@@ -269,6 +269,7 @@ Defined contexts:
 
 - `workflow-approvals` now includes a dedicated `ReviewCycle` aggregate for workflow-governed cycle orchestration (`not-started`, `active`, `completed`, `archived`) that is separate from evidence lifecycle state.
 - `ReviewCycle` enforces strict date ordering (`startDate < endDate`) and scoped active-cycle uniqueness (`institution + canonicalized scope`).
+- `ReviewCycle` critical governance fields (`startDate`, `endDate`, `programIds`, `organizationUnitIds`, `evidenceSetIds`) are immutable once status is `completed` or `archived`; repository save boundaries enforce this to prevent in-memory mutation bypass.
 - `workflow-approvals` now includes a `ReviewWorkflow` aggregate tied to a `ReviewCycle` and a target context (for example report section or evidence grouping), with explicit workflow states:
   - `draft`
   - `in-review`
@@ -276,6 +277,7 @@ Defined contexts:
   - `approved`
   - `submitted`
 - Workflow transitions are governed by explicit domain transition maps and role policy (`faculty`, `reviewer`, `admin`) with append-only transition history.
+- `ReviewWorkflow` exposes explicit transition methods (`submitForReview`, `requestRevision`, `returnToDraft`, `approve`, `submitFinal`) and preserves a compatibility transition entrypoint for orchestrated use-case routing.
 - Transition history is sequence-backed and reconstruction-validated (`transition_sequence` persistence + aggregate checks for contiguous state-chain progression and terminal state consistency).
 - Evidence integration is reference-based (`evidenceItemIds`, `evidenceCollectionId`) and evaluated through an evidence-management application contract (`evaluateWorkflowEvidenceReadiness`) with explicit readiness policy input; workflow state is not embedded in `EvidenceItem`.
 - `ReviewWorkflow.evidenceCollectionId` must reference a collection/set key declared on `ReviewCycle.evidenceSetIds`, preserving cycle-level container ownership while delegating evidence readiness/usability evaluation to evidence-management.

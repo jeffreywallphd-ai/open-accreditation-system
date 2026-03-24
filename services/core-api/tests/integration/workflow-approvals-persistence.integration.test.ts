@@ -29,6 +29,7 @@ export async function runTests(): Promise<void> {
 
   let reviewCycleId = '';
   let reviewWorkflowId = '';
+  let completedCycleId = '';
   let institutionId = '';
   try {
     const org = app.get(ORG_SERVICE);
@@ -342,6 +343,17 @@ export async function runTests(): Promise<void> {
       ValidationError,
       'active scope uniqueness should be enforced through persistence-backed repository checks',
     );
+
+    const completedCycle = await workflow.createReviewCycle({
+      institutionId,
+      name: '2028 Completed Cycle Round Trip',
+      startDate: '2028-01-01',
+      endDate: '2028-12-31',
+      programIds: ['program_wp_completed'],
+    });
+    completedCycleId = completedCycle.id;
+    await workflow.startReviewCycle(completedCycle.id);
+    await workflow.completeReviewCycle(completedCycle.id);
   } finally {
     await app.close();
   }
@@ -356,6 +368,10 @@ export async function runTests(): Promise<void> {
     assert.equal(restoredCycle?.status, 'active');
     assert.equal(restoredCycle?.programIds.length, 1);
     assert.equal(restoredCycle?.programIds[0], 'program_wp_1');
+
+    const restoredCompletedCycle = await workflow.getReviewCycleById(completedCycleId);
+    assert.ok(restoredCompletedCycle);
+    assert.equal(restoredCompletedCycle?.status, 'completed');
 
     const restoredWorkflow = await workflow.getReviewWorkflowById(reviewWorkflowId);
     assert.ok(restoredWorkflow);

@@ -53,21 +53,21 @@ export async function runTests(): Promise<void> {
   assert.equal(workflow.state, reviewWorkflowState.DRAFT);
   assert.equal(workflow.transitionHistory.length, 0);
 
-  workflow.transitionTo(reviewWorkflowState.IN_REVIEW, workflowActorRole.FACULTY, {
+  workflow.submitForReview(workflowActorRole.FACULTY, {
     reason: 'Ready for formal review',
   });
   assert.equal(workflow.state, reviewWorkflowState.IN_REVIEW);
   assert.equal(workflow.transitionHistory.length, 1);
   assert.equal(workflow.transitionHistory[0].sequence, 1);
 
-  workflow.transitionTo(reviewWorkflowState.REVISION_REQUIRED, workflowActorRole.REVIEWER, {
+  workflow.requestRevision(workflowActorRole.REVIEWER, {
     reason: 'Need stronger evidence alignment',
   });
   assert.equal(workflow.state, reviewWorkflowState.REVISION_REQUIRED);
-  workflow.transitionTo(reviewWorkflowState.DRAFT, workflowActorRole.FACULTY, {
+  workflow.returnToDraft(workflowActorRole.FACULTY, {
     reason: 'Preparing revision',
   });
-  workflow.transitionTo(reviewWorkflowState.IN_REVIEW, workflowActorRole.FACULTY);
+  workflow.submitForReview(workflowActorRole.FACULTY);
 
   assert.throws(
     () => workflow.transitionTo(reviewWorkflowState.SUBMITTED, workflowActorRole.ADMIN),
@@ -76,18 +76,18 @@ export async function runTests(): Promise<void> {
   );
 
   assert.throws(
-    () => workflow.transitionTo(reviewWorkflowState.APPROVED, workflowActorRole.FACULTY),
+    () => workflow.approve(workflowActorRole.FACULTY),
     ValidationError,
     'role policy should reject unauthorized transitions',
   );
 
   assert.throws(
-    () => workflow.transitionTo(reviewWorkflowState.APPROVED, workflowActorRole.REVIEWER),
+    () => workflow.approve(workflowActorRole.REVIEWER),
     ValidationError,
     'approval should fail when required evidence is insufficient',
   );
 
-  workflow.transitionTo(reviewWorkflowState.APPROVED, workflowActorRole.REVIEWER, {
+  workflow.approve(workflowActorRole.REVIEWER, {
     evidenceSummary: {
       requiredCount: 1,
       foundCount: 1,
@@ -101,12 +101,12 @@ export async function runTests(): Promise<void> {
   assert.equal(workflow.state, reviewWorkflowState.APPROVED);
 
   assert.throws(
-    () => workflow.transitionTo(reviewWorkflowState.SUBMITTED, workflowActorRole.REVIEWER),
+    () => workflow.submitFinal(workflowActorRole.REVIEWER),
     ValidationError,
     'submitted transition is restricted to admin role',
   );
 
-  workflow.transitionTo(reviewWorkflowState.SUBMITTED, workflowActorRole.ADMIN, {
+  workflow.submitFinal(workflowActorRole.ADMIN, {
     evidenceSummary: {
       requiredCount: 1,
       foundCount: 1,
@@ -188,9 +188,9 @@ export async function runTests(): Promise<void> {
     evidenceCollectionId: 'collection_1',
     evidenceItemIds: [],
   });
-  collectionOnlyWorkflow.transitionTo(reviewWorkflowState.IN_REVIEW, workflowActorRole.FACULTY);
+  collectionOnlyWorkflow.submitForReview(workflowActorRole.FACULTY);
   assert.throws(
-    () => collectionOnlyWorkflow.transitionTo(reviewWorkflowState.APPROVED, workflowActorRole.REVIEWER),
+    () => collectionOnlyWorkflow.approve(workflowActorRole.REVIEWER),
     ValidationError,
     'collection-only workflow should still require evidence readiness summary for approval',
   );

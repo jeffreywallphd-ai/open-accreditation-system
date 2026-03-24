@@ -1053,6 +1053,7 @@ Implementation note (current `core-api` slice): the `workflow-approvals` module 
   - `active -> completed`
   - `completed -> archived`
   - `archived` is terminal.
+- `ReviewCycle` critical governance fields (`startDate`, `endDate`, `programIds`, `organizationUnitIds`, `evidenceSetIds`) are immutable after `completed` or `archived`.
 - Only one `ReviewCycle` in `status=active` is allowed for the same canonical scope key (`institutionId + sorted programIds + sorted organizationUnitIds`).
 - `ReviewWorkflow.state` is constrained to `draft`, `in-review`, `revision-required`, `approved`, `submitted`.
 - `ReviewWorkflow` state transitions are explicit:
@@ -1062,6 +1063,7 @@ Implementation note (current `core-api` slice): the `workflow-approvals` module 
   - `approved -> submitted`
   - `submitted` is terminal.
 - Role-governed transitions are enforced in domain logic and constrained to `faculty`, `reviewer`, and `admin` policy.
+- `ReviewWorkflow` transition behavior is exposed through explicit domain methods (`submitForReview`, `requestRevision`, `returnToDraft`, `approve`, `submitFinal`) that enforce both state-map and role-policy constraints.
 - `ReviewWorkflow` transition history is append-only; existing transition records cannot be mutated or removed by repository save paths.
 - `ReviewWorkflow` transition history is sequence-backed and must remain contiguous (`1..n`) with valid state chaining (`fromState` = previous `toState`) and terminal state consistency (`ReviewWorkflow.state` = last transition `toState`).
 - `ReviewWorkflow` is unique per cycle-target tuple (`reviewCycleId`, `targetType`, `targetId`) so workflow state retrieval by cycle/report target is deterministic.

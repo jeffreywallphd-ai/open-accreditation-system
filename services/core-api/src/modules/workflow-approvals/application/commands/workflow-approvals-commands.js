@@ -18,6 +18,16 @@ export class StartReviewCycleCommand {
   }
 }
 
+export class CompleteReviewCycleCommand {
+  constructor(service) {
+    this.service = service;
+  }
+
+  async execute(reviewCycleId) {
+    return this.service.completeReviewCycle(reviewCycleId);
+  }
+}
+
 export class CreateReviewWorkflowCommand {
   constructor(service) {
     this.service = service;
