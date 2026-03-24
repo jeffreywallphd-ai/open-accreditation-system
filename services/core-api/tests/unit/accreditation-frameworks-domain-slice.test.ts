@@ -1,0 +1,227 @@
+import assert from 'node:assert/strict';
+import { AccreditationFrameworksService } from '../../src/modules/accreditation-frameworks/application/accreditation-frameworks-service.js';
+import {
+  InMemoryAccreditationCycleRepository,
+  InMemoryAccreditationFrameworkRepository,
+  InMemoryAccreditorRepository,
+  InMemoryFrameworkVersionRepository,
+  InMemoryScopeReferenceAdapter,
+} from '../../src/modules/accreditation-frameworks/infrastructure/persistence/in-memory-accreditation-frameworks-repositories.js';
+import { ValidationError } from '../../src/modules/shared/kernel/errors.js';
+
+function createService() {
+  return new AccreditationFrameworksService({
+    accreditors: new InMemoryAccreditorRepository(),
+    frameworks: new InMemoryAccreditationFrameworkRepository(),
+    frameworkVersions: new InMemoryFrameworkVersionRepository(),
+    cycles: new InMemoryAccreditationCycleRepository(),
+    scopeReferences: new InMemoryScopeReferenceAdapter({
+      institutionIds: ['inst_1'],
+      programIds: ['prog_1', 'prog_2'],
+      organizationUnitIds: ['org_1', 'org_2'],
+    }),
+  });
+}
+
+export async function runTests(): Promise<void> {
+  const service = createService();
+
+  const accreditor = await service.createAccreditor({
+    code: 'AACSB',
+    name: 'AACSB',
+  });
+
+  const framework = await service.createFramework({
+    accreditorId: accreditor.id,
+    code: 'BUSINESS',
+    name: 'Business Accreditation',
+  });
+
+  const version = await service.createFrameworkVersion({
+    frameworkId: framework.id,
+    versionTag: '2026.1',
+    effectiveStartDate: '2026-01-01',
+  });
+
+  const withStandard = await service.addStandard(version.id, {
+    code: 'STD1',
+    title: 'Strategic Management and Innovation',
+    sequence: 1,
+  });
+  const standard = withStandard.standards[0];
+
+  const withCriterion = await service.addCriterion(version.id, {
+    standardId: standard.id,
+    code: 'CR1',
+    title: 'Mission and Strategy',
+    sequence: 1,
+  });
+  const criterion = withCriterion.criteria[0];
+
+  await assert.rejects(
+    () =>
+      service.addEvidenceRequirement(version.id, {
+        requirementCode: 'ER-BAD',
+        title: 'Bad Target',
+        requirementType: 'document',
+        criterionId: 'missing',
+      }),
+    ValidationError,
+  );
+
+  const withElement = await service.addCriterionElement(version.id, {
+    criterionId: criterion.id,
+    code: 'CE1',
+    title: 'Mission Alignment',
+    statement: 'The institution aligns strategy with mission.',
+  });
+  const element = withElement.criterionElements[0];
+
+  await assert.rejects(
+    () =>
+      service.addEvidenceRequirement(version.id, {
+        requirementCode: 'ER-MISMATCH',
+        title: 'Mismatched Target',
+        requirementType: 'document',
+        criterionId: criterion.id,
+        criterionElementId: 'unknown-element',
+      }),
+    ValidationError,
+  );
+
+  const withRequirement = await service.addEvidenceRequirement(version.id, {
+    requirementCode: 'ER1',
+    title: 'Mission Artifacts',
+    requirementType: 'document',
+    criterionElementId: element.id,
+    cardinalityRule: 'one-per-cycle',
+  });
+
+  assert.equal(withRequirement.evidenceRequirements.length, 1);
+
+  const published = await service.publishFrameworkVersion(version.id);
+  assert.equal(published.status, 'published');
+
+  await assert.rejects(
+    () =>
+      service.addStandard(version.id, {
+        code: 'STD2',
+        title: 'Post-publication update',
+      }),
+    ValidationError,
+  );
+
+  const cycle = await service.createAccreditationCycle({
+    frameworkVersionId: version.id,
+    institutionId: 'inst_1',
+    name: '2026 Continuous Review',
+    cycleStartDate: '2026-01-01',
+    cycleEndDate: '2026-12-31',
+  });
+
+  await assert.rejects(
+    () =>
+      service.addAccreditationScope(cycle.id, {
+        name: 'Invalid Scope',
+        scopeType: 'program-cluster',
+      }),
+    ValidationError,
+  );
+
+  await assert.rejects(
+    () =>
+      service.addAccreditationScope(cycle.id, {
+        name: 'Missing Program Scope',
+        scopeType: 'program-cluster',
+        programIds: ['prog_missing'],
+      }),
+    ValidationError,
+  );
+
+  const activated = await service.activateAccreditationCycle(cycle.id);
+  assert.equal(activated.status, 'active');
+
+  const withScope = await service.addAccreditationScope(cycle.id, {
+    name: 'Primary Program Scope',
+    scopeType: 'program-cluster',
+    programIds: ['prog_1'],
+    organizationUnitIds: ['org_1'],
+    effectiveStartDate: '2026-01-01',
+    effectiveEndDate: '2026-12-31',
+  });
+
+  const scope = withScope.scopes[0];
+
+  await assert.rejects(
+    () =>
+      service.addCycleMilestone(cycle.id, {
+        name: 'Out of range milestone',
+        dueDate: '2027-01-10',
+      }),
+    ValidationError,
+  );
+
+  const withMilestone = await service.addCycleMilestone(cycle.id, {
+    name: 'Self-study completion',
+    dueDate: '2026-05-01',
+    scopeId: scope.id,
+  });
+  assert.equal(withMilestone.milestones.length, 1);
+
+  await assert.rejects(
+    () =>
+      service.addReviewEvent(cycle.id, {
+        name: 'Invalid range event',
+        eventType: 'site-visit',
+        startDate: '2026-09-10',
+        endDate: '2026-09-01',
+        scopeId: scope.id,
+      }),
+    ValidationError,
+  );
+
+  const withEvent = await service.addReviewEvent(cycle.id, {
+    name: 'Site Visit',
+    eventType: 'site-visit',
+    startDate: '2026-09-10',
+    endDate: '2026-09-12',
+    scopeId: scope.id,
+  });
+  const reviewEvent = withEvent.reviewEvents[0];
+
+  const withDecision = await service.issueDecisionRecord(cycle.id, {
+    decisionType: 'commission',
+    outcome: 'accredited',
+    reviewEventId: reviewEvent.id,
+    rationale: 'Criteria satisfied.',
+    issuedAt: '2026-10-01T00:00:00.000Z',
+  });
+  assert.equal(withDecision.decisionRecords.length, 1);
+  assert.equal(withDecision.status, 'decision-issued');
+
+  const firstDecision = withDecision.decisionRecords[0];
+
+  const withSupersedingDecision = await service.issueDecisionRecord(cycle.id, {
+    decisionType: 'commission-correction',
+    outcome: 'accredited-with-conditions',
+    supersedesDecisionRecordId: firstDecision.id,
+    issuedAt: '2026-10-10T00:00:00.000Z',
+  });
+
+  assert.equal(withSupersedingDecision.decisionRecords.length, 2);
+  assert.equal(withSupersedingDecision.decisionRecords[0].status, 'superseded');
+  assert.equal(
+    withSupersedingDecision.decisionRecords[0].supersededByDecisionRecordId,
+    withSupersedingDecision.decisionRecords[1].id,
+  );
+
+  await assert.rejects(
+    () =>
+      service.issueDecisionRecord(cycle.id, {
+        decisionType: 'invalid-double-supersede',
+        outcome: 'denied',
+        supersedesDecisionRecordId: firstDecision.id,
+      }),
+    ValidationError,
+  );
+}

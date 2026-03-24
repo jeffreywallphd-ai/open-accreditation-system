@@ -67,6 +67,7 @@ This is a **logical data model**, not a finalized physical database schema. It i
   - [Extension rules](#extension-rules)
 - [Assessment scope matrix](#assessment-scope-matrix)
 - [Reviewer/event responsibility semantics](#reviewerevent-responsibility-semantics)
+- [Implementation-ready accreditation invariants (Epic 1 slice)](#implementation-ready-accreditation-invariants-epic-1-slice)
 - [Key cross-context relationships](#key-cross-context-relationships)
   - [Person, identity, and reviewer/faculty relationships](#person-identity-and-reviewerfaculty-relationships)
   - [Framework and accreditation engagement relationships](#framework-and-accreditation-engagement-relationships)
@@ -916,6 +917,44 @@ Additional rules:
 - `ReviewEvent` references the participating `ReviewTeam`; event participation is therefore inferred from active team membership unless explicitly constrained by event notes or later extensions.
 - V1 does **not** introduce `ReviewEventParticipant` or `ReviewerAssignment` because current canonical needs are covered by team membership plus event references.
 - Future fine-grained participation/assignment entities are expected if implementation later needs attendee-level check-in, interview-panel composition, or criterion-specific reviewer tasking. These are listed in [Deferred / Later-Phase Entities](#deferred-later-phase-entities).
+
+## Implementation-ready accreditation invariants (Epic 1 slice)
+
+This section is the implementation contract for the first domain slice under `services/core-api/src/modules/accreditation-frameworks`. It narrows ambiguous behavior into enforceable invariants.
+
+### Aggregate ownership and mutation
+
+| Aggregate root | Owned children | Mutable operations | Immutable/supersedable rules |
+| --- | --- | --- | --- |
+| `FrameworkVersion` | `Standard`, `Criterion`, `CriterionElement`, `EvidenceRequirement` | add/update while `status=draft` | after publication, structure is immutable; changes require a new framework version |
+| `AccreditationCycle` | `AccreditationScope`, `CycleMilestone`, `ReviewEvent`, `DecisionRecord` | scope/milestone/event planning and cycle state transitions | decisions are append-only; corrections use a new decision that supersedes the prior record |
+| `AccreditationScope` (child) | `AccreditationScopeProgram`, `AccreditationScopeOrganizationUnit` | create/activate/exclude/close by cycle owner only | scope references must stay tied to the owning cycle |
+
+### Framework/version invariants
+
+- `AccreditationFramework` belongs to one `Accreditor`; framework-version tags are unique within a framework.
+- `FrameworkVersion` publication requires at least one `Standard`, at least one `Criterion`, and at least one `CriterionElement` for every criterion.
+- `Criterion` must reference a `Standard` in the same framework version.
+- `CriterionElement` must reference a `Criterion` in the same framework version.
+- `EvidenceRequirement` must target a valid `criterionId` or `criterionElementId` in the same framework version.
+- If `EvidenceRequirement` carries both `criterionId` and `criterionElementId`, the element must belong to the same criterion.
+
+### Cycle/scope/milestone/review/decision invariants
+
+- `AccreditationCycle` must reference a **published** `FrameworkVersion`.
+- `AccreditationScope` must contain at least one program or organization-unit reference; empty scopes are invalid.
+- `AccreditationScope`, `CycleMilestone`, and `ReviewEvent` dates must stay within `AccreditationCycle` start/end dates.
+- `CycleMilestone.scopeId` and `ReviewEvent.scopeId` must reference existing scope records in the same cycle.
+- `DecisionRecord` issuance is not allowed while the cycle is in `draft`.
+- `DecisionRecord` corrections/supersessions must reference an existing prior decision in the same cycle, and the same decision cannot be superseded twice.
+
+### Cross-context reference rules for this slice
+
+- `accreditation-frameworks` owns all writes to framework/cycle aggregates and children listed above.
+- `organization-registry` remains the source of truth for institution and organization-unit existence; `accreditation-frameworks` stores only stable IDs.
+- `curriculum-mapping` remains the source of truth for program existence; `accreditation-frameworks` stores only stable IDs.
+- Existence validation for program/organization references must happen through published application ports, never by direct table-level coupling.
+- `evidence-management`, `workflow-approvals`, and `assessment-improvement` may reference IDs for traceability but must not mutate `accreditation-frameworks` state.
 
 ## Key cross-context relationships
 

@@ -1,7 +1,7 @@
 {
   "meta": {
     "document": "Open Accreditation System entity model AI context",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "source_docs": [
       "README.md",
       "docs/architecture/README.md",
@@ -715,6 +715,23 @@
       "AcademicTerm alone as the only assessment subject in normal cases",
       "Program plus unrelated CourseSection without explicit curriculum mapping or scope rationale",
       "Measure/result scope introducing targets not present or implied in the plan"
+    ]
+  },
+  "implementationInvariants": {
+    "accreditationFrameworksEpic1": [
+      "FrameworkVersion publication requires at least one Standard and at least one CriterionElement under each Criterion.",
+      "FrameworkVersion structural children (Standard, Criterion, CriterionElement, EvidenceRequirement) are mutable only while status=draft.",
+      "EvidenceRequirement must target criterionId or criterionElementId in the same FrameworkVersion; if both are set, they must align.",
+      "AccreditationCycle must reference a published FrameworkVersion.",
+      "AccreditationScope must include at least one Program or OrganizationUnit reference.",
+      "CycleMilestone, ReviewEvent, and AccreditationScope dates must stay within AccreditationCycle start/end dates.",
+      "DecisionRecord is append-only after issuance; corrections are represented by successor records that supersede prior decisions."
+    ],
+    "crossContextReferenceRules": [
+      "accreditation-frameworks validates local shape and ownership invariants for framework and cycle aggregates.",
+      "organization-registry validates institution and organization-unit existence via application ports.",
+      "curriculum-mapping validates program existence via application ports.",
+      "evidence-management, workflow-approvals, and assessment-improvement may reference accreditation IDs but do not mutate accreditation-frameworks aggregates."
     ]
   }
 }
