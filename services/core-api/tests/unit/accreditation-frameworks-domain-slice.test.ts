@@ -102,6 +102,8 @@ export async function runTests(): Promise<void> {
     throw new Error('expected second criterion');
   }
 
+  await assert.rejects(() => service.publishFrameworkVersion(version.id), ValidationError);
+
   const withSecondElement = await service.addCriterionElement(version.id, {
     criterionId: secondCriterion.id,
     code: 'CE2',
