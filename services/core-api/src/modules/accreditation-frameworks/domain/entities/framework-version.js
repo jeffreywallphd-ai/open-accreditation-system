@@ -44,6 +44,13 @@ export class Standard {
       updatedAt: now,
     });
   }
+
+  asEvidenceLinkTarget() {
+    return {
+      targetEntityType: 'Standard',
+      targetEntityId: this.id,
+    };
+  }
 }
 
 export class Criterion {
@@ -78,6 +85,13 @@ export class Criterion {
       createdAt: now,
       updatedAt: now,
     });
+  }
+
+  asEvidenceLinkTarget() {
+    return {
+      targetEntityType: 'Criterion',
+      targetEntityId: this.id,
+    };
   }
 }
 
@@ -125,6 +139,13 @@ export class CriterionElement {
       createdAt: now,
       updatedAt: now,
     });
+  }
+
+  asEvidenceLinkTarget() {
+    return {
+      targetEntityType: 'CriterionElement',
+      targetEntityId: this.id,
+    };
   }
 }
 

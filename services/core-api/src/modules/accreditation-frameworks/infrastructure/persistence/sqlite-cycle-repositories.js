@@ -140,6 +140,30 @@ export class SqliteAccreditationCycleRepository extends AccreditationCycleReposi
         );
       }
 
+      for (const reportingPeriod of cycle.reportingPeriods ?? []) {
+        this.database.run(
+          `INSERT INTO accreditation_frameworks_reporting_periods
+           (id, accreditation_cycle_id, name, period_type, start_date, end_date, status, scope_id, created_at, updated_at)
+           VALUES (@id, @accreditationCycleId, @name, @periodType, @startDate, @endDate, @status, @scopeId, @createdAt, @updatedAt)
+           ON CONFLICT(id) DO UPDATE SET
+             accreditation_cycle_id=excluded.accreditation_cycle_id, name=excluded.name, period_type=excluded.period_type,
+             start_date=excluded.start_date, end_date=excluded.end_date, status=excluded.status, scope_id=excluded.scope_id,
+             updated_at=excluded.updated_at`,
+          {
+            id: reportingPeriod.id,
+            accreditationCycleId: reportingPeriod.accreditationCycleId,
+            name: reportingPeriod.name,
+            periodType: reportingPeriod.periodType,
+            startDate: reportingPeriod.startDate,
+            endDate: reportingPeriod.endDate,
+            status: reportingPeriod.status,
+            scopeId: reportingPeriod.scopeId,
+            createdAt: reportingPeriod.createdAt,
+            updatedAt: reportingPeriod.updatedAt,
+          },
+        );
+      }
+
       for (const reviewEvent of cycle.reviewEvents) {
         this.database.run(
           `INSERT INTO accreditation_frameworks_review_events
@@ -224,6 +248,10 @@ export class SqliteAccreditationCycleRepository extends AccreditationCycleReposi
       'SELECT * FROM accreditation_frameworks_cycle_milestones WHERE accreditation_cycle_id = @id ORDER BY due_date ASC, created_at ASC',
       { id: row.id },
     );
+    const reportingPeriods = this.database.all(
+      'SELECT * FROM accreditation_frameworks_reporting_periods WHERE accreditation_cycle_id = @id ORDER BY start_date ASC, created_at ASC',
+      { id: row.id },
+    );
     const events = this.database.all(
       'SELECT * FROM accreditation_frameworks_review_events WHERE accreditation_cycle_id = @id ORDER BY start_date ASC, created_at ASC',
       { id: row.id },
@@ -291,6 +319,18 @@ export class SqliteAccreditationCycleRepository extends AccreditationCycleReposi
         name: item.name,
         milestoneType: item.milestone_type,
         dueDate: item.due_date,
+        status: item.status,
+        scopeId: item.scope_id,
+        createdAt: item.created_at,
+        updatedAt: item.updated_at,
+      })),
+      reportingPeriods: reportingPeriods.map((item) => ({
+        id: item.id,
+        accreditationCycleId: item.accreditation_cycle_id,
+        name: item.name,
+        periodType: item.period_type,
+        startDate: item.start_date,
+        endDate: item.end_date,
         status: item.status,
         scopeId: item.scope_id,
         createdAt: item.created_at,

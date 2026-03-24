@@ -68,6 +68,7 @@ This is a **logical data model**, not a finalized physical database schema. It i
 - [Assessment scope matrix](#assessment-scope-matrix)
 - [Reviewer/event responsibility semantics](#reviewerevent-responsibility-semantics)
 - [Implementation-ready accreditation invariants (Epic 1 slice)](#implementation-ready-accreditation-invariants-epic-1-slice)
+- [Implementation-ready curriculum linkage invariants (Epic 2 Phase 0 groundwork)](#implementation-ready-curriculum-linkage-invariants-epic-2-phase-0-groundwork)
 - [Key cross-context relationships](#key-cross-context-relationships)
   - [Person, identity, and reviewer/faculty relationships](#person-identity-and-reviewerfaculty-relationships)
   - [Framework and accreditation engagement relationships](#framework-and-accreditation-engagement-relationships)
@@ -123,7 +124,7 @@ Unless a module has a stronger reason to do otherwise, prefer these platform-wid
 | --- | --- | --- | --- |
 | `identity-access` | `User`, `Role`, `ServicePrincipal` | `Permission`, `RolePermissionGrant`, `UserRoleAssignment` | `User` and `Role` are mutable roots with effective-dated assignment/grant history. |
 | `organization-registry` | `Institution`, `Person`, `OrganizationUnit`, `Committee` | hierarchy/self-references only in this phase | Canonical reference roots; mutable current-state records with auditable identity/history changes. |
-| `accreditation-frameworks` | `Accreditor`, `AccreditationFramework`, `FrameworkVersion`, `AccreditationCycle`, `ReviewTeam`, `ReviewerProfile` | `Standard`, `Criterion`, `CriterionElement`, `EvidenceRequirement`, `AccreditationScope`, `CycleMilestone`, `ReviewEvent`, `DecisionRecord`, `ReviewTeamMembership` | Framework structure is versioned; cycle operations are mutable with append-only or supersedable event/history records. |
+| `accreditation-frameworks` | `Accreditor`, `AccreditationFramework`, `FrameworkVersion`, `AccreditationCycle`, `ReviewTeam`, `ReviewerProfile` | `Standard`, `Criterion`, `CriterionElement`, `EvidenceRequirement`, `AccreditationScope`, `CycleMilestone`, `ReportingPeriod`, `ReviewEvent`, `DecisionRecord`, `ReviewTeamMembership` | Framework structure is versioned; cycle operations are mutable with append-only or supersedable event/history records. |
 | `evidence-management` | `EvidenceItem`, `EvidenceCollection`, `EvidenceRequest`, `EvidenceRetentionPolicy` | `EvidenceArtifact`, `EvidenceReference`, `EvidenceReview` | Evidence metadata is mutable; artifacts/references/reviews preserve append-only lineage. |
 | `curriculum-mapping` | `Program`, `Course`, `CourseSection`, `AcademicTerm`, `LearningOutcome`, `Competency` | `ProgramOutcomeMap`, `CourseOutcomeMap`, `StandardsAlignment` | Canonical academic structure is mutable current state; mappings are supersedable for traceability. |
 | `assessment-improvement` | `AssessmentPlan`, `AssessmentInstrument`, `AssessmentResult`, `Finding`, `ActionPlan` | `AssessmentMeasure`, `BenchmarkTarget`, `ActionPlanTask`, `ImprovementClosureReview` | Plans/measures/targets are supersedable; results/findings/closure reviews preserve historical execution facts. |
@@ -237,6 +238,7 @@ Own accreditor-agnostic framework structure and accreditation engagement operati
 - `AccreditationScopeProgram`
 - `AccreditationScopeOrganizationUnit`
 - `CycleMilestone`
+- `ReportingPeriod`
 - `ReviewEvent`
 - `DecisionRecord`
 - `ReviewTeamMembership`
@@ -244,7 +246,7 @@ Own accreditor-agnostic framework structure and accreditation engagement operati
 **Aggregate notes**
 
 - `FrameworkVersion` is the publication boundary for standards, criteria, criterion elements, and evidence requirements. Once a version is published for institutional use, structural changes require a new version or explicit superseding child records.
-- `AccreditationCycle` is the operational root for scope, milestones, review events, and decision history.
+- `AccreditationCycle` is the operational root for scope, milestones, reporting periods, review events, and decision history.
 - `ReviewTeamMembership` is enough in v1 to express roster membership, team role, primary responsibilities, and conflict status. Event-specific assignment detail is deferred rather than implied.
 
 **Entity baseline**
@@ -304,6 +306,16 @@ Own accreditor-agnostic framework structure and accreditation engagement operati
   - `blockingFlag` identifies milestones that must be satisfied before downstream workflow transitions.
 - **Lifecycle notes:** effective-dated/supersedable. Preserve milestone history instead of overwriting schedule commitments.
 - **Relationship notes:** may drive `WorkflowEscalationEvent`, `ReviewEvent` scheduling, evidence calls, and report package deadlines.
+
+#### `ReportingPeriod`
+
+- **Purpose:** explicit reporting anchor within an `AccreditationCycle` used for evidence versioning, result grouping, and report package assembly windows.
+- **Key fields:** `accreditationCycleId`, `name`, `periodType`, `startDate`, `endDate`, `status`, `scopeId`.
+- **Field guidance:**
+  - `periodType` should remain generic: cycle-window, annual, semester, quarter, interim, or monitoring.
+  - `scopeId` is optional and should be used only when a reporting window applies to a specific scope segment.
+- **Lifecycle notes:** mutable while planning; close periods instead of deleting them once evidence/reporting operations reference them.
+- **Relationship notes:** may be referenced by assessment artifacts, evidence records, and report package assembly logic.
 
 #### `ReviewEvent`
 
@@ -922,14 +934,14 @@ Additional rules:
 
 This section is the implementation contract for the first domain slice under `services/core-api/src/modules/accreditation-frameworks`. It narrows ambiguous behavior into enforceable invariants.
 
-Implementation note (current `core-api` slice): `AccreditationScopeProgram` and `AccreditationScopeOrganizationUnit` are persisted as explicit child records of `AccreditationScope`, decision corrections are exposed as explicit supersession operations that append a new `DecisionRecord`, and read-side retrieval is available for `FrameworkVersion`, `AccreditationCycle`, `ReviewTeam`, and `ReviewerProfile` via bounded-context application/API queries that enforce the same ownership/supersession integrity checks used by write paths.
+Implementation note (current `core-api` slice): `AccreditationScopeProgram` and `AccreditationScopeOrganizationUnit` are persisted as explicit child records of `AccreditationScope`, `ReportingPeriod` is persisted as a first-class child of `AccreditationCycle`, decision corrections are exposed as explicit supersession operations that append a new `DecisionRecord`, and read-side retrieval is available for `FrameworkVersion`, `AccreditationCycle`, `ReviewTeam`, and `ReviewerProfile` via bounded-context application/API queries that enforce the same ownership/supersession integrity checks used by write paths.
 
 ### Aggregate ownership and mutation
 
 | Aggregate root | Owned children | Mutable operations | Immutable/supersedable rules |
 | --- | --- | --- | --- |
 | `FrameworkVersion` | `Standard`, `Criterion`, `CriterionElement`, `EvidenceRequirement` | add/update while `status=draft` | after publication, structure is immutable; changes require a new framework version |
-| `AccreditationCycle` | `AccreditationScope`, `CycleMilestone`, `ReviewEvent`, `DecisionRecord` | scope/milestone/event planning and cycle state transitions | decisions are append-only; corrections use a new decision that supersedes the prior record |
+| `AccreditationCycle` | `AccreditationScope`, `CycleMilestone`, `ReportingPeriod`, `ReviewEvent`, `DecisionRecord` | scope/milestone/reporting/event planning and cycle state transitions | decisions are append-only; corrections use a new decision that supersedes the prior record |
 | `ReviewTeam` | `ReviewTeamMembership` | add/supersede memberships and activate team lifecycle | membership history is append-only; superseding is explicit and a membership cannot be superseded twice |
 | `ReviewerProfile` | none | create and read for reviewer identity/projection metadata | one profile per person; profile person/institution linkage is immutable |
 | `AccreditationScope` (child) | `AccreditationScopeProgram`, `AccreditationScopeOrganizationUnit` | create/activate/exclude/close by cycle owner only | scope references must stay tied to the owning cycle |
@@ -948,8 +960,8 @@ Implementation note (current `core-api` slice): `AccreditationScopeProgram` and 
 
 - `AccreditationCycle` must reference a **published** `FrameworkVersion`.
 - `AccreditationScope` must contain at least one program or organization-unit reference; empty scopes are invalid.
-- `AccreditationScope`, `CycleMilestone`, and `ReviewEvent` dates must stay within `AccreditationCycle` start/end dates.
-- `CycleMilestone.scopeId` and `ReviewEvent.scopeId` must reference existing scope records in the same cycle.
+- `AccreditationScope`, `CycleMilestone`, `ReportingPeriod`, and `ReviewEvent` dates must stay within `AccreditationCycle` start/end dates.
+- `CycleMilestone.scopeId`, `ReportingPeriod.scopeId`, and `ReviewEvent.scopeId` must reference existing scope records in the same cycle.
 - `ReviewEvent.reviewTeamId` must reference a `ReviewTeam` in the same cycle.
 - `DecisionRecord` issuance is not allowed while the cycle is in `draft`.
 - `DecisionRecord` corrections/supersessions must reference an existing prior decision in the same cycle, and the same decision cannot be superseded twice.
@@ -963,6 +975,23 @@ Implementation note (current `core-api` slice): `AccreditationScopeProgram` and 
 - Existence validation for program/organization references must happen through published application ports, never by direct table-level coupling.
 - Current `core-api` implementation validates institution/person/organization references through published `organization-registry` application services and validates program references through published `curriculum-mapping` application services.
 - `evidence-management`, `workflow-approvals`, and `assessment-improvement` may reference IDs for traceability but must not mutate `accreditation-frameworks` state.
+
+## Implementation-ready curriculum linkage invariants (Epic 2 Phase 0 groundwork)
+
+Implementation note (current `core-api` slice): to support early evidence traceability before the full `assessment-improvement` bounded-context implementation, the current curriculum module includes minimal linkage entities (`Course`, `LearningOutcome`, `CourseOutcomeMap`, `Assessment`, `AssessmentOutcomeLink`, and `AssessmentArtifact`) with strict ownership and scope invariants.
+
+### Linkage and ownership invariants
+
+- `Course` is institution-scoped and may optionally reference a parent `Program` and owning `OrganizationUnit`, both in the same institution.
+- `LearningOutcome.scopeType` governs allowed parent references:
+  - `program` requires `programId`
+  - `course` requires `courseId`
+  - `institution` allows neither `programId` nor `courseId`
+- `CourseOutcomeMap` is unique per `(courseId, learningOutcomeId)` and both records must belong to the same institution.
+- `Assessment` must reference at least one anchor (`programId` and/or `courseId`) and may optionally carry `reviewCycleId` and `reportingPeriodId` for cross-cycle reporting and future evidence versioning.
+- `AssessmentOutcomeLink` is unique per `(assessmentId, learningOutcomeId)` and both records must belong to the same institution.
+- `AssessmentArtifact` must reference `assessmentId` and/or `learningOutcomeId`; when both are present, they must already be linked through `AssessmentOutcomeLink`.
+- `AssessmentArtifact` must carry institutional ownership scope (`scopeType`, `scopeEntityId`) where non-institution scope requires a concrete scoped entity.
 
 ## Key cross-context relationships
 
@@ -992,6 +1021,7 @@ Implementation note (current `core-api` slice): `AccreditationScopeProgram` and 
 - `AccreditationScope 1:N AccreditationScopeProgram`
 - `AccreditationScope 1:N AccreditationScopeOrganizationUnit`
 - `AccreditationCycle 1:N CycleMilestone`
+- `AccreditationCycle 1:N ReportingPeriod`
 - `AccreditationCycle 1:N ReviewEvent`
 - `AccreditationCycle 1:N DecisionRecord`
 - `AccreditationCycle 1:N ReviewTeam`
@@ -1001,9 +1031,14 @@ Implementation note (current `core-api` slice): `AccreditationScopeProgram` and 
 ### Curriculum, assessment, and faculty relationships
 
 - `Institution 1:N Program`
+- `Institution 1:N Course`
 - `Program 1:N LearningOutcome`
+- `Course N:M LearningOutcome` via `CourseOutcomeMap`
 - `Course 1:N CourseSection`
 - `AcademicTerm 1:N CourseSection`
+- `Institution 1:N Assessment` (Phase 0 implementation anchor)
+- `Assessment N:M LearningOutcome` via `AssessmentOutcomeLink` (Phase 0 implementation anchor)
+- `Assessment 1:N AssessmentArtifact` (Phase 0 implementation anchor)
 - `AssessmentPlan 1:N AssessmentMeasure`
 - `AssessmentMeasure N:1 AssessmentInstrument`
 - `AssessmentMeasure 1:N BenchmarkTarget`

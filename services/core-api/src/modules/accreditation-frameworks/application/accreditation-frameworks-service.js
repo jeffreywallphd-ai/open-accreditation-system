@@ -116,6 +116,12 @@ export class AccreditationFrameworksService {
     return this.cycles.save(cycle);
   }
 
+  async addReportingPeriod(cycleId, input) {
+    const cycle = await this.#requireCycle(cycleId);
+    cycle.addReportingPeriod(input);
+    return this.cycles.save(cycle);
+  }
+
   async addReviewEvent(cycleId, input) {
     const cycle = await this.#requireCycle(cycleId);
     if (input.reviewTeamId) {

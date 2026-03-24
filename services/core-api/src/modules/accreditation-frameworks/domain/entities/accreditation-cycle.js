@@ -6,6 +6,7 @@ import {
   accreditationScopeStatus,
   cycleMilestoneStatus,
   decisionRecordStatus,
+  reportingPeriodStatus,
   reviewEventStatus,
 } from '../value-objects/accreditation-statuses.js';
 
@@ -238,6 +239,45 @@ export class CycleMilestone {
   }
 }
 
+export class ReportingPeriod {
+  constructor(props) {
+    assertRequired(props.id, 'ReportingPeriod.id');
+    assertRequired(props.accreditationCycleId, 'ReportingPeriod.accreditationCycleId');
+    assertString(props.name, 'ReportingPeriod.name');
+    assertRequired(props.startDate, 'ReportingPeriod.startDate');
+    assertRequired(props.endDate, 'ReportingPeriod.endDate');
+    assertDateOrder(props.startDate, props.endDate, 'ReportingPeriod.startDate', 'ReportingPeriod.endDate');
+    assertOneOf(props.status, 'ReportingPeriod.status', Object.values(reportingPeriodStatus));
+
+    this.id = props.id;
+    this.accreditationCycleId = props.accreditationCycleId;
+    this.name = props.name;
+    this.periodType = props.periodType ?? 'cycle-window';
+    this.startDate = props.startDate;
+    this.endDate = props.endDate;
+    this.status = props.status;
+    this.scopeId = props.scopeId ?? null;
+    this.createdAt = props.createdAt;
+    this.updatedAt = props.updatedAt;
+  }
+
+  static create(input) {
+    const now = nowIso();
+    return new ReportingPeriod({
+      id: input.id ?? createId('period'),
+      accreditationCycleId: input.accreditationCycleId,
+      name: input.name,
+      periodType: input.periodType,
+      startDate: input.startDate,
+      endDate: input.endDate,
+      status: input.status ?? reportingPeriodStatus.OPEN,
+      scopeId: input.scopeId,
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+}
+
 export class ReviewEvent {
   constructor(props) {
     assertRequired(props.id, 'ReviewEvent.id');
@@ -342,6 +382,9 @@ export class AccreditationCycle {
     this.status = props.status;
     this.scopes = (props.scopes ?? []).map((item) => (item instanceof AccreditationScope ? item : new AccreditationScope(item)));
     this.milestones = (props.milestones ?? []).map((item) => (item instanceof CycleMilestone ? item : new CycleMilestone(item)));
+    this.reportingPeriods = (props.reportingPeriods ?? []).map((item) =>
+      item instanceof ReportingPeriod ? item : new ReportingPeriod(item),
+    );
     this.reviewEvents = (props.reviewEvents ?? []).map((item) => (item instanceof ReviewEvent ? item : new ReviewEvent(item)));
     this.decisionRecords = (props.decisionRecords ?? []).map((item) =>
       item instanceof DecisionRecord ? item : new DecisionRecord(item),
@@ -364,6 +407,7 @@ export class AccreditationCycle {
       status: input.status ?? accreditationCycleStatus.DRAFT,
       scopes: [],
       milestones: [],
+      reportingPeriods: [],
       reviewEvents: [],
       decisionRecords: [],
       createdAt: now,
@@ -429,6 +473,39 @@ export class AccreditationCycle {
     this.updatedAt = nowIso();
     this.#assertAggregateIntegrity();
     return milestone;
+  }
+
+  addReportingPeriod(input) {
+    const reportingPeriod = ReportingPeriod.create({
+      ...input,
+      accreditationCycleId: this.id,
+    });
+
+    if (!isDateInRange(reportingPeriod.startDate, this.cycleStartDate, this.cycleEndDate)) {
+      throw new ValidationError('ReportingPeriod.startDate must be within AccreditationCycle dates');
+    }
+    if (!isDateInRange(reportingPeriod.endDate, this.cycleStartDate, this.cycleEndDate)) {
+      throw new ValidationError('ReportingPeriod.endDate must be within AccreditationCycle dates');
+    }
+    if (reportingPeriod.scopeId && !this.scopes.some((item) => item.id === reportingPeriod.scopeId)) {
+      throw new ValidationError(`ReportingPeriod.scopeId not found in AccreditationCycle: ${reportingPeriod.scopeId}`);
+    }
+
+    const duplicate = this.reportingPeriods.find(
+      (item) =>
+        item.name === reportingPeriod.name &&
+        item.startDate === reportingPeriod.startDate &&
+        item.endDate === reportingPeriod.endDate &&
+        item.scopeId === reportingPeriod.scopeId,
+    );
+    if (duplicate) {
+      throw new ValidationError('Duplicate ReportingPeriod for the same AccreditationCycle');
+    }
+
+    this.reportingPeriods.push(reportingPeriod);
+    this.updatedAt = nowIso();
+    this.#assertAggregateIntegrity();
+    return reportingPeriod;
   }
 
   addReviewEvent(input) {
@@ -519,6 +596,23 @@ export class AccreditationCycle {
       }
       if (milestone.scopeId && !this.scopes.some((item) => item.id === milestone.scopeId)) {
         throw new ValidationError(`CycleMilestone.scopeId not found in AccreditationCycle: ${milestone.scopeId}`);
+      }
+    }
+
+    for (const reportingPeriod of this.reportingPeriods) {
+      if (reportingPeriod.accreditationCycleId !== this.id) {
+        throw new ValidationError(
+          `ReportingPeriod.accreditationCycleId must match AccreditationCycle.id: ${reportingPeriod.id}`,
+        );
+      }
+      if (!isDateInRange(reportingPeriod.startDate, this.cycleStartDate, this.cycleEndDate)) {
+        throw new ValidationError('ReportingPeriod.startDate must be within AccreditationCycle dates');
+      }
+      if (!isDateInRange(reportingPeriod.endDate, this.cycleStartDate, this.cycleEndDate)) {
+        throw new ValidationError('ReportingPeriod.endDate must be within AccreditationCycle dates');
+      }
+      if (reportingPeriod.scopeId && !this.scopes.some((item) => item.id === reportingPeriod.scopeId)) {
+        throw new ValidationError(`ReportingPeriod.scopeId not found in AccreditationCycle: ${reportingPeriod.scopeId}`);
       }
     }
 

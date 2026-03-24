@@ -110,6 +110,16 @@ const addMilestoneSchema = z.object({
   scopeId: z.string().optional(),
 });
 
+const addReportingPeriodSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().min(1),
+  periodType: z.string().optional(),
+  startDate: z.string().min(1),
+  endDate: z.string().min(1),
+  status: z.string().optional(),
+  scopeId: z.string().optional(),
+});
+
 const addReviewEventSchema = z.object({
   id: z.string().optional(),
   reviewTeamId: z.string().optional(),
@@ -294,6 +304,14 @@ export class AccreditationFrameworksController {
   @Post('cycles/:cycleId/milestones')
   async addMilestone(@Param('cycleId') cycleId: string, @Body(new ZodValidationPipe(addMilestoneSchema)) body) {
     return { data: await this.service.addCycleMilestone(cycleId, body) };
+  }
+
+  @Post('cycles/:cycleId/reporting-periods')
+  async addReportingPeriod(
+    @Param('cycleId') cycleId: string,
+    @Body(new ZodValidationPipe(addReportingPeriodSchema)) body,
+  ) {
+    return { data: await this.service.addReportingPeriod(cycleId, body) };
   }
 
   @Post('cycles/:cycleId/review-events')

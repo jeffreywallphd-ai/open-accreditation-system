@@ -175,6 +175,14 @@ export async function runTests(): Promise<void> {
       scopeId,
     });
 
+    await afr.addReportingPeriod(cycle.id, {
+      name: 'Spring 2026',
+      periodType: 'semester',
+      startDate: '2026-01-15',
+      endDate: '2026-05-15',
+      scopeId,
+    });
+
     const withEvent = await afr.addReviewEvent(cycle.id, {
       reviewTeamId: team.id,
       scopeId,
@@ -245,6 +253,7 @@ export async function runTests(): Promise<void> {
     assert.ok(restoredCycle);
     assert.ok(restoredTeam);
     assert.equal(restoredCycle?.decisionRecords.length, 2);
+    assert.equal(restoredCycle?.reportingPeriods.length, 1);
     assert.equal(restoredCycle?.decisionRecords[0].id, initialDecisionId);
     assert.equal(restoredCycle?.scopes[0].scopePrograms.length, 1);
     assert.equal(restoredCycle?.scopes[0].scopeOrganizationUnits.length, 1);

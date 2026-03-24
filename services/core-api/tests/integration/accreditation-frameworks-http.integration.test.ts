@@ -436,6 +436,19 @@ export async function runTests(): Promise<void> {
     });
     assert.equal(milestoneResponse.statusCode, 201);
 
+    const reportingPeriodResponse = await app.inject({
+      method: 'POST',
+      url: `/accreditation-frameworks/cycles/${cycle.id}/reporting-periods`,
+      payload: {
+        name: 'Spring 2026',
+        periodType: 'semester',
+        startDate: '2026-01-15',
+        endDate: '2026-05-15',
+        scopeId: scope.id,
+      },
+    });
+    assert.equal(reportingPeriodResponse.statusCode, 201);
+
     const eventResponse = await app.inject({
       method: 'POST',
       url: `/accreditation-frameworks/cycles/${cycle.id}/review-events`,

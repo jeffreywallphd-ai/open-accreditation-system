@@ -4,6 +4,8 @@ import { OrganizationUnit } from '../../src/modules/organization-registry/domain
 import { OrganizationHierarchyService } from '../../src/modules/organization-registry/domain/services/organization-hierarchy-service.js';
 import { ValidationError } from '../../src/modules/shared/kernel/errors.js';
 import { User } from '../../src/modules/identity-access/domain/entities/user.js';
+import { LearningOutcome } from '../../src/modules/curriculum-mapping/domain/entities/learning-outcome.js';
+import { AssessmentArtifact } from '../../src/modules/curriculum-mapping/domain/entities/assessment.js';
 
 export async function runTests() {
   assert.throws(
@@ -66,6 +68,28 @@ export async function runTests() {
         scopeType: 'committee',
         committeeId: 'committee_1',
         institutionId: 'inst_1',
+      }),
+    ValidationError,
+  );
+
+  assert.throws(
+    () =>
+      LearningOutcome.create({
+        institutionId: 'inst_1',
+        code: 'LO-1',
+        title: 'Invalid Program Outcome',
+        statement: 'Outcome statement',
+        scopeType: 'program',
+      }),
+    ValidationError,
+  );
+
+  assert.throws(
+    () =>
+      AssessmentArtifact.create({
+        institutionId: 'inst_1',
+        name: 'Artifact without links',
+        artifactType: 'rubric',
       }),
     ValidationError,
   );

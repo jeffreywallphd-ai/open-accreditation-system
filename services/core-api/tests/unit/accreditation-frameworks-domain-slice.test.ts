@@ -209,6 +209,25 @@ export async function runTests(): Promise<void> {
 
   await assert.rejects(
     () =>
+      service.addReportingPeriod(cycle.id, {
+        name: 'Invalid reporting period',
+        startDate: '2025-12-15',
+        endDate: '2026-01-20',
+      }),
+    ValidationError,
+  );
+
+  const withReportingPeriod = await service.addReportingPeriod(cycle.id, {
+    name: 'Spring 2026',
+    periodType: 'semester',
+    startDate: '2026-01-15',
+    endDate: '2026-05-15',
+    scopeId: scope.id,
+  });
+  assert.equal(withReportingPeriod.reportingPeriods.length, 1);
+
+  await assert.rejects(
+    () =>
       service.addReviewEvent(cycle.id, {
         name: 'Invalid range event',
         eventType: 'site-visit',

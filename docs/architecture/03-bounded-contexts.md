@@ -107,7 +107,7 @@ Defined contexts:
 **Owns**
 
 - accreditors, frameworks, framework versions, standards, criteria, and `CriterionElement`
-- accreditation engagements: `AccreditationCycle`, `AccreditationScope`, `CycleMilestone`, `ReviewEvent`, and `DecisionRecord`
+- accreditation engagements: `AccreditationCycle`, `AccreditationScope`, `CycleMilestone`, `ReportingPeriod`, `ReviewEvent`, and `DecisionRecord`
 - reviewer operations: `ReviewerProfile`, `ReviewTeam`, and `ReviewTeamMembership`
 - framework-defined `EvidenceRequirement` metadata and extension points
 
@@ -121,7 +121,7 @@ Defined contexts:
 - Aggregate roots: `Accreditor`, `AccreditationFramework`, `FrameworkVersion`, `AccreditationCycle`, `ReviewTeam`, `ReviewerProfile`
 - Owned children:
   - `FrameworkVersion` owns `Standard`, `Criterion`, `CriterionElement`, and `EvidenceRequirement`
-  - `AccreditationCycle` owns `AccreditationScope`, `CycleMilestone`, `ReviewEvent`, and cycle-level `DecisionRecord`
+  - `AccreditationCycle` owns `AccreditationScope`, `CycleMilestone`, `ReportingPeriod`, `ReviewEvent`, and cycle-level `DecisionRecord`
   - `AccreditationScope` owns `AccreditationScopeProgram` and `AccreditationScopeOrganizationUnit`
   - `ReviewTeam` owns `ReviewTeamMembership`
   - `ReviewEvent` may own event-scoped `DecisionRecord` entries
@@ -132,7 +132,7 @@ Defined contexts:
 - Mutability rules:
   - framework structure under `FrameworkVersion` is supersedable/versioned, not overwritten in place once published for active use
   - `AccreditationCycle` is mutable in place for current operational state
-  - `CycleMilestone`, `ReviewEvent`, and `ReviewTeamMembership` are effective-dated/supersedable with audit history
+  - `CycleMilestone`, `ReportingPeriod`, `ReviewEvent`, and `ReviewTeamMembership` are effective-dated/supersedable with audit history
   - `DecisionRecord` is append-only after issuance except for explicit superseding or correction links
 
 **Aggregate notes**
@@ -317,6 +317,7 @@ Defined contexts:
 
 - `CourseSection` is treated as a root because many other contexts need stable delivery-level references without traversing course internals.
 - `AcademicTerm` is also a root because it serves as a shared temporal scope for curriculum, assessment, and faculty deployment.
+- Current `core-api` phase-0 groundwork includes minimal assessment linkage anchors (`Assessment`, `AssessmentOutcomeLink`, `AssessmentArtifact`) in this context to support evidence-traceable relationships prior to the full `assessment-improvement` implementation. Treat these as transitional ownership for implementation continuity.
 
 ### `compliance-audit`
 

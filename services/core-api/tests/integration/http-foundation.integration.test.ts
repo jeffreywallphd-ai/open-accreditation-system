@@ -66,6 +66,96 @@ export async function runTests(): Promise<void> {
 
     assert.equal(createCommittee.statusCode, 201);
 
+    const createProgram = await app.inject({
+      method: 'POST',
+      url: '/curriculum-mapping/programs',
+      payload: {
+        institutionId: institution.id,
+        name: 'BS Data Science',
+        code: 'BSDS',
+      },
+    });
+    assert.equal(createProgram.statusCode, 201);
+    const program = createProgram.json().data;
+
+    const createCourse = await app.inject({
+      method: 'POST',
+      url: '/curriculum-mapping/courses',
+      payload: {
+        institutionId: institution.id,
+        programId: program.id,
+        owningOrganizationUnitId: unit.id,
+        name: 'Applied Data Analysis',
+        code: 'DS310',
+      },
+    });
+    assert.equal(createCourse.statusCode, 201);
+    const course = createCourse.json().data;
+
+    const createOutcome = await app.inject({
+      method: 'POST',
+      url: '/curriculum-mapping/learning-outcomes',
+      payload: {
+        institutionId: institution.id,
+        code: 'PLO-DS-1',
+        title: 'Analyze Data',
+        statement: 'Students analyze data using statistical methods.',
+        scopeType: 'program',
+        programId: program.id,
+      },
+    });
+    assert.equal(createOutcome.statusCode, 201);
+    const outcome = createOutcome.json().data;
+
+    const createCourseOutcomeMap = await app.inject({
+      method: 'POST',
+      url: '/curriculum-mapping/course-outcome-maps',
+      payload: {
+        courseId: course.id,
+        learningOutcomeId: outcome.id,
+      },
+    });
+    assert.equal(createCourseOutcomeMap.statusCode, 201);
+
+    const createAssessment = await app.inject({
+      method: 'POST',
+      url: '/curriculum-mapping/assessments',
+      payload: {
+        institutionId: institution.id,
+        programId: program.id,
+        courseId: course.id,
+        name: 'DS310 Final Project Review',
+        assessmentType: 'direct',
+      },
+    });
+    assert.equal(createAssessment.statusCode, 201);
+    const assessment = createAssessment.json().data;
+
+    const createAssessmentOutcomeLink = await app.inject({
+      method: 'POST',
+      url: '/curriculum-mapping/assessment-outcome-links',
+      payload: {
+        assessmentId: assessment.id,
+        learningOutcomeId: outcome.id,
+      },
+    });
+    assert.equal(createAssessmentOutcomeLink.statusCode, 201);
+
+    const createAssessmentArtifact = await app.inject({
+      method: 'POST',
+      url: '/curriculum-mapping/assessment-artifacts',
+      payload: {
+        institutionId: institution.id,
+        assessmentId: assessment.id,
+        learningOutcomeId: outcome.id,
+        scopeType: 'course',
+        scopeEntityId: course.id,
+        name: 'Project scoring rubric',
+        artifactType: 'rubric',
+      },
+    });
+    assert.equal(createAssessmentArtifact.statusCode, 201);
+
     const listPeople = await app.inject({
       method: 'GET',
       url: `/organization-registry/people?institutionId=${institution.id}`,
