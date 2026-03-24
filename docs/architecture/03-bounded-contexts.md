@@ -107,7 +107,7 @@ Defined contexts:
 **Owns**
 
 - accreditors, frameworks, framework versions, standards, criteria, and `CriterionElement`
-- accreditation engagements: `AccreditationCycle`, `AccreditationScope`, `CycleMilestone`, `ReviewEvent`, and `DecisionRecord`
+- accreditation engagements: `AccreditationCycle`, `AccreditationScope`, `CycleMilestone`, `ReportingPeriod`, `ReviewEvent`, and `DecisionRecord`
 - reviewer operations: `ReviewerProfile`, `ReviewTeam`, and `ReviewTeamMembership`
 - framework-defined `EvidenceRequirement` metadata and extension points
 
@@ -121,7 +121,7 @@ Defined contexts:
 - Aggregate roots: `Accreditor`, `AccreditationFramework`, `FrameworkVersion`, `AccreditationCycle`, `ReviewTeam`, `ReviewerProfile`
 - Owned children:
   - `FrameworkVersion` owns `Standard`, `Criterion`, `CriterionElement`, and `EvidenceRequirement`
-  - `AccreditationCycle` owns `AccreditationScope`, `CycleMilestone`, `ReviewEvent`, and cycle-level `DecisionRecord`
+  - `AccreditationCycle` owns `AccreditationScope`, `CycleMilestone`, `ReportingPeriod`, `ReviewEvent`, and cycle-level `DecisionRecord`
   - `AccreditationScope` owns `AccreditationScopeProgram` and `AccreditationScopeOrganizationUnit`
   - `ReviewTeam` owns `ReviewTeamMembership`
   - `ReviewEvent` may own event-scoped `DecisionRecord` entries
@@ -132,7 +132,7 @@ Defined contexts:
 - Mutability rules:
   - framework structure under `FrameworkVersion` is supersedable/versioned, not overwritten in place once published for active use
   - `AccreditationCycle` is mutable in place for current operational state
-  - `CycleMilestone`, `ReviewEvent`, and `ReviewTeamMembership` are effective-dated/supersedable with audit history
+  - `CycleMilestone`, `ReportingPeriod`, `ReviewEvent`, and `ReviewTeamMembership` are effective-dated/supersedable with audit history
   - `DecisionRecord` is append-only after issuance except for explicit superseding or correction links
 
 **Aggregate notes**
@@ -169,6 +169,40 @@ Defined contexts:
   - `EvidenceReview` is append-only for completed review actions
   - `EvidenceRequest` is mutable in place for open/fulfilled/cancelled state, with immutable status-change history captured by events
   - `EvidenceRetentionPolicy` is supersedable/versioned
+
+**Current implementation note (Epic 2 Phase 1 foundation)**
+
+- `EvidenceItem` is implemented as a first-class aggregate in `services/core-api`.
+- `EvidenceItem` classification is constrained to canonical evidence types (`document`, `metric`, `narrative`, `dataset`, `assessment-artifact`) and provenance types (`manual`, `upload`, `integration`).
+- `EvidenceItem` lifecycle status (`draft`, `active`, `superseded`, `incomplete`, `archived`) is separate from workflow approval state.
+- Lifecycle transitions are explicit and enforced in the aggregate:
+  - `draft -> incomplete | active | archived`
+  - `incomplete -> draft | archived`
+  - `active -> incomplete | superseded | archived`
+  - `superseded` and `archived` are terminal in Phase 1.
+- Usability is modeled explicitly from evidence lifecycle + completeness + artifact requirements + available artifacts.
+- The aggregate enforces artifact ownership (`EvidenceArtifact.evidenceItemId` must match owning `EvidenceItem.id`) and exposes a computed "current artifact" as the most recent `available` artifact.
+- Binary/file storage metadata is modeled in `EvidenceArtifact`, not in `EvidenceItem`.
+- Activation is gated by required evidence metadata (`description` and at least one of `reportingPeriodId`/`reviewCycleId`), completeness, and artifact requirements.
+- Artifact requirements are domain-driven: `upload` sources and evidence types `document`, `dataset`, `assessment-artifact` require an available artifact for activation; `metric`/`narrative` may activate without an artifact when sourced by `manual`/`integration`.
+- Artifact registration is limited to editable statuses (`draft`, `incomplete`) in this phase; `active`, `superseded`, and `archived` do not allow artifact mutation.
+- `superseded` and `archived` statuses are terminal for lifecycle transitions in this phase.
+- Supersession orchestration validates successor existence and institution alignment before calling aggregate transitions.
+- Supersession orchestration now enforces lineage-consistent successor linkage (`same evidenceLineageId`, `successor.supersedesEvidenceItemId = predecessor.id`, and `successor.versionNumber = predecessor.versionNumber + 1`).
+- `EvidenceItem` now carries version-lineage semantics (`evidenceLineageId`, `versionNumber`, `supersedesEvidenceItemId`, `supersededByEvidenceItemId`) so superseding revisions can preserve historical records.
+- Application-layer use cases include explicit superseding-version creation (`createSupersedingEvidenceVersion`) in addition to governed status transitions.
+- `EvidenceReference` is implemented as an append-only owned child on `EvidenceItem`, with accreditation-centered target types (`criterion`, `criterion-element`, `learning-outcome`, `narrative-section`) and governed relationship semantics.
+- `EvidenceReference` target admissibility is validated centrally in the evidence-management application layer through target-type validator contracts, with target existence checks delegated to owning bounded-context application interfaces.
+- `EvidenceReference` input normalization is governed (`targetType`, `targetEntityId`, `relationshipType`, `rationale`, `anchorPath`) with target-specific anchor rules (for example, `narrative-section` requires `anchorPath`).
+- Persistence and repository boundaries enforce append-only behavior for artifacts and references and reject in-place mutation of evidence identity/version-anchor fields.
+- Repository save paths rehydrate/validate aggregate snapshots before persistence so invalid in-memory mutation cannot bypass domain invariants.
+- Application-layer retrieval now supports lineage/current-version queries and reference-target queries (criterion/subcriterion/outcome retrieval foundations) without introducing a reporting-engine abstraction.
+- Application-layer retrieval now includes explicit query/use-case foundations for:
+  - reference-target retrieval (`criterion`, `criterion-element`, `learning-outcome`, `narrative-section`)
+  - `current` vs `historical` lineage-aware retrieval
+  - linkage-context projection (evidence + matching reference subset)
+  - governed usability filters (`isUsable`, `hasAvailableArtifact`, `requiresArtifactForActivation`)
+  - cycle-anchor filters (`reviewCycleId`, `reportingPeriodId`) and lineage cycle-readiness summaries for cross-cycle evolution, including within-cycle vs cross-cycle supersession classification.
 
 ### `assessment-improvement`
 
@@ -230,6 +264,23 @@ Defined contexts:
   - `WorkflowAssignment` is append-only for reassignment history
   - `WorkflowDecision`, `WorkflowComment`, `WorkflowDelegation`, and `WorkflowEscalationEvent` are append-only facts
   - `SubmissionSnapshot` and `SubmissionPackageItem` are immutable after creation
+
+**Current implementation note (Phase 3 inner-layer foundation)**
+
+- `workflow-approvals` now includes a dedicated `ReviewCycle` aggregate for workflow-governed cycle orchestration (`not-started`, `active`, `completed`, `archived`) that is separate from evidence lifecycle state.
+- `ReviewCycle` enforces strict date ordering (`startDate < endDate`) and scoped active-cycle uniqueness (`institution + canonicalized scope`).
+- `workflow-approvals` now includes a `ReviewWorkflow` aggregate tied to a `ReviewCycle` and a target context (for example report section or evidence grouping), with explicit workflow states:
+  - `draft`
+  - `in-review`
+  - `revision-required`
+  - `approved`
+  - `submitted`
+- Workflow transitions are governed by explicit domain transition maps and role policy (`faculty`, `reviewer`, `admin`) with append-only transition history.
+- Transition history is sequence-backed and reconstruction-validated (`transition_sequence` persistence + aggregate checks for contiguous state-chain progression and terminal state consistency).
+- Evidence integration is reference-based (`evidenceItemIds`, `evidenceCollectionId`) and evaluated through an evidence-management application contract (`evaluateWorkflowEvidenceReadiness`) with explicit readiness policy input; workflow state is not embedded in `EvidenceItem`.
+- `ReviewWorkflow.evidenceCollectionId` must reference a collection/set key declared on `ReviewCycle.evidenceSetIds`, preserving cycle-level container ownership while delegating evidence readiness/usability evaluation to evidence-management.
+- Approval/submission readiness policies now evaluate: referenced evidence presence/usability/currentness, superseded evidence exclusion, and target-scoped collection sufficiency (for example report-section scoped readiness) without duplicating evidence lifecycle rules in workflow.
+- `ReviewWorkflow` is unique per (`reviewCycleId`, `targetType`, `targetId`) so cycle-target state retrieval remains deterministic.
 
 ### `narratives-reporting`
 
@@ -317,6 +368,7 @@ Defined contexts:
 
 - `CourseSection` is treated as a root because many other contexts need stable delivery-level references without traversing course internals.
 - `AcademicTerm` is also a root because it serves as a shared temporal scope for curriculum, assessment, and faculty deployment.
+- Current `core-api` phase-0 groundwork includes minimal assessment linkage anchors (`Assessment`, `AssessmentOutcomeLink`, `AssessmentArtifact`) in this context to support evidence-traceable relationships prior to the full `assessment-improvement` implementation. Treat these as transitional ownership for implementation continuity.
 
 ### `compliance-audit`
 

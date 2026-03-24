@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, HttpStatus, Inject, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Inject, Param, Post, Query } from '@nestjs/common';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/http/zod-validation.pipe.js';
 import { AFR_SERVICE } from '../accreditation-frameworks.module.js';
@@ -110,6 +110,16 @@ const addMilestoneSchema = z.object({
   scopeId: z.string().optional(),
 });
 
+const addReportingPeriodSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().min(1),
+  periodType: z.string().optional(),
+  startDate: z.string().min(1),
+  endDate: z.string().min(1),
+  status: z.string().optional(),
+  scopeId: z.string().optional(),
+});
+
 const addReviewEventSchema = z.object({
   id: z.string().optional(),
   reviewTeamId: z.string().optional(),
@@ -129,6 +139,15 @@ const issueDecisionSchema = z.object({
   rationale: z.string().optional(),
   issuedAt: z.string().optional(),
   supersedesDecisionRecordId: z.string().optional(),
+});
+
+const supersedeDecisionSchema = z.object({
+  id: z.string().optional(),
+  reviewEventId: z.string().optional(),
+  decisionType: z.string().min(1),
+  outcome: z.string().min(1),
+  rationale: z.string().optional(),
+  issuedAt: z.string().optional(),
 });
 
 const createReviewerProfileSchema = z.object({
@@ -189,6 +208,26 @@ export class AccreditationFrameworksController {
     return { data: await this.service.createFrameworkVersion(body) };
   }
 
+  @Get('framework-versions/:frameworkVersionId')
+  async getFrameworkVersionById(@Param('frameworkVersionId') frameworkVersionId: string) {
+    return { data: await this.service.getFrameworkVersionById(frameworkVersionId) };
+  }
+
+  @Get('framework-versions')
+  async listFrameworkVersions(
+    @Query('frameworkId') frameworkId?: string,
+    @Query('versionTag') versionTag?: string,
+    @Query('status') status?: string,
+  ) {
+    return {
+      data: await this.service.listFrameworkVersions({
+        frameworkId,
+        versionTag,
+        status,
+      }),
+    };
+  }
+
   @Post('framework-versions/:frameworkVersionId/standards')
   async addStandard(
     @Param('frameworkVersionId') frameworkVersionId: string,
@@ -232,6 +271,26 @@ export class AccreditationFrameworksController {
     return { data: await this.service.createAccreditationCycle(body) };
   }
 
+  @Get('cycles/:cycleId')
+  async getCycleById(@Param('cycleId') cycleId: string) {
+    return { data: await this.service.getAccreditationCycleById(cycleId) };
+  }
+
+  @Get('cycles')
+  async listCycles(
+    @Query('frameworkVersionId') frameworkVersionId?: string,
+    @Query('institutionId') institutionId?: string,
+    @Query('status') status?: string,
+  ) {
+    return {
+      data: await this.service.listAccreditationCycles({
+        frameworkVersionId,
+        institutionId,
+        status,
+      }),
+    };
+  }
+
   @Post('cycles/:cycleId/activate')
   async activateCycle(@Param('cycleId') cycleId: string) {
     return { data: await this.service.activateAccreditationCycle(cycleId) };
@@ -247,6 +306,14 @@ export class AccreditationFrameworksController {
     return { data: await this.service.addCycleMilestone(cycleId, body) };
   }
 
+  @Post('cycles/:cycleId/reporting-periods')
+  async addReportingPeriod(
+    @Param('cycleId') cycleId: string,
+    @Body(new ZodValidationPipe(addReportingPeriodSchema)) body,
+  ) {
+    return { data: await this.service.addReportingPeriod(cycleId, body) };
+  }
+
   @Post('cycles/:cycleId/review-events')
   async addReviewEvent(@Param('cycleId') cycleId: string, @Body(new ZodValidationPipe(addReviewEventSchema)) body) {
     return { data: await this.service.addReviewEvent(cycleId, body) };
@@ -257,16 +324,69 @@ export class AccreditationFrameworksController {
     return { data: await this.service.issueDecisionRecord(cycleId, body) };
   }
 
+  @Post('cycles/:cycleId/decision-records/:decisionRecordId/supersede')
+  async supersedeDecision(
+    @Param('cycleId') cycleId: string,
+    @Param('decisionRecordId') decisionRecordId: string,
+    @Body(new ZodValidationPipe(supersedeDecisionSchema)) body,
+  ) {
+    return { data: await this.service.supersedeDecisionRecord(cycleId, decisionRecordId, body) };
+  }
+
   @Post('reviewer-profiles')
   @HttpCode(HttpStatus.CREATED)
   async createReviewerProfile(@Body(new ZodValidationPipe(createReviewerProfileSchema)) body) {
     return { data: await this.service.createReviewerProfile(body) };
   }
 
+  @Get('reviewer-profiles/:reviewerProfileId')
+  async getReviewerProfileById(@Param('reviewerProfileId') reviewerProfileId: string) {
+    return { data: await this.service.getReviewerProfileById(reviewerProfileId) };
+  }
+
+  @Get('reviewer-profiles')
+  async listReviewerProfiles(
+    @Query('personId') personId?: string,
+    @Query('institutionId') institutionId?: string,
+    @Query('reviewerType') reviewerType?: string,
+    @Query('status') status?: string,
+  ) {
+    return {
+      data: await this.service.listReviewerProfiles({
+        personId,
+        institutionId,
+        reviewerType,
+        status,
+      }),
+    };
+  }
+
   @Post('review-teams')
   @HttpCode(HttpStatus.CREATED)
   async createReviewTeam(@Body(new ZodValidationPipe(createReviewTeamSchema)) body) {
     return { data: await this.service.createReviewTeam(body) };
+  }
+
+  @Get('review-teams/:reviewTeamId')
+  async getReviewTeamById(@Param('reviewTeamId') reviewTeamId: string) {
+    return { data: await this.service.getReviewTeamById(reviewTeamId) };
+  }
+
+  @Get('review-teams')
+  async listReviewTeams(
+    @Query('accreditationCycleId') accreditationCycleId?: string,
+    @Query('institutionId') institutionId?: string,
+    @Query('status') status?: string,
+    @Query('name') name?: string,
+  ) {
+    return {
+      data: await this.service.listReviewTeams({
+        accreditationCycleId,
+        institutionId,
+        status,
+        name,
+      }),
+    };
   }
 
   @Post('review-teams/:reviewTeamId/memberships')

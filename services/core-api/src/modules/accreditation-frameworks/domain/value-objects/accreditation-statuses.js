@@ -26,6 +26,11 @@ export const cycleMilestoneStatus = Object.freeze({
   CANCELLED: 'cancelled',
 });
 
+export const reportingPeriodStatus = Object.freeze({
+  OPEN: 'open',
+  CLOSED: 'closed',
+});
+
 export const reviewEventStatus = Object.freeze({
   PLANNED: 'planned',
   COMPLETED: 'completed',

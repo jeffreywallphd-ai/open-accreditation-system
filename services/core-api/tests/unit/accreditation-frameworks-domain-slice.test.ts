@@ -11,7 +11,8 @@ import {
 } from '../../src/modules/accreditation-frameworks/infrastructure/persistence/in-memory-accreditation-frameworks-repositories.js';
 import { ValidationError } from '../../src/modules/shared/kernel/errors.js';
 import { FrameworkVersion } from '../../src/modules/accreditation-frameworks/domain/entities/framework-version.js';
-import { AccreditationCycle } from '../../src/modules/accreditation-frameworks/domain/entities/accreditation-cycle.js';
+import { AccreditationCycle, AccreditationScope } from '../../src/modules/accreditation-frameworks/domain/entities/accreditation-cycle.js';
+import { ReviewTeam } from '../../src/modules/accreditation-frameworks/domain/entities/review-team.js';
 import {
   accreditationCycleStatus,
   frameworkVersionStatus,
@@ -101,6 +102,8 @@ export async function runTests(): Promise<void> {
   if (!secondCriterion) {
     throw new Error('expected second criterion');
   }
+
+  await assert.rejects(() => service.publishFrameworkVersion(version.id), ValidationError);
 
   const withSecondElement = await service.addCriterionElement(version.id, {
     criterionId: secondCriterion.id,
@@ -206,6 +209,25 @@ export async function runTests(): Promise<void> {
 
   await assert.rejects(
     () =>
+      service.addReportingPeriod(cycle.id, {
+        name: 'Invalid reporting period',
+        startDate: '2025-12-15',
+        endDate: '2026-01-20',
+      }),
+    ValidationError,
+  );
+
+  const withReportingPeriod = await service.addReportingPeriod(cycle.id, {
+    name: 'Spring 2026',
+    periodType: 'semester',
+    startDate: '2026-01-15',
+    endDate: '2026-05-15',
+    scopeId: scope.id,
+  });
+  assert.equal(withReportingPeriod.reportingPeriods.length, 1);
+
+  await assert.rejects(
+    () =>
       service.addReviewEvent(cycle.id, {
         name: 'Invalid range event',
         eventType: 'site-visit',
@@ -237,10 +259,9 @@ export async function runTests(): Promise<void> {
 
   const firstDecision = withDecision.decisionRecords[0];
 
-  const withSupersedingDecision = await service.issueDecisionRecord(cycle.id, {
+  const withSupersedingDecision = await service.supersedeDecisionRecord(cycle.id, firstDecision.id, {
     decisionType: 'commission-correction',
     outcome: 'accredited-with-conditions',
-    supersedesDecisionRecordId: firstDecision.id,
     issuedAt: '2026-10-10T00:00:00.000Z',
   });
 
@@ -257,6 +278,29 @@ export async function runTests(): Promise<void> {
         decisionType: 'invalid-double-supersede',
         outcome: 'denied',
         supersedesDecisionRecordId: firstDecision.id,
+      }),
+    ValidationError,
+  );
+
+  await assert.rejects(
+    () =>
+      new AccreditationScope({
+        id: 'scope_invalid',
+        accreditationCycleId: cycle.id,
+        name: 'Invalid Scope Child',
+        scopeType: 'program-cluster',
+        status: 'draft',
+        scopePrograms: [
+          {
+            id: 'scope_prog_invalid',
+            accreditationScopeId: 'scope_other',
+            programId: 'prog_1',
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          },
+        ],
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
       }),
     ValidationError,
   );
@@ -335,6 +379,65 @@ export async function runTests(): Promise<void> {
         milestones: [],
         reviewEvents: [],
         decisionRecords: [],
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      }),
+    ValidationError,
+  );
+
+  await assert.rejects(
+    () =>
+      new AccreditationCycle({
+        id: 'cycle_decision_integrity',
+        frameworkVersionId: version.id,
+        institutionId: 'inst_1',
+        name: 'Invalid Decision Links',
+        cycleStartDate: '2026-01-01',
+        cycleEndDate: '2026-12-31',
+        status: accreditationCycleStatus.DECISION_ISSUED,
+        scopes: [],
+        milestones: [],
+        reviewEvents: [],
+        decisionRecords: [
+          {
+            id: 'dec_a',
+            accreditationCycleId: 'cycle_decision_integrity',
+            decisionType: 'commission',
+            outcome: 'accredited',
+            issuedAt: '2026-06-01T00:00:00.000Z',
+            status: 'superseded',
+            supersededByDecisionRecordId: null,
+            createdAt: '2026-06-01T00:00:00.000Z',
+            updatedAt: '2026-06-01T00:00:00.000Z',
+          },
+        ],
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-06-01T00:00:00.000Z',
+      }),
+    ValidationError,
+  );
+
+  await assert.rejects(
+    () =>
+      new ReviewTeam({
+        id: 'team_integrity',
+        accreditationCycleId: cycle.id,
+        institutionId: 'inst_1',
+        name: 'Invalid Team',
+        status: 'active',
+        memberships: [
+          {
+            id: 'membership_a',
+            reviewTeamId: 'team_integrity',
+            personId: 'person_1',
+            role: 'chair',
+            state: 'superseded',
+            conflictStatus: 'none',
+            supersededByMembershipId: null,
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          },
+        ],
         createdAt: '2026-01-01T00:00:00.000Z',
         updatedAt: '2026-01-01T00:00:00.000Z',
       }),

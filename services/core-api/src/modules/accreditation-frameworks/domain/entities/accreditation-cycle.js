@@ -6,6 +6,7 @@ import {
   accreditationScopeStatus,
   cycleMilestoneStatus,
   decisionRecordStatus,
+  reportingPeriodStatus,
   reviewEventStatus,
 } from '../value-objects/accreditation-statuses.js';
 
@@ -31,6 +32,56 @@ function ensureUnique(values, message) {
   }
 }
 
+export class AccreditationScopeProgram {
+  constructor(props) {
+    assertRequired(props.id, 'AccreditationScopeProgram.id');
+    assertRequired(props.accreditationScopeId, 'AccreditationScopeProgram.accreditationScopeId');
+    assertRequired(props.programId, 'AccreditationScopeProgram.programId');
+
+    this.id = props.id;
+    this.accreditationScopeId = props.accreditationScopeId;
+    this.programId = props.programId;
+    this.createdAt = props.createdAt;
+    this.updatedAt = props.updatedAt;
+  }
+
+  static create(input) {
+    const now = nowIso();
+    return new AccreditationScopeProgram({
+      id: input.id ?? createId('scope_prog'),
+      accreditationScopeId: input.accreditationScopeId,
+      programId: input.programId,
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+}
+
+export class AccreditationScopeOrganizationUnit {
+  constructor(props) {
+    assertRequired(props.id, 'AccreditationScopeOrganizationUnit.id');
+    assertRequired(props.accreditationScopeId, 'AccreditationScopeOrganizationUnit.accreditationScopeId');
+    assertRequired(props.organizationUnitId, 'AccreditationScopeOrganizationUnit.organizationUnitId');
+
+    this.id = props.id;
+    this.accreditationScopeId = props.accreditationScopeId;
+    this.organizationUnitId = props.organizationUnitId;
+    this.createdAt = props.createdAt;
+    this.updatedAt = props.updatedAt;
+  }
+
+  static create(input) {
+    const now = nowIso();
+    return new AccreditationScopeOrganizationUnit({
+      id: input.id ?? createId('scope_org'),
+      accreditationScopeId: input.accreditationScopeId,
+      organizationUnitId: input.organizationUnitId,
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+}
+
 export class AccreditationScope {
   constructor(props) {
     assertRequired(props.id, 'AccreditationScope.id');
@@ -46,17 +97,41 @@ export class AccreditationScope {
     this.scopeType = props.scopeType;
     this.description = props.description ?? null;
     this.status = props.status;
-    this.programIds = props.programIds ?? [];
-    this.organizationUnitIds = props.organizationUnitIds ?? [];
+    this.scopePrograms = (props.scopePrograms ?? []).map((item) =>
+      item instanceof AccreditationScopeProgram ? item : new AccreditationScopeProgram(item),
+    );
+    this.scopeOrganizationUnits = (props.scopeOrganizationUnits ?? []).map((item) =>
+      item instanceof AccreditationScopeOrganizationUnit ? item : new AccreditationScopeOrganizationUnit(item),
+    );
     this.effectiveStartDate = props.effectiveStartDate ?? null;
     this.effectiveEndDate = props.effectiveEndDate ?? null;
     this.scopeOrder = props.scopeOrder ?? 0;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
+
+    if (this.scopePrograms.length === 0 && this.scopeOrganizationUnits.length === 0) {
+      const legacyProgramIds = [...(props.programIds ?? [])];
+      const legacyOrganizationUnitIds = [...(props.organizationUnitIds ?? [])];
+      this.scopePrograms = legacyProgramIds.map((programId) =>
+        AccreditationScopeProgram.create({
+          accreditationScopeId: this.id,
+          programId,
+        }),
+      );
+      this.scopeOrganizationUnits = legacyOrganizationUnitIds.map((organizationUnitId) =>
+        AccreditationScopeOrganizationUnit.create({
+          accreditationScopeId: this.id,
+          organizationUnitId,
+        }),
+      );
+    }
+
+    this.#assertIntegrity();
   }
 
   static create(input) {
     const now = nowIso();
+    const id = input.id ?? createId('scope');
     const programIds = [...(input.programIds ?? [])];
     const organizationUnitIds = [...(input.organizationUnitIds ?? [])];
     if (programIds.length === 0 && organizationUnitIds.length === 0) {
@@ -66,20 +141,66 @@ export class AccreditationScope {
     ensureUnique(organizationUnitIds, 'AccreditationScope organizationUnitIds must be unique');
 
     return new AccreditationScope({
-      id: input.id ?? createId('scope'),
+      id,
       accreditationCycleId: input.accreditationCycleId,
       name: input.name,
       scopeType: input.scopeType,
       description: input.description,
       status: input.status ?? accreditationScopeStatus.DRAFT,
-      programIds,
-      organizationUnitIds,
+      scopePrograms: programIds.map((programId) =>
+        AccreditationScopeProgram.create({
+          accreditationScopeId: id,
+          programId,
+        }),
+      ),
+      scopeOrganizationUnits: organizationUnitIds.map((organizationUnitId) =>
+        AccreditationScopeOrganizationUnit.create({
+          accreditationScopeId: id,
+          organizationUnitId,
+        }),
+      ),
       effectiveStartDate: input.effectiveStartDate,
       effectiveEndDate: input.effectiveEndDate,
       scopeOrder: input.scopeOrder,
       createdAt: now,
       updatedAt: now,
     });
+  }
+
+  get programIds() {
+    return this.scopePrograms.map((item) => item.programId);
+  }
+
+  get organizationUnitIds() {
+    return this.scopeOrganizationUnits.map((item) => item.organizationUnitId);
+  }
+
+  #assertIntegrity() {
+    const programIds = this.programIds;
+    const organizationUnitIds = this.organizationUnitIds;
+
+    if (programIds.length === 0 && organizationUnitIds.length === 0) {
+      throw new ValidationError('AccreditationScope must include at least one programId or organizationUnitId');
+    }
+
+    ensureUnique(programIds, 'AccreditationScope programIds must be unique');
+    ensureUnique(organizationUnitIds, 'AccreditationScope organizationUnitIds must be unique');
+
+    for (const scopeProgram of this.scopePrograms) {
+      if (scopeProgram.accreditationScopeId !== this.id) {
+        throw new ValidationError(
+          `AccreditationScopeProgram.accreditationScopeId must match AccreditationScope.id: ${scopeProgram.id}`,
+        );
+      }
+    }
+
+    for (const scopeOrganizationUnit of this.scopeOrganizationUnits) {
+      if (scopeOrganizationUnit.accreditationScopeId !== this.id) {
+        throw new ValidationError(
+          `AccreditationScopeOrganizationUnit.accreditationScopeId must match AccreditationScope.id: ${scopeOrganizationUnit.id}`,
+        );
+      }
+    }
   }
 }
 
@@ -111,6 +232,45 @@ export class CycleMilestone {
       milestoneType: input.milestoneType,
       dueDate: input.dueDate,
       status: input.status ?? cycleMilestoneStatus.PLANNED,
+      scopeId: input.scopeId,
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+}
+
+export class ReportingPeriod {
+  constructor(props) {
+    assertRequired(props.id, 'ReportingPeriod.id');
+    assertRequired(props.accreditationCycleId, 'ReportingPeriod.accreditationCycleId');
+    assertString(props.name, 'ReportingPeriod.name');
+    assertRequired(props.startDate, 'ReportingPeriod.startDate');
+    assertRequired(props.endDate, 'ReportingPeriod.endDate');
+    assertDateOrder(props.startDate, props.endDate, 'ReportingPeriod.startDate', 'ReportingPeriod.endDate');
+    assertOneOf(props.status, 'ReportingPeriod.status', Object.values(reportingPeriodStatus));
+
+    this.id = props.id;
+    this.accreditationCycleId = props.accreditationCycleId;
+    this.name = props.name;
+    this.periodType = props.periodType ?? 'cycle-window';
+    this.startDate = props.startDate;
+    this.endDate = props.endDate;
+    this.status = props.status;
+    this.scopeId = props.scopeId ?? null;
+    this.createdAt = props.createdAt;
+    this.updatedAt = props.updatedAt;
+  }
+
+  static create(input) {
+    const now = nowIso();
+    return new ReportingPeriod({
+      id: input.id ?? createId('period'),
+      accreditationCycleId: input.accreditationCycleId,
+      name: input.name,
+      periodType: input.periodType,
+      startDate: input.startDate,
+      endDate: input.endDate,
+      status: input.status ?? reportingPeriodStatus.OPEN,
       scopeId: input.scopeId,
       createdAt: now,
       updatedAt: now,
@@ -222,6 +382,9 @@ export class AccreditationCycle {
     this.status = props.status;
     this.scopes = (props.scopes ?? []).map((item) => (item instanceof AccreditationScope ? item : new AccreditationScope(item)));
     this.milestones = (props.milestones ?? []).map((item) => (item instanceof CycleMilestone ? item : new CycleMilestone(item)));
+    this.reportingPeriods = (props.reportingPeriods ?? []).map((item) =>
+      item instanceof ReportingPeriod ? item : new ReportingPeriod(item),
+    );
     this.reviewEvents = (props.reviewEvents ?? []).map((item) => (item instanceof ReviewEvent ? item : new ReviewEvent(item)));
     this.decisionRecords = (props.decisionRecords ?? []).map((item) =>
       item instanceof DecisionRecord ? item : new DecisionRecord(item),
@@ -244,6 +407,7 @@ export class AccreditationCycle {
       status: input.status ?? accreditationCycleStatus.DRAFT,
       scopes: [],
       milestones: [],
+      reportingPeriods: [],
       reviewEvents: [],
       decisionRecords: [],
       createdAt: now,
@@ -311,6 +475,39 @@ export class AccreditationCycle {
     return milestone;
   }
 
+  addReportingPeriod(input) {
+    const reportingPeriod = ReportingPeriod.create({
+      ...input,
+      accreditationCycleId: this.id,
+    });
+
+    if (!isDateInRange(reportingPeriod.startDate, this.cycleStartDate, this.cycleEndDate)) {
+      throw new ValidationError('ReportingPeriod.startDate must be within AccreditationCycle dates');
+    }
+    if (!isDateInRange(reportingPeriod.endDate, this.cycleStartDate, this.cycleEndDate)) {
+      throw new ValidationError('ReportingPeriod.endDate must be within AccreditationCycle dates');
+    }
+    if (reportingPeriod.scopeId && !this.scopes.some((item) => item.id === reportingPeriod.scopeId)) {
+      throw new ValidationError(`ReportingPeriod.scopeId not found in AccreditationCycle: ${reportingPeriod.scopeId}`);
+    }
+
+    const duplicate = this.reportingPeriods.find(
+      (item) =>
+        item.name === reportingPeriod.name &&
+        item.startDate === reportingPeriod.startDate &&
+        item.endDate === reportingPeriod.endDate &&
+        item.scopeId === reportingPeriod.scopeId,
+    );
+    if (duplicate) {
+      throw new ValidationError('Duplicate ReportingPeriod for the same AccreditationCycle');
+    }
+
+    this.reportingPeriods.push(reportingPeriod);
+    this.updatedAt = nowIso();
+    this.#assertAggregateIntegrity();
+    return reportingPeriod;
+  }
+
   addReviewEvent(input) {
     const reviewEvent = ReviewEvent.create({
       ...input,
@@ -368,7 +565,16 @@ export class AccreditationCycle {
     return decision;
   }
 
+  supersedeDecision(supersededDecisionRecordId, input) {
+    return this.issueDecision({
+      ...input,
+      supersedesDecisionRecordId: supersededDecisionRecordId,
+    });
+  }
+
   #assertAggregateIntegrity() {
+    const decisionById = new Map(this.decisionRecords.map((item) => [item.id, item]));
+
     for (const scope of this.scopes) {
       if (scope.accreditationCycleId !== this.id) {
         throw new ValidationError(`AccreditationScope.accreditationCycleId must match AccreditationCycle.id: ${scope.id}`);
@@ -390,6 +596,23 @@ export class AccreditationCycle {
       }
       if (milestone.scopeId && !this.scopes.some((item) => item.id === milestone.scopeId)) {
         throw new ValidationError(`CycleMilestone.scopeId not found in AccreditationCycle: ${milestone.scopeId}`);
+      }
+    }
+
+    for (const reportingPeriod of this.reportingPeriods) {
+      if (reportingPeriod.accreditationCycleId !== this.id) {
+        throw new ValidationError(
+          `ReportingPeriod.accreditationCycleId must match AccreditationCycle.id: ${reportingPeriod.id}`,
+        );
+      }
+      if (!isDateInRange(reportingPeriod.startDate, this.cycleStartDate, this.cycleEndDate)) {
+        throw new ValidationError('ReportingPeriod.startDate must be within AccreditationCycle dates');
+      }
+      if (!isDateInRange(reportingPeriod.endDate, this.cycleStartDate, this.cycleEndDate)) {
+        throw new ValidationError('ReportingPeriod.endDate must be within AccreditationCycle dates');
+      }
+      if (reportingPeriod.scopeId && !this.scopes.some((item) => item.id === reportingPeriod.scopeId)) {
+        throw new ValidationError(`ReportingPeriod.scopeId not found in AccreditationCycle: ${reportingPeriod.scopeId}`);
       }
     }
 
@@ -417,7 +640,11 @@ export class AccreditationCycle {
         throw new ValidationError(`DecisionRecord.reviewEventId not found in AccreditationCycle: ${decision.reviewEventId}`);
       }
       if (decision.supersedesDecisionRecordId) {
-        if (!this.decisionRecords.some((item) => item.id === decision.supersedesDecisionRecordId)) {
+        if (decision.supersedesDecisionRecordId === decision.id) {
+          throw new ValidationError('DecisionRecord cannot supersede itself');
+        }
+        const superseded = decisionById.get(decision.supersedesDecisionRecordId);
+        if (!superseded) {
           throw new ValidationError(
             `DecisionRecord.supersedesDecisionRecordId not found: ${decision.supersedesDecisionRecordId}`,
           );
@@ -425,7 +652,32 @@ export class AccreditationCycle {
         if (supersededIds.has(decision.supersedesDecisionRecordId)) {
           throw new ValidationError('DecisionRecord already superseded and cannot be superseded twice');
         }
+        if (superseded.supersededByDecisionRecordId !== decision.id) {
+          throw new ValidationError('DecisionRecord supersession link must include reciprocal supersededByDecisionRecordId');
+        }
         supersededIds.add(decision.supersedesDecisionRecordId);
+      }
+
+      if (decision.supersededByDecisionRecordId) {
+        if (decision.supersededByDecisionRecordId === decision.id) {
+          throw new ValidationError('DecisionRecord cannot be superseded by itself');
+        }
+        const superseding = decisionById.get(decision.supersededByDecisionRecordId);
+        if (!superseding) {
+          throw new ValidationError(
+            `DecisionRecord.supersededByDecisionRecordId not found: ${decision.supersededByDecisionRecordId}`,
+          );
+        }
+        if (superseding.supersedesDecisionRecordId !== decision.id) {
+          throw new ValidationError('DecisionRecord supersededBy link must match superseding record reference');
+        }
+      }
+
+      if (decision.status === decisionRecordStatus.SUPERSEDED && !decision.supersededByDecisionRecordId) {
+        throw new ValidationError('Superseded DecisionRecord must include supersededByDecisionRecordId');
+      }
+      if (decision.status !== decisionRecordStatus.SUPERSEDED && decision.supersededByDecisionRecordId) {
+        throw new ValidationError('Only superseded DecisionRecord can set supersededByDecisionRecordId');
       }
     }
   }

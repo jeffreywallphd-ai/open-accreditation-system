@@ -63,6 +63,15 @@ Event schema sources:
 
 Note: many schema files are placeholders now; future changes should fill them rather than bypass them.
 
+### Internal bounded-context contract note
+
+Not all integrations are external-system integrations. For cross-context orchestration inside `services/core-api`, use published application contracts instead of direct repository coupling. Current Phase 3 implementation uses:
+
+- `evidence-management` -> `WorkflowEvidenceReadinessContract.evaluateWorkflowEvidenceReadiness`
+- consumer: `workflow-approvals` application layer (`WorkflowApprovalsService`)
+
+This contract keeps workflow decisions decoupled from evidence persistence internals while still enforcing evidence presence, usability, completeness, current-vs-superseded constraints, and cycle/target-scoped collection readiness constraints.
+
 ## Data Flow Pattern
 
 ```mermaid

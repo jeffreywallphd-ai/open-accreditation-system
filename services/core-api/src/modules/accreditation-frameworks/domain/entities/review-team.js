@@ -167,6 +167,8 @@ export class ReviewTeam {
   }
 
   #assertIntegrity() {
+    const membershipsById = new Map(this.memberships.map((membership) => [membership.id, membership]));
+
     const primaryMemberships = this.memberships.filter(
       (membership) => membership.state === reviewTeamMembershipState.ACTIVE && membership.isPrimary,
     );
@@ -197,6 +199,44 @@ export class ReviewTeam {
         new Date(membership.effectiveEndDate).getTime() < new Date(membership.effectiveStartDate).getTime()
       ) {
         throw new ValidationError('ReviewTeamMembership effective dates are invalid');
+      }
+
+      if (membership.supersedesMembershipId) {
+        if (membership.supersedesMembershipId === membership.id) {
+          throw new ValidationError('ReviewTeamMembership cannot supersede itself');
+        }
+        const superseded = membershipsById.get(membership.supersedesMembershipId);
+        if (!superseded) {
+          throw new ValidationError(`ReviewTeamMembership.supersedesMembershipId not found: ${membership.supersedesMembershipId}`);
+        }
+        if (superseded.personId !== membership.personId) {
+          throw new ValidationError('Superseding membership must keep the same personId');
+        }
+        if (superseded.supersededByMembershipId !== membership.id) {
+          throw new ValidationError('ReviewTeamMembership supersession link must include reciprocal supersededByMembershipId');
+        }
+      }
+
+      if (membership.supersededByMembershipId) {
+        if (membership.supersededByMembershipId === membership.id) {
+          throw new ValidationError('ReviewTeamMembership cannot be superseded by itself');
+        }
+        const superseding = membershipsById.get(membership.supersededByMembershipId);
+        if (!superseding) {
+          throw new ValidationError(
+            `ReviewTeamMembership.supersededByMembershipId not found: ${membership.supersededByMembershipId}`,
+          );
+        }
+        if (superseding.supersedesMembershipId !== membership.id) {
+          throw new ValidationError('ReviewTeamMembership supersededBy link must match superseding record reference');
+        }
+      }
+
+      if (membership.state === reviewTeamMembershipState.SUPERSEDED && !membership.supersededByMembershipId) {
+        throw new ValidationError('Superseded ReviewTeamMembership must include supersededByMembershipId');
+      }
+      if (membership.state === reviewTeamMembershipState.ACTIVE && membership.supersededByMembershipId) {
+        throw new ValidationError('Active ReviewTeamMembership cannot include supersededByMembershipId');
       }
     }
 

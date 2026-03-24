@@ -44,6 +44,13 @@ export class Standard {
       updatedAt: now,
     });
   }
+
+  asEvidenceLinkTarget() {
+    return {
+      targetEntityType: 'Standard',
+      targetEntityId: this.id,
+    };
+  }
 }
 
 export class Criterion {
@@ -78,6 +85,13 @@ export class Criterion {
       createdAt: now,
       updatedAt: now,
     });
+  }
+
+  asEvidenceLinkTarget() {
+    return {
+      targetEntityType: 'Criterion',
+      targetEntityId: this.id,
+    };
   }
 }
 
@@ -125,6 +139,13 @@ export class CriterionElement {
       createdAt: now,
       updatedAt: now,
     });
+  }
+
+  asEvidenceLinkTarget() {
+    return {
+      targetEntityType: 'CriterionElement',
+      targetEntityId: this.id,
+    };
   }
 }
 
@@ -345,6 +366,7 @@ export class FrameworkVersion {
     }
 
     this.#assertStructuralIntegrity();
+    this.#assertPublicationReadiness();
 
     this.status = frameworkVersionStatus.PUBLISHED;
     this.publishedAt = publishedAt;
@@ -406,8 +428,23 @@ export class FrameworkVersion {
           `CriterionElement.frameworkVersionId must match FrameworkVersion.id: ${criterionElement.id}`,
         );
       }
-      if (!this.criteria.some((item) => item.id === criterionElement.criterionId)) {
+      const parentCriterion = this.criteria.find((item) => item.id === criterionElement.criterionId);
+      if (!parentCriterion) {
         throw new ValidationError(`CriterionElement.criterionId not found in FrameworkVersion: ${criterionElement.criterionId}`);
+      }
+      if (criterionElement.supersedesElementId) {
+        if (criterionElement.supersedesElementId === criterionElement.id) {
+          throw new ValidationError('CriterionElement cannot supersede itself');
+        }
+        const supersededElement = this.criterionElements.find((item) => item.id === criterionElement.supersedesElementId);
+        if (!supersededElement) {
+          throw new ValidationError(
+            `CriterionElement.supersedesElementId not found in FrameworkVersion: ${criterionElement.supersedesElementId}`,
+          );
+        }
+        if (supersededElement.criterionId !== parentCriterion.id) {
+          throw new ValidationError('CriterionElement.supersedesElementId must reference an element in the same Criterion');
+        }
       }
     }
 
@@ -440,18 +477,38 @@ export class FrameworkVersion {
           );
         }
       }
+
+      if (evidenceRequirement.supersedesRequirementId) {
+        if (evidenceRequirement.supersedesRequirementId === evidenceRequirement.id) {
+          throw new ValidationError('EvidenceRequirement cannot supersede itself');
+        }
+        const supersededRequirement = this.evidenceRequirements.find(
+          (item) => item.id === evidenceRequirement.supersedesRequirementId,
+        );
+        if (!supersededRequirement) {
+          throw new ValidationError(
+            `EvidenceRequirement.supersedesRequirementId not found in FrameworkVersion: ${evidenceRequirement.supersedesRequirementId}`,
+          );
+        }
+      }
     }
 
+    if (this.status === frameworkVersionStatus.PUBLISHED) {
+      this.#assertPublicationReadiness();
+    }
+  }
+
+  #assertPublicationReadiness() {
     for (const standard of this.standards) {
       const standardCriteria = this.criteria.filter((item) => item.standardId === standard.id);
-      if (this.status === frameworkVersionStatus.PUBLISHED && standardCriteria.length === 0) {
+      if (standardCriteria.length === 0) {
         throw new ValidationError(`Standard must include at least one Criterion before publication: ${standard.id}`);
       }
     }
 
     for (const criterion of this.criteria) {
       const criterionElements = this.criterionElements.filter((item) => item.criterionId === criterion.id);
-      if (this.status === frameworkVersionStatus.PUBLISHED && criterionElements.length === 0) {
+      if (criterionElements.length === 0) {
         throw new ValidationError(`Criterion must include at least one CriterionElement before publication: ${criterion.id}`);
       }
     }
