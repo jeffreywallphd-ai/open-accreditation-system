@@ -69,6 +69,7 @@ This is a **logical data model**, not a finalized physical database schema. It i
 - [Reviewer/event responsibility semantics](#reviewerevent-responsibility-semantics)
 - [Implementation-ready accreditation invariants (Epic 1 slice)](#implementation-ready-accreditation-invariants-epic-1-slice)
 - [Implementation-ready evidence invariants (Epic 2 Phase 1 foundation)](#implementation-ready-evidence-invariants-epic-2-phase-1-foundation)
+- [Implementation-ready workflow invariants (Phase 3 foundation)](#implementation-ready-workflow-invariants-phase-3-foundation)
 - [Implementation-ready curriculum linkage invariants (Epic 2 Phase 0 groundwork)](#implementation-ready-curriculum-linkage-invariants-epic-2-phase-0-groundwork)
 - [Key cross-context relationships](#key-cross-context-relationships)
   - [Person, identity, and reviewer/faculty relationships](#person-identity-and-reviewerfaculty-relationships)
@@ -129,7 +130,7 @@ Unless a module has a stronger reason to do otherwise, prefer these platform-wid
 | `evidence-management` | `EvidenceItem`, `EvidenceCollection`, `EvidenceRequest`, `EvidenceRetentionPolicy` | `EvidenceArtifact`, `EvidenceReference`, `EvidenceReview` | Evidence metadata is mutable; artifacts/references/reviews preserve append-only lineage. |
 | `curriculum-mapping` | `Program`, `Course`, `CourseSection`, `AcademicTerm`, `LearningOutcome`, `Competency` | `ProgramOutcomeMap`, `CourseOutcomeMap`, `StandardsAlignment` | Canonical academic structure is mutable current state; mappings are supersedable for traceability. |
 | `assessment-improvement` | `AssessmentPlan`, `AssessmentInstrument`, `AssessmentResult`, `Finding`, `ActionPlan` | `AssessmentMeasure`, `BenchmarkTarget`, `ActionPlanTask`, `ImprovementClosureReview` | Plans/measures/targets are supersedable; results/findings/closure reviews preserve historical execution facts. |
-| `workflow-approvals` | `WorkflowTemplate`, `Submission` | `WorkflowStep`, `WorkflowAssignment`, `WorkflowDecision`, `WorkflowComment`, `WorkflowDelegation`, `WorkflowEscalationEvent`, `SubmissionSnapshot`, `SubmissionPackageItem` | Runtime workflow history is append-only; snapshots/packages are immutable. |
+| `workflow-approvals` | `WorkflowTemplate`, `Submission`, `ReviewCycle`, `ReviewWorkflow` | `WorkflowStep`, `WorkflowAssignment`, `WorkflowDecision`, `WorkflowComment`, `WorkflowDelegation`, `WorkflowEscalationEvent`, `SubmissionSnapshot`, `SubmissionPackageItem`, `WorkflowTransitionRecord` | Runtime workflow history is append-only; snapshots/packages are immutable; review-cycle orchestration and role-governed state transitions remain explicit aggregates. |
 | `narratives-reporting` | `Narrative`, `ReportPackage`, `ExportJob` | `NarrativeSection` | Draft narrative content is mutable; submitted/package-bound versions must remain reproducible. |
 | `faculty-intelligence` | `FacultyProfile`, `FacultyQualification` | `FacultyAppointment`, `FacultyDeployment`, `FacultyActivity`, `QualificationBasis`, `QualificationReview` | Faculty projections are mutable current state; appointments/deployments/qualification evidence are effective-dated or append-only. |
 | `compliance-audit` | `AuditEvent`, `ControlAttestation`, `PolicyException` | none in this phase | Audit events are append-only; attestations/exceptions supersede by new records. |
@@ -588,6 +589,8 @@ Own governed submission workflows, assignments, decisions, comments, delegations
 
 - `WorkflowTemplate`
 - `Submission`
+- `ReviewCycle`
+- `ReviewWorkflow`
 
 **Owned entities**
 
@@ -599,17 +602,23 @@ Own governed submission workflows, assignments, decisions, comments, delegations
 - `WorkflowEscalationEvent`
 - `SubmissionSnapshot`
 - `SubmissionPackageItem`
+- `WorkflowTransitionRecord`
 
 **Aggregate notes**
 
 - All runtime workflow history beneath `Submission` is append-only for auditability.
 - `SubmissionSnapshot` is the canonical answer to “what exactly was reviewed at that moment?”
+- `ReviewCycle` is a distinct lifecycle container for workflow orchestration over a bounded institutional scope (`not-started`, `active`, `completed`, `archived`).
+- `ReviewWorkflow` carries explicit state-machine and role policy behavior (`faculty`, `reviewer`, `admin`) without embedding workflow state into `EvidenceItem`.
 
 **Entity baseline**
 
 - `WorkflowTemplate`: reusable workflow definition for submissions.
 - `WorkflowStep`: ordered step definition with routing semantics.
 - `Submission`: runtime submission against a workflow and business target.
+- `ReviewCycle`: workflow-governed cycle container with explicit date bounds, scope anchors (`programIds`, `organizationUnitIds`), and evidence-set linkage metadata.
+- `ReviewWorkflow`: workflow instance bound to a cycle and domain target (for example report section or evidence grouping), with governed transitions (`draft`, `in-review`, `revision-required`, `approved`, `submitted`).
+- `WorkflowTransitionRecord`: append-only transition fact for actor role, state change, rationale, and evidence-readiness snapshot.
 - `WorkflowAssignment`: current or historical assignment record for a step.
 - `WorkflowDecision`: approval, rejection, request-change, or acknowledgement decision.
 
@@ -1031,6 +1040,32 @@ Implementation note (current `core-api` slice): the `evidence-management` module
   - cycle/reporting anchors (`reviewCycleId`, `reportingPeriodId`) and lineage cycle-readiness summaries for cross-cycle reuse/supersession analysis.
   - cycle-readiness summaries classify within-cycle vs cross-cycle supersession transitions for cross-cycle evolution tracking.
 
+## Implementation-ready workflow invariants (Phase 3 foundation)
+
+Implementation note (current `core-api` slice): the `workflow-approvals` module now includes a `ReviewCycle` aggregate and a `ReviewWorkflow` aggregate to provide inner-layer workflow orchestration separate from evidence lifecycle state.
+
+### ReviewCycle and ReviewWorkflow invariants
+
+- `ReviewCycle.status` is constrained to `not-started`, `active`, `completed`, `archived`.
+- `ReviewCycle.startDate` must be strictly earlier than `ReviewCycle.endDate` (`startDate < endDate`).
+- `ReviewCycle` state transitions are explicit:
+  - `not-started -> active | archived`
+  - `active -> completed`
+  - `completed -> archived`
+  - `archived` is terminal.
+- Only one `ReviewCycle` in `status=active` is allowed for the same canonical scope key (`institutionId + sorted programIds + sorted organizationUnitIds`).
+- `ReviewWorkflow.state` is constrained to `draft`, `in-review`, `revision-required`, `approved`, `submitted`.
+- `ReviewWorkflow` state transitions are explicit:
+  - `draft -> in-review`
+  - `in-review -> revision-required | approved`
+  - `revision-required -> draft`
+  - `approved -> submitted`
+  - `submitted` is terminal.
+- Role-governed transitions are enforced in domain logic and constrained to `faculty`, `reviewer`, and `admin` policy.
+- `ReviewWorkflow` transition history is append-only; existing transition records cannot be mutated or removed by repository save paths.
+- Workflow evidence integration remains reference-based (`evidenceItemIds`, `evidenceCollectionId`) and does not embed workflow state in `EvidenceItem`.
+- Approval/submission transitions evaluate referenced evidence readiness (complete + active + usable) via application orchestration and pass evidence sufficiency context into domain transition validation.
+
 ## Implementation-ready curriculum linkage invariants (Epic 2 Phase 0 groundwork)
 
 Implementation note (current `core-api` slice): to support early evidence traceability before the full `assessment-improvement` bounded-context implementation, the current curriculum module includes minimal linkage entities (`Course`, `LearningOutcome`, `CourseOutcomeMap`, `Assessment`, `AssessmentOutcomeLink`, and `AssessmentArtifact`) with strict ownership and scope invariants.
@@ -1114,6 +1149,9 @@ Implementation note (current `core-api` slice): to support early evidence tracea
 - `EvidenceRequest 1:N EvidenceItem` for requested responses or revisions
 - `WorkflowTemplate 1:N WorkflowStep`
 - `WorkflowTemplate 1:N Submission`
+- `ReviewCycle 1:N ReviewWorkflow`
+- `ReviewWorkflow 1:N WorkflowTransitionRecord`
+- `ReviewWorkflow N:M EvidenceItem` via referenced `evidenceItemIds` linkage
 - `Submission 1:N WorkflowAssignment`
 - `Submission 1:N WorkflowDecision`
 - `Submission 1:N WorkflowComment`

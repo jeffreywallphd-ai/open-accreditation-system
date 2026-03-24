@@ -265,6 +265,19 @@ Defined contexts:
   - `WorkflowDecision`, `WorkflowComment`, `WorkflowDelegation`, and `WorkflowEscalationEvent` are append-only facts
   - `SubmissionSnapshot` and `SubmissionPackageItem` are immutable after creation
 
+**Current implementation note (Phase 3 inner-layer foundation)**
+
+- `workflow-approvals` now includes a dedicated `ReviewCycle` aggregate for workflow-governed cycle orchestration (`not-started`, `active`, `completed`, `archived`) that is separate from evidence lifecycle state.
+- `ReviewCycle` enforces strict date ordering (`startDate < endDate`) and scoped active-cycle uniqueness (`institution + canonicalized scope`).
+- `workflow-approvals` now includes a `ReviewWorkflow` aggregate tied to a `ReviewCycle` and a target context (for example report section or evidence grouping), with explicit workflow states:
+  - `draft`
+  - `in-review`
+  - `revision-required`
+  - `approved`
+  - `submitted`
+- Workflow transitions are governed by explicit domain transition maps and role policy (`faculty`, `reviewer`, `admin`) with append-only transition history.
+- Evidence integration is reference-based (`evidenceItemIds`, `evidenceCollectionId`) and evaluated through application-layer evidence queries; workflow state is not embedded in `EvidenceItem`.
+
 ### `narratives-reporting`
 
 **Owns**

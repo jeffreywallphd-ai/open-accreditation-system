@@ -1,7 +1,7 @@
 {
   "meta": {
     "document": "Open Accreditation System entity model AI context",
-    "version": "1.5.0",
+    "version": "1.6.0",
     "source_docs": [
       "README.md",
       "docs/architecture/README.md",
@@ -88,6 +88,9 @@
       "WorkflowTemplate",
       "WorkflowStep",
       "Submission",
+      "ReviewCycle",
+      "ReviewWorkflow",
+      "WorkflowTransitionRecord",
       "WorkflowAssignment",
       "WorkflowDecision",
       "WorkflowComment",
@@ -156,6 +159,8 @@
       "Finding",
       "ActionPlan",
       "Submission",
+      "ReviewCycle",
+      "ReviewWorkflow",
       "SubmissionSnapshot",
       "Narrative",
       "NarrativeSection",
@@ -180,6 +185,7 @@
       "EvidenceRequest",
       "EvidenceReview",
       "EvidenceRetentionPolicy",
+      "WorkflowTransitionRecord",
       "WorkflowComment",
       "WorkflowDelegation",
       "WorkflowEscalationEvent",
@@ -437,6 +443,26 @@
       "from": "WorkflowTemplate",
       "to": "Submission",
       "cardinality": "1:N"
+    },
+    {
+      "from": "ReviewCycle",
+      "to": "ReviewWorkflow",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "ReviewWorkflow",
+      "to": "WorkflowTransitionRecord",
+      "cardinality": "1:N"
+    },
+    {
+      "from": "ReviewWorkflow",
+      "to": "EvidenceItem",
+      "cardinality": "N:M"
+    },
+    {
+      "from": "ReviewCycle",
+      "to": "EvidenceCollection",
+      "cardinality": "N:M"
     },
     {
       "from": "Submission",
@@ -755,6 +781,19 @@
       "EvidenceReference target admissibility is validated centrally in evidence-management and target existence/admissibility checks are delegated through target-owning application interfaces.",
       "EvidenceReference linkage annotations are normalized and target-governed; narrative-section targets require anchorPath.",
       "Evidence retrieval supports explicit target queries (criterion, criterion-element, learning-outcome, narrative-section), lineage version-state filters (current/historical/all), linkage-context projection, cycle/reporting anchor filtering, and within-cycle vs cross-cycle supersession-readiness summaries."
+    ],
+    "workflowApprovalsPhase3": [
+      "ReviewCycle is a first-class aggregate root for workflow-governed review cycle orchestration.",
+      "ReviewCycle.status must be one of: not-started, active, completed, archived.",
+      "ReviewCycle.startDate must be strictly earlier than endDate.",
+      "Only one active ReviewCycle is allowed for the same institution+scope key (canonicalized programIds and organizationUnitIds).",
+      "ReviewWorkflow is a first-class aggregate root bound to a ReviewCycle and target context (for example report section or evidence grouping).",
+      "ReviewWorkflow.state must be one of: draft, in-review, revision-required, approved, submitted.",
+      "ReviewWorkflow state transitions are explicit and restricted to draft->in-review, in-review->revision-required|approved, revision-required->draft, approved->submitted.",
+      "Workflow role policy is enforced for faculty, reviewer, and admin transitions.",
+      "Workflow transition history is append-only and cannot be mutated in-place.",
+      "Workflow evidence integration is reference-based (evidenceItemIds/evidenceCollectionId) and does not embed workflow state in EvidenceItem.",
+      "Approval/submission transitions evaluate referenced evidence completeness, activity status, and usability."
     ],
     "crossContextReferenceRules": [
       "accreditation-frameworks validates local shape and ownership invariants for framework and cycle aggregates.",

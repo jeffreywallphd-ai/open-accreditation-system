@@ -10,6 +10,7 @@ import { IdentityAccessModule } from './modules/identity-access/identity-access.
 import { AccreditationFrameworksModule } from './modules/accreditation-frameworks/accreditation-frameworks.module.js';
 import { CurriculumMappingModule } from './modules/curriculum-mapping/curriculum-mapping.module.js';
 import { EvidenceManagementModule } from './modules/evidence-management/evidence-management.module.js';
+import { WorkflowApprovalsModule } from './modules/workflow-approvals/workflow-approvals.module.js';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { EvidenceManagementModule } from './modules/evidence-management/evidence
     CurriculumMappingModule,
     AccreditationFrameworksModule,
     EvidenceManagementModule,
+    WorkflowApprovalsModule,
   ],
   providers: [
     {
