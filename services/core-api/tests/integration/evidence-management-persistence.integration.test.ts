@@ -30,6 +30,7 @@ export async function runTests(): Promise<void> {
   let criterionId = '';
   let criterionElementId = '';
   let outcomeId = '';
+  let successorId = '';
   try {
     const org = app.get(ORG_SERVICE);
     const evidenceService = app.get(EVID_SERVICE);
@@ -149,13 +150,26 @@ export async function runTests(): Promise<void> {
       targetEntityId: outcomeId,
       relationshipType: evidenceReferenceRelationshipType.DEMONSTRATES,
     });
+    await assert.rejects(
+      () =>
+        evidenceService.addEvidenceReference(created.id, {
+          targetType: evidenceReferenceTargetType.NARRATIVE_SECTION,
+          targetEntityId: 'narrative_section_1',
+          relationshipType: evidenceReferenceRelationshipType.INCLUDED_IN,
+          anchorPath: 'section://1.1',
+        }),
+      ValidationError,
+      'narrative-section linkage requires a target validation contract in the current deployment',
+    );
     await evidenceService.markEvidenceComplete(created.id);
     await evidenceService.activateEvidenceItem(created.id);
 
     const successor = await evidenceService.createSupersedingEvidenceVersion(created.id, {
       title: '2026 Program Learning Outcomes Narrative - Revised',
       description: 'Revised narrative evidence for outcomes alignment.',
+      reviewCycleId: 'cycle_2027',
     });
+    successorId = successor.id;
 
     await evidenceService.addEvidenceArtifact(successor.id, {
       artifactName: 'outcomes-narrative-v3.pdf',
@@ -195,6 +209,20 @@ export async function runTests(): Promise<void> {
       { institutionId: institution.id },
     );
     assert.equal(criterionReferences.length, 2);
+
+    const withLinkageContext = await evidenceService.listEvidenceWithLinkageContext({
+      institutionId: institution.id,
+      targetType: evidenceReferenceTargetType.CRITERION_ELEMENT,
+      targetEntityId: criterionElementId,
+      hasRationale: true,
+    });
+    assert.equal(withLinkageContext.length, 1);
+    assert.equal(withLinkageContext[0].evidenceItem.id, successor.id);
+    assert.equal(withLinkageContext[0].linkageContext.matchingReferenceCount, 1);
+    assert.equal(
+      withLinkageContext[0].linkageContext.matchingReferences[0].rationale,
+      'Updated version maps to same criterion element with revised alignment details.',
+    );
   } finally {
     await app.close();
   }
@@ -241,6 +269,7 @@ export async function runTests(): Promise<void> {
     assert.ok(current);
     assert.equal(current?.versionNumber, 2);
     assert.equal(current?.status, 'active');
+    assert.equal(current?.id, successorId);
 
     const outcomeLinked = await evidenceService.listEvidenceByReference(
       evidenceReferenceTargetType.LEARNING_OUTCOME,
@@ -249,6 +278,21 @@ export async function runTests(): Promise<void> {
     );
     assert.equal(outcomeLinked.length, 1);
     assert.equal(outcomeLinked[0].id, evidenceItemId);
+
+    const historical = await evidenceService.listHistoricalEvidence({ institutionId });
+    assert.equal(historical.length, 1);
+    assert.equal(historical[0].id, evidenceItemId);
+
+    const currentOnly = await evidenceService.listCurrentEvidence({ institutionId });
+    assert.equal(currentOnly.length, 1);
+    assert.equal(currentOnly[0].id, successorId);
+
+    const cycleReadiness = await evidenceService.getEvidenceLineageCycleReadiness(evidenceLineageId);
+    assert.equal(cycleReadiness.versionCount, 2);
+    assert.equal(cycleReadiness.reviewCycleIds.length, 1);
+    assert.equal(cycleReadiness.reviewCycleIds[0], 'cycle_2027');
+    assert.equal(cycleReadiness.reportingPeriodIds.length, 1);
+    assert.equal(cycleReadiness.reportingPeriodIds[0], 'period_2026');
 
     await assert.rejects(
       () =>

@@ -14,6 +14,7 @@ import {
   parseEvidenceType,
   requiresArtifactForActivation,
 } from '../value-objects/evidence-classifications.js';
+import { normalizeEvidenceReferenceInput } from '../value-objects/evidence-reference-policy.js';
 
 const EDITABLE_EVIDENCE_STATUSES = Object.freeze(new Set([evidenceStatus.DRAFT, evidenceStatus.INCOMPLETE]));
 const EVIDENCE_STATUS_TRANSITIONS = Object.freeze({
@@ -86,26 +87,21 @@ export class EvidenceArtifact {
 
 export class EvidenceReference {
   constructor(props) {
+    const normalized = normalizeEvidenceReferenceInput(props);
+
     assertRequired(props.id, 'EvidenceReference.id');
     assertRequired(props.evidenceItemId, 'EvidenceReference.evidenceItemId');
-    parseEvidenceReferenceTargetType(props.targetType);
+    parseEvidenceReferenceTargetType(normalized.targetType);
     assertRequired(props.targetEntityId, 'EvidenceReference.targetEntityId');
     parseEvidenceReferenceRelationshipType(props.relationshipType);
 
-    if (props.rationale !== undefined && props.rationale !== null && typeof props.rationale !== 'string') {
-      throw new ValidationError('EvidenceReference.rationale must be a string when provided');
-    }
-    if (props.anchorPath !== undefined && props.anchorPath !== null && typeof props.anchorPath !== 'string') {
-      throw new ValidationError('EvidenceReference.anchorPath must be a string when provided');
-    }
-
     this.id = props.id;
     this.evidenceItemId = props.evidenceItemId;
-    this.targetType = props.targetType;
-    this.targetEntityId = props.targetEntityId;
+    this.targetType = normalized.targetType;
+    this.targetEntityId = normalized.targetEntityId;
     this.relationshipType = props.relationshipType;
-    this.rationale = props.rationale ?? null;
-    this.anchorPath = props.anchorPath ?? null;
+    this.rationale = normalized.rationale;
+    this.anchorPath = normalized.anchorPath;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
   }

@@ -10,9 +10,17 @@ import {
   UpdateEvidenceItemStatusCommand,
 } from '../../src/modules/evidence-management/application/commands/evidence-management-commands.js';
 import {
+  GetEvidenceLineageCycleReadinessQuery,
   GetCurrentEvidenceVersionQuery,
   GetEvidenceItemByIdQuery,
+  ListCurrentEvidenceQuery,
   ListEvidenceByReferenceQuery,
+  ListEvidenceByCriterionQuery,
+  ListEvidenceByCriterionElementQuery,
+  ListEvidenceByLearningOutcomeQuery,
+  ListEvidenceByNarrativeSectionQuery,
+  ListEvidenceWithLinkageContextQuery,
+  ListHistoricalEvidenceQuery,
   ListEvidenceVersionsQuery,
 } from '../../src/modules/evidence-management/application/queries/evidence-management-queries.js';
 import {
@@ -36,6 +44,7 @@ export async function runTests(): Promise<void> {
   const knownCriterionId = 'criterion_known';
   const knownCriterionElementId = 'criterion_element_known';
   const knownOutcomeId = 'outcome_known';
+  const knownNarrativeSectionId = 'narrative_section_known';
 
   const accreditationFrameworks = {
     async getCriterionById(id: string) {
@@ -56,7 +65,24 @@ export async function runTests(): Promise<void> {
       };
     },
   };
-  const service = new EvidenceManagementService({ institutions, evidenceItems, accreditationFrameworks, curriculumMapping });
+  const narrativesReporting = {
+    async getNarrativeSectionById(id: string) {
+      if (id !== knownNarrativeSectionId) {
+        return null;
+      }
+      return {
+        id,
+        institutionId,
+      };
+    },
+  };
+  const service = new EvidenceManagementService({
+    institutions,
+    evidenceItems,
+    accreditationFrameworks,
+    curriculumMapping,
+    narrativesReporting,
+  });
 
   const institution = Institution.create({
     id: institutionId,
@@ -82,6 +108,14 @@ export async function runTests(): Promise<void> {
   const getCurrentEvidenceVersion = new GetCurrentEvidenceVersionQuery(service);
   const listEvidenceVersions = new ListEvidenceVersionsQuery(service);
   const listEvidenceByReference = new ListEvidenceByReferenceQuery(service);
+  const listEvidenceByCriterion = new ListEvidenceByCriterionQuery(service);
+  const listEvidenceByCriterionElement = new ListEvidenceByCriterionElementQuery(service);
+  const listEvidenceByLearningOutcome = new ListEvidenceByLearningOutcomeQuery(service);
+  const listEvidenceByNarrativeSection = new ListEvidenceByNarrativeSectionQuery(service);
+  const listCurrentEvidence = new ListCurrentEvidenceQuery(service);
+  const listHistoricalEvidence = new ListHistoricalEvidenceQuery(service);
+  const listEvidenceWithLinkageContext = new ListEvidenceWithLinkageContextQuery(service);
+  const getEvidenceLineageCycleReadiness = new GetEvidenceLineageCycleReadinessQuery(service);
 
   const evidenceItem = await createEvidenceItem.execute({
     institutionId: institution.id,
@@ -124,6 +158,13 @@ export async function runTests(): Promise<void> {
     targetEntityId: knownOutcomeId,
     relationshipType: evidenceReferenceRelationshipType.DEMONSTRATES,
   });
+  await attachEvidenceReference.execute(evidenceItem.id, {
+    targetType: evidenceReferenceTargetType.NARRATIVE_SECTION,
+    targetEntityId: knownNarrativeSectionId,
+    relationshipType: evidenceReferenceRelationshipType.INCLUDED_IN,
+    anchorPath: 'section://2.1',
+    rationale: 'Supports this narrative section with direct outcomes evidence.',
+  });
 
   const restored = await getEvidenceItemById.execute(evidenceItem.id);
   assert.ok(restored);
@@ -131,7 +172,7 @@ export async function runTests(): Promise<void> {
   assert.equal(restored?.artifacts.length, 1);
   assert.equal(restored?.usability.isUsable, true);
   assert.equal(restored?.usability.currentArtifactId, restored?.artifacts[0].id);
-  assert.equal(restored?.references.length, 2);
+  assert.equal(restored?.references.length, 3);
   await assert.rejects(
     () =>
       attachEvidenceArtifact.execute(evidenceItem.id, {
@@ -271,11 +312,73 @@ export async function runTests(): Promise<void> {
   assert.equal(criterionEvidence.length, 1);
   assert.equal(criterionEvidence[0].id, evidenceItem.id);
 
+  const criterionEvidenceExplicit = await listEvidenceByCriterion.execute(knownCriterionId, { currentOnly: true });
+  assert.equal(criterionEvidenceExplicit.length, 1);
+  assert.equal(criterionEvidenceExplicit[0].id, evidenceItem.id);
+
+  const criterionElementEvidence = await listEvidenceByCriterionElement.execute(knownCriterionElementId, {
+    currentOnly: false,
+  });
+  assert.equal(criterionElementEvidence.length, 1);
+  assert.equal(criterionElementEvidence[0].id, uploadMetric.id);
+
+  const outcomeEvidence = await listEvidenceByLearningOutcome.execute(knownOutcomeId, {
+    currentOnly: true,
+    institutionId,
+  });
+  assert.equal(outcomeEvidence.length, 1);
+  assert.equal(outcomeEvidence[0].id, evidenceItem.id);
+
+  const narrativeSectionEvidence = await listEvidenceByNarrativeSection.execute(knownNarrativeSectionId, {
+    institutionId,
+    hasRationale: true,
+  });
+  assert.equal(narrativeSectionEvidence.length, 1);
+  assert.equal(narrativeSectionEvidence[0].id, evidenceItem.id);
+
+  const linkageContext = await listEvidenceWithLinkageContext.execute({
+    targetType: evidenceReferenceTargetType.NARRATIVE_SECTION,
+    targetEntityId: knownNarrativeSectionId,
+    hasRationale: true,
+    institutionId,
+  });
+  assert.equal(linkageContext.length, 1);
+  assert.equal(linkageContext[0].evidenceItem.id, evidenceItem.id);
+  assert.equal(linkageContext[0].linkageContext.matchingReferenceCount, 1);
+  assert.equal(linkageContext[0].linkageContext.matchingReferences[0].anchorPath, 'section://2.1');
+  assert.equal(
+    linkageContext[0].linkageContext.matchingReferences[0].rationale,
+    'Supports this narrative section with direct outcomes evidence.',
+  );
+
+  const currentEvidence = await listCurrentEvidence.execute({ institutionId });
+  assert.equal(currentEvidence.length, 4);
+
+  const historicalEvidence = await listHistoricalEvidence.execute({ institutionId });
+  assert.equal(historicalEvidence.length, 2);
+  assert.ok(historicalEvidence.some((item) => item.id === uploadMetric.id));
+  assert.ok(historicalEvidence.some((item) => item.id === successor.id));
+
+  const usableEvidence = await service.listEvidenceItems({ institutionId, isUsable: true, versionState: 'current' });
+  assert.ok(usableEvidence.length >= 2);
+  assert.ok(usableEvidence.every((item) => item.usability.isUsable === true));
+
   await assert.rejects(
     () =>
       updateEvidenceItemStatus.execute(uploadMetric.id, evidenceLifecycleAction.ARCHIVE),
     ValidationError,
     'superseded evidence remains terminal and cannot be archived later',
+  );
+
+  await assert.rejects(
+    () =>
+      attachEvidenceReference.execute(evidenceItem.id, {
+        targetType: 'criterion-v2' as unknown as typeof evidenceReferenceTargetType.CRITERION,
+        targetEntityId: knownCriterionId,
+        relationshipType: evidenceReferenceRelationshipType.SUPPORTS,
+      }),
+    ValidationError,
+    'disallowed targetType values should fail centrally',
   );
 
   await assert.rejects(
@@ -331,5 +434,23 @@ export async function runTests(): Promise<void> {
     () => evidenceItems.save(invalidSuccessor),
     ValidationError,
     'repository should enforce predecessor-successor version increments on insert',
+  );
+
+  const cycleReadySummary = await getEvidenceLineageCycleReadiness.execute(successor.evidenceLineageId);
+  assert.equal(cycleReadySummary.evidenceLineageId, successor.evidenceLineageId);
+  assert.equal(cycleReadySummary.versionCount, 3);
+  assert.equal(cycleReadySummary.hasCrossCycleReuse, false);
+  assert.equal(cycleReadySummary.reviewCycleIds.length, 1);
+  assert.equal(cycleReadySummary.reviewCycleIds[0], 'cycle_2026');
+
+  await assert.rejects(
+    () =>
+      attachEvidenceReference.execute(evidenceItem.id, {
+        targetType: evidenceReferenceTargetType.NARRATIVE_SECTION,
+        targetEntityId: knownNarrativeSectionId,
+        relationshipType: evidenceReferenceRelationshipType.SUPPORTS,
+      }),
+    ValidationError,
+    'narrative-section references should require anchorPath',
   );
 }

@@ -1,6 +1,7 @@
 import { ValidationError } from '../../../shared/kernel/errors.js';
 import { EvidenceItem, EvidenceArtifact, EvidenceReference } from '../../domain/entities/evidence-item.js';
 import { EvidenceItemRepository } from '../../domain/repositories/repositories.js';
+import { evidenceItemMatchesFilter } from './evidence-item-filtering.js';
 
 function filterClause(filter = {}, keyMap = {}) {
   const where = [];
@@ -255,7 +256,6 @@ export class SqliteEvidenceItemRepository extends EvidenceItemRepository {
   }
 
   async findByFilter(filter = {}) {
-    const { currentOnly, targetType, targetEntityId, relationshipType } = filter ?? {};
     const { sql, params } = filterClause(filter, {
       id: 'id',
       institutionId: 'institution_id',
@@ -266,34 +266,42 @@ export class SqliteEvidenceItemRepository extends EvidenceItemRepository {
       versionNumber: 'version_number',
       supersedesEvidenceItemId: 'supersedes_evidence_item_id',
       supersededByEvidenceItemId: 'superseded_by_evidence_item_id',
+      reviewCycleId: 'review_cycle_id',
+      reportingPeriodId: 'reporting_period_id',
     });
 
     const whereClauses = [];
     if (sql) {
       whereClauses.push(sql.replace(/^WHERE\s+/i, ''));
     }
-    if (currentOnly) {
+    const versionState = filter.versionState ?? (filter.currentOnly === true ? 'current' : 'all');
+    if (versionState === 'current') {
       whereClauses.push('evidence_management_items.superseded_by_evidence_item_id IS NULL');
     }
-    if (targetType || targetEntityId || relationshipType) {
+    if (versionState === 'historical') {
+      whereClauses.push('evidence_management_items.superseded_by_evidence_item_id IS NOT NULL');
+    }
+    if (filter.targetType || filter.targetEntityId || filter.relationshipType || filter.hasRationale !== undefined) {
       whereClauses.push(
         `EXISTS (
            SELECT 1
            FROM evidence_management_references refs
            WHERE refs.evidence_item_id = evidence_management_items.id
-             ${targetType ? 'AND refs.target_type = @targetType' : ''}
-             ${targetEntityId ? 'AND refs.target_entity_id = @targetEntityId' : ''}
-             ${relationshipType ? 'AND refs.relationship_type = @relationshipType' : ''}
+             ${filter.targetType ? 'AND refs.target_type = @targetType' : ''}
+             ${filter.targetEntityId ? 'AND refs.target_entity_id = @targetEntityId' : ''}
+             ${filter.relationshipType ? 'AND refs.relationship_type = @relationshipType' : ''}
+             ${filter.hasRationale === true ? "AND refs.rationale IS NOT NULL AND TRIM(refs.rationale) <> ''" : ''}
+             ${filter.hasRationale === false ? "AND (refs.rationale IS NULL OR TRIM(refs.rationale) = '')" : ''}
          )`,
       );
-      if (targetType) {
-        params.targetType = targetType;
+      if (filter.targetType) {
+        params.targetType = filter.targetType;
       }
-      if (targetEntityId) {
-        params.targetEntityId = targetEntityId;
+      if (filter.targetEntityId) {
+        params.targetEntityId = filter.targetEntityId;
       }
-      if (relationshipType) {
-        params.relationshipType = relationshipType;
+      if (filter.relationshipType) {
+        params.relationshipType = filter.relationshipType;
       }
     }
     const composedWhereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
@@ -301,8 +309,8 @@ export class SqliteEvidenceItemRepository extends EvidenceItemRepository {
       `SELECT * FROM evidence_management_items ${composedWhereSql} ORDER BY version_number ASC, created_at ASC`,
       params,
     );
-    return rows.map(
-      (row) =>
+    return rows
+      .map((row) =>
         EvidenceItem.rehydrate({
           id: row.id,
           institutionId: row.institution_id,
@@ -323,7 +331,8 @@ export class SqliteEvidenceItemRepository extends EvidenceItemRepository {
           createdAt: row.created_at,
           updatedAt: row.updated_at,
         }),
-    );
+      )
+      .filter((item) => evidenceItemMatchesFilter(item, filter));
   }
 
   #listArtifactsByEvidenceItemId(evidenceItemId) {

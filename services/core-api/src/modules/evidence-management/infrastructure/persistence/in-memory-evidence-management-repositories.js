@@ -1,15 +1,7 @@
 import { ValidationError } from '../../../shared/kernel/errors.js';
 import { EvidenceItemRepository } from '../../domain/repositories/repositories.js';
 import { EvidenceItem } from '../../domain/entities/evidence-item.js';
-
-function matchesFilter(item, filter) {
-  return Object.entries(filter).every(([key, value]) => {
-    if (value === undefined || value === null) {
-      return true;
-    }
-    return item[key] === value;
-  });
-}
+import { evidenceItemMatchesFilter } from './evidence-item-filtering.js';
 
 export class InMemoryEvidenceItemRepository extends EvidenceItemRepository {
   constructor() {
@@ -63,23 +55,9 @@ export class InMemoryEvidenceItemRepository extends EvidenceItemRepository {
   }
 
   async findByFilter(filter = {}) {
-    const { targetType, targetEntityId, relationshipType, currentOnly, ...itemFilter } = filter ?? {};
     return [...this.items.values()]
-      .filter((item) => matchesFilter(item, itemFilter))
-      .filter((item) => (currentOnly ? !item.supersededByEvidenceItemId : true))
-      .filter((item) => {
-        if (!targetType && !targetEntityId && !relationshipType) {
-          return true;
-        }
-        const references = item.references ?? [];
-        return references.some(
-          (reference) =>
-            (targetType ? reference.targetType === targetType : true) &&
-            (targetEntityId ? reference.targetEntityId === targetEntityId : true) &&
-            (relationshipType ? reference.relationshipType === relationshipType : true),
-        );
-      })
-      .map((item) => EvidenceItem.rehydrate(structuredClone(item)));
+      .map((item) => EvidenceItem.rehydrate(structuredClone(item)))
+      .filter((item) => evidenceItemMatchesFilter(item, filter));
   }
 
   #assertAppendOnlyArtifacts(existingItem, nextItem) {

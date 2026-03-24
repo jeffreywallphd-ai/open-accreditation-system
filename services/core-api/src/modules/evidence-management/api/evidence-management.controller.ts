@@ -105,22 +105,51 @@ export class EvidenceManagementController {
     @Query('evidenceType') evidenceType?: string,
     @Query('sourceType') sourceType?: string,
     @Query('status') status?: string,
+    @Query('reviewCycleId') reviewCycleId?: string,
+    @Query('reportingPeriodId') reportingPeriodId?: string,
     @Query('evidenceLineageId') evidenceLineageId?: string,
     @Query('currentOnly') currentOnly?: string,
+    @Query('versionState') versionState?: string,
     @Query('targetType') targetType?: string,
     @Query('targetEntityId') targetEntityId?: string,
+    @Query('relationshipType') relationshipType?: string,
+    @Query('hasRationale') hasRationale?: string,
+    @Query('isUsable') isUsable?: string,
+    @Query('hasAvailableArtifact') hasAvailableArtifact?: string,
+    @Query('requiresArtifactForActivation') requiresArtifactForActivation?: string,
+    @Query('includeLinkageContext') includeLinkageContext?: string,
   ) {
+    const parsedFilter = {
+      institutionId,
+      evidenceType,
+      sourceType,
+      status,
+      reviewCycleId,
+      reportingPeriodId,
+      evidenceLineageId,
+      currentOnly: currentOnly === 'true' ? true : currentOnly === 'false' ? false : undefined,
+      versionState,
+      targetType,
+      targetEntityId,
+      relationshipType,
+      hasRationale: hasRationale === 'true' ? true : hasRationale === 'false' ? false : undefined,
+      isUsable: isUsable === 'true' ? true : isUsable === 'false' ? false : undefined,
+      hasAvailableArtifact:
+        hasAvailableArtifact === 'true' ? true : hasAvailableArtifact === 'false' ? false : undefined,
+      requiresArtifactForActivation:
+        requiresArtifactForActivation === 'true'
+          ? true
+          : requiresArtifactForActivation === 'false'
+            ? false
+            : undefined,
+    };
+
+    if (includeLinkageContext === 'true') {
+      return { data: await this.service.listEvidenceWithLinkageContext(parsedFilter) };
+    }
+
     return {
-      data: await this.service.listEvidenceItems({
-        institutionId,
-        evidenceType,
-        sourceType,
-        status,
-        evidenceLineageId,
-        currentOnly: currentOnly === 'true',
-        targetType,
-        targetEntityId,
-      }),
+      data: await this.service.listEvidenceItems(parsedFilter),
     };
   }
 

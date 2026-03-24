@@ -106,9 +106,32 @@ export async function runTests(): Promise<void> {
     targetType: evidenceReferenceTargetType.CRITERION,
     targetEntityId: 'criterion_1',
     relationshipType: evidenceReferenceRelationshipType.SUPPORTS,
-    rationale: 'Direct evidence alignment to criterion requirement.',
+    rationale: ' Direct evidence alignment to criterion requirement. ',
   });
   assert.equal(evidenceItem.references.length, 1);
+  assert.equal(evidenceItem.references[0].rationale, 'Direct evidence alignment to criterion requirement.');
+
+  evidenceItem.addReference({
+    targetType: evidenceReferenceTargetType.NARRATIVE_SECTION,
+    targetEntityId: 'narrative_section_1',
+    relationshipType: evidenceReferenceRelationshipType.INCLUDED_IN,
+    anchorPath: ' section://2.1 ',
+    rationale: ' Included in the narrative section evidence package. ',
+  });
+  assert.equal(evidenceItem.references.length, 2);
+  assert.equal(evidenceItem.references[1].anchorPath, 'section://2.1');
+  assert.equal(evidenceItem.references[1].rationale, 'Included in the narrative section evidence package.');
+
+  assert.throws(
+    () =>
+      evidenceItem.addReference({
+        targetType: evidenceReferenceTargetType.NARRATIVE_SECTION,
+        targetEntityId: 'narrative_section_2',
+        relationshipType: evidenceReferenceRelationshipType.SUPPORTS,
+      }),
+    ValidationError,
+    'narrative-section references should require an anchorPath',
+  );
 
   assert.throws(
     () =>
@@ -149,7 +172,7 @@ export async function runTests(): Promise<void> {
     targetEntityId: 'outcome_1',
     relationshipType: evidenceReferenceRelationshipType.DEMONSTRATES,
   });
-  assert.equal(evidenceItem.references.length, 2);
+  assert.equal(evidenceItem.references.length, 3);
 
   const successorDraft = evidenceItem.createSupersedingVersion({
     title: 'Program Review Narrative v2',

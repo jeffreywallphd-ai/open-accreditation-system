@@ -749,7 +749,10 @@
       "EvidenceItem.status=superseded and EvidenceItem.status=archived are terminal for lifecycle transitions in this phase.",
       "Superseding EvidenceItem requires successor existence and same institution.",
       "EvidenceArtifact persistence is append-only in this phase; existing artifact metadata cannot be changed or removed in-place.",
-      "EvidenceReference target associations are append-only in this phase; existing reference metadata cannot be changed or removed in-place."
+      "EvidenceReference target associations are append-only in this phase; existing reference metadata cannot be changed or removed in-place.",
+      "EvidenceReference target admissibility is validated centrally in evidence-management and target existence/admissibility checks are delegated through target-owning application interfaces.",
+      "EvidenceReference linkage annotations are normalized and target-governed; narrative-section targets require anchorPath.",
+      "Evidence retrieval supports explicit target queries (criterion, criterion-element, learning-outcome, narrative-section), lineage version-state filters (current/historical/all), linkage-context projection, and cycle/reporting anchor filtering."
     ],
     "crossContextReferenceRules": [
       "accreditation-frameworks validates local shape and ownership invariants for framework and cycle aggregates.",

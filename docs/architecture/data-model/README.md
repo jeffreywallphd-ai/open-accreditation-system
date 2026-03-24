@@ -1015,7 +1015,17 @@ Implementation note (current `core-api` slice): the `evidence-management` module
 - `EvidenceArtifact` persistence is append-only in this phase (existing artifact metadata cannot be silently rewritten or removed in-place).
 - `EvidenceReference` is an owned `EvidenceItem` child and append-only in persistence (existing reference metadata cannot be silently rewritten or removed in-place).
 - `EvidenceReference.targetType` is constrained in implementation to `criterion`, `criterion-element`, `learning-outcome`, and `narrative-section`.
+- `EvidenceReference` target type admissibility is validated centrally in `evidence-management` and then resolved through target-owning bounded-context application contracts (for example, framework/curriculum target resolvers).
+- `EvidenceReference` uses governed normalization for linkage annotations:
+  - `rationale` is normalized to trimmed optional text for review/report traceability.
+  - `anchorPath` is target-governed; `narrative-section` linkage requires a concrete anchor path.
 - Duplicate `EvidenceReference` associations (same target type/entity, relationship type, and anchor path within one item) are rejected.
+- Application retrieval foundations are explicit and lineage-aware:
+  - retrieval by `criterion`, `criterion-element`, `learning-outcome`, and `narrative-section`
+  - current-only vs historical retrieval (`versionState=current|historical|all`)
+  - linkage-context retrieval (evidence with matching reference subset)
+  - governed usability filters (`isUsable`, `hasAvailableArtifact`, `requiresArtifactForActivation`)
+  - cycle/reporting anchors (`reviewCycleId`, `reportingPeriodId`) and lineage cycle-readiness summaries for cross-cycle reuse/supersession analysis.
 
 ## Implementation-ready curriculum linkage invariants (Epic 2 Phase 0 groundwork)
 

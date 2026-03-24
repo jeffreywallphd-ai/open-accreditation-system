@@ -2,8 +2,13 @@ import { NotFoundError, ValidationError } from '../../shared/kernel/errors.js';
 import { EvidenceItem } from '../domain/entities/evidence-item.js';
 import {
   evidenceReferenceTargetType,
+  parseEvidenceReferenceTargetType,
   evidenceStatus,
 } from '../domain/value-objects/evidence-classifications.js';
+import {
+  createDefaultEvidenceReferenceTargetValidators,
+  normalizeAndValidateReferenceInput,
+} from './evidence-reference-target-validators.js';
 
 export const evidenceLifecycleAction = Object.freeze({
   COMPLETE: 'complete',
@@ -19,6 +24,14 @@ export class EvidenceManagementService {
     this.institutions = deps.institutions;
     this.accreditationFrameworks = deps.accreditationFrameworks;
     this.curriculumMapping = deps.curriculumMapping;
+    this.narrativesReporting = deps.narrativesReporting;
+    this.referenceTargetValidators =
+      deps.referenceTargetValidators ??
+      createDefaultEvidenceReferenceTargetValidators({
+        accreditationFrameworksService: this.accreditationFrameworks,
+        curriculumMappingService: this.curriculumMapping,
+        narrativesReportingService: this.narrativesReporting,
+      });
   }
 
   async createEvidenceItem(input) {
@@ -35,8 +48,9 @@ export class EvidenceManagementService {
 
   async addEvidenceReference(evidenceItemId, input) {
     const evidenceItem = await this.#requireEvidenceItem(evidenceItemId);
-    await this.#validateReferenceTarget(evidenceItem, input);
-    evidenceItem.addReference(input);
+    const normalizedInput = normalizeAndValidateReferenceInput(input);
+    await this.#validateReferenceTarget(evidenceItem, normalizedInput);
+    evidenceItem.addReference(normalizedInput);
     return this.evidenceItems.save(evidenceItem);
   }
 
@@ -108,7 +122,7 @@ export class EvidenceManagementService {
   }
 
   async listEvidenceItems(filter = {}) {
-    return this.evidenceItems.findByFilter(filter);
+    return this.evidenceItems.findByFilter(this.#normalizeQueryFilter(filter));
   }
 
   async getCurrentEvidenceVersion(evidenceLineageId) {
@@ -133,13 +147,92 @@ export class EvidenceManagementService {
     if (!targetType || !targetEntityId) {
       throw new ValidationError('targetType and targetEntityId are required');
     }
+    parseEvidenceReferenceTargetType(targetType, 'EvidenceReference.targetType');
     return this.evidenceItems.findByFilter({
       targetType,
       targetEntityId,
       relationshipType: options.relationshipType,
+      versionState: options.versionState,
       currentOnly: options.currentOnly,
       institutionId: options.institutionId,
+      reviewCycleId: options.reviewCycleId,
+      reportingPeriodId: options.reportingPeriodId,
+      status: options.status,
+      statuses: options.statuses,
+      isUsable: options.isUsable,
+      hasAvailableArtifact: options.hasAvailableArtifact,
+      requiresArtifactForActivation: options.requiresArtifactForActivation,
+      hasRationale: options.hasRationale,
     });
+  }
+
+  async listEvidenceByCriterion(criterionId, options = {}) {
+    return this.listEvidenceByReference(evidenceReferenceTargetType.CRITERION, criterionId, options);
+  }
+
+  async listEvidenceByCriterionElement(criterionElementId, options = {}) {
+    return this.listEvidenceByReference(evidenceReferenceTargetType.CRITERION_ELEMENT, criterionElementId, options);
+  }
+
+  async listEvidenceByLearningOutcome(learningOutcomeId, options = {}) {
+    return this.listEvidenceByReference(evidenceReferenceTargetType.LEARNING_OUTCOME, learningOutcomeId, options);
+  }
+
+  async listEvidenceByNarrativeSection(narrativeSectionId, options = {}) {
+    return this.listEvidenceByReference(evidenceReferenceTargetType.NARRATIVE_SECTION, narrativeSectionId, options);
+  }
+
+  async listCurrentEvidence(filter = {}) {
+    return this.evidenceItems.findByFilter({
+      ...this.#normalizeQueryFilter(filter),
+      versionState: 'current',
+    });
+  }
+
+  async listHistoricalEvidence(filter = {}) {
+    return this.evidenceItems.findByFilter({
+      ...this.#normalizeQueryFilter(filter),
+      versionState: 'historical',
+    });
+  }
+
+  async listEvidenceWithLinkageContext(filter = {}) {
+    const normalizedFilter = this.#normalizeQueryFilter(filter);
+    const items = await this.evidenceItems.findByFilter(normalizedFilter);
+    return items.map((evidenceItem) => {
+      const matchingReferences = this.#selectMatchingReferences(evidenceItem, normalizedFilter);
+      return {
+        evidenceItem,
+        linkageContext: {
+          matchingReferences,
+          referenceCount: evidenceItem.references.length,
+          matchingReferenceCount: matchingReferences.length,
+        },
+      };
+    });
+  }
+
+  async getEvidenceLineageCycleReadiness(evidenceLineageId) {
+    const versions = await this.listEvidenceVersions(evidenceLineageId, { includeHistorical: true });
+    const reviewCycleIds = [...new Set(versions.map((item) => item.reviewCycleId).filter(Boolean))];
+    const reportingPeriodIds = [...new Set(versions.map((item) => item.reportingPeriodId).filter(Boolean))];
+
+    return {
+      evidenceLineageId,
+      versionCount: versions.length,
+      reviewCycleIds,
+      reportingPeriodIds,
+      hasCrossCycleReuse: reviewCycleIds.length > 1 || reportingPeriodIds.length > 1,
+      versions: versions.map((item) => ({
+        id: item.id,
+        versionNumber: item.versionNumber,
+        status: item.status,
+        reviewCycleId: item.reviewCycleId,
+        reportingPeriodId: item.reportingPeriodId,
+        supersedesEvidenceItemId: item.supersedesEvidenceItemId,
+        supersededByEvidenceItemId: item.supersededByEvidenceItemId,
+      })),
+    };
   }
 
   async #requireInstitution(institutionId) {
@@ -172,34 +265,74 @@ export class EvidenceManagementService {
   }
 
   async #validateReferenceTarget(evidenceItem, input) {
-    if (!input?.targetType || !input?.targetEntityId) {
-      throw new ValidationError('EvidenceReference targetType and targetEntityId are required');
+    const validator = this.referenceTargetValidators.get(input.targetType);
+    if (!validator) {
+      throw new ValidationError(`EvidenceReference targetType is not supported: ${input.targetType}`);
     }
 
-    if (input.targetType === evidenceReferenceTargetType.CRITERION) {
-      const criterion = await this.accreditationFrameworks?.getCriterionById?.(input.targetEntityId);
-      if (!criterion) {
-        throw new ValidationError(`Criterion not found: ${input.targetEntityId}`);
-      }
-      return;
+    const result = await validator.validate({
+      targetEntityId: input.targetEntityId,
+      evidenceItem,
+      referenceInput: input,
+    });
+
+    if (!result?.exists || result?.admissible === false) {
+      throw new ValidationError(
+        result?.reason ?? `EvidenceReference target not found or inadmissible: ${input.targetType}:${input.targetEntityId}`,
+      );
     }
 
-    if (input.targetType === evidenceReferenceTargetType.CRITERION_ELEMENT) {
-      const criterionElement = await this.accreditationFrameworks?.getCriterionElementById?.(input.targetEntityId);
-      if (!criterionElement) {
-        throw new ValidationError(`CriterionElement not found: ${input.targetEntityId}`);
-      }
-      return;
+    if (result?.institutionId && result.institutionId !== evidenceItem.institutionId) {
+      throw new ValidationError(`EvidenceReference ${input.targetType} must belong to the same institution`);
+    }
+  }
+
+  #normalizeQueryFilter(filter = {}) {
+    const normalized = { ...filter };
+    if (normalized.currentOnly === true && !normalized.versionState) {
+      normalized.versionState = 'current';
+    }
+    if (normalized.currentOnly === false && !normalized.versionState) {
+      normalized.versionState = 'all';
     }
 
-    if (input.targetType === evidenceReferenceTargetType.LEARNING_OUTCOME) {
-      const learningOutcome = await this.curriculumMapping?.getLearningOutcomeById?.(input.targetEntityId);
-      if (!learningOutcome) {
-        throw new ValidationError(`LearningOutcome not found: ${input.targetEntityId}`);
-      }
-      if (learningOutcome.institutionId !== evidenceItem.institutionId) {
-        throw new ValidationError('EvidenceReference LearningOutcome must belong to the same institution');
-      }
+    if (normalized.versionState && !['current', 'historical', 'all'].includes(normalized.versionState)) {
+      throw new ValidationError('versionState must be one of: current, historical, all');
     }
+
+    return normalized;
+  }
+
+  #selectMatchingReferences(evidenceItem, filter) {
+    const references = evidenceItem.references ?? [];
+    const referenceFiltersDefined =
+      filter.targetType !== undefined ||
+      filter.targetEntityId !== undefined ||
+      filter.relationshipType !== undefined ||
+      filter.hasRationale !== undefined;
+
+    if (!referenceFiltersDefined) {
+      return references;
+    }
+
+    return references.filter((reference) => {
+      const hasRationale = Boolean(reference.rationale && reference.rationale.trim() !== '');
+      if (filter.targetType && reference.targetType !== filter.targetType) {
+        return false;
+      }
+      if (filter.targetEntityId && reference.targetEntityId !== filter.targetEntityId) {
+        return false;
+      }
+      if (filter.relationshipType && reference.relationshipType !== filter.relationshipType) {
+        return false;
+      }
+      if (filter.hasRationale === true && !hasRationale) {
+        return false;
+      }
+      if (filter.hasRationale === false && hasRationale) {
+        return false;
+      }
+      return true;
+    });
   }
 }
