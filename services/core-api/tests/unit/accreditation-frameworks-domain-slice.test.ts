@@ -12,6 +12,7 @@ import {
 import { ValidationError } from '../../src/modules/shared/kernel/errors.js';
 import { FrameworkVersion } from '../../src/modules/accreditation-frameworks/domain/entities/framework-version.js';
 import { AccreditationCycle, AccreditationScope } from '../../src/modules/accreditation-frameworks/domain/entities/accreditation-cycle.js';
+import { ReviewTeam } from '../../src/modules/accreditation-frameworks/domain/entities/review-team.js';
 import {
   accreditationCycleStatus,
   frameworkVersionStatus,
@@ -359,6 +360,65 @@ export async function runTests(): Promise<void> {
         milestones: [],
         reviewEvents: [],
         decisionRecords: [],
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      }),
+    ValidationError,
+  );
+
+  await assert.rejects(
+    () =>
+      new AccreditationCycle({
+        id: 'cycle_decision_integrity',
+        frameworkVersionId: version.id,
+        institutionId: 'inst_1',
+        name: 'Invalid Decision Links',
+        cycleStartDate: '2026-01-01',
+        cycleEndDate: '2026-12-31',
+        status: accreditationCycleStatus.DECISION_ISSUED,
+        scopes: [],
+        milestones: [],
+        reviewEvents: [],
+        decisionRecords: [
+          {
+            id: 'dec_a',
+            accreditationCycleId: 'cycle_decision_integrity',
+            decisionType: 'commission',
+            outcome: 'accredited',
+            issuedAt: '2026-06-01T00:00:00.000Z',
+            status: 'superseded',
+            supersededByDecisionRecordId: null,
+            createdAt: '2026-06-01T00:00:00.000Z',
+            updatedAt: '2026-06-01T00:00:00.000Z',
+          },
+        ],
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-06-01T00:00:00.000Z',
+      }),
+    ValidationError,
+  );
+
+  await assert.rejects(
+    () =>
+      new ReviewTeam({
+        id: 'team_integrity',
+        accreditationCycleId: cycle.id,
+        institutionId: 'inst_1',
+        name: 'Invalid Team',
+        status: 'active',
+        memberships: [
+          {
+            id: 'membership_a',
+            reviewTeamId: 'team_integrity',
+            personId: 'person_1',
+            role: 'chair',
+            state: 'superseded',
+            conflictStatus: 'none',
+            supersededByMembershipId: null,
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          },
+        ],
         createdAt: '2026-01-01T00:00:00.000Z',
         updatedAt: '2026-01-01T00:00:00.000Z',
       }),
