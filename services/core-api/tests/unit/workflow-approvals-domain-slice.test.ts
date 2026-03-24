@@ -33,6 +33,13 @@ export async function runTests(): Promise<void> {
     evidenceSetIds: ['set_1'],
   });
   assert.equal(cycle.status, reviewCycleStatus.NOT_STARTED);
+  assert.equal(cycle.scopeKey.includes('inst_1'), true);
+
+  assert.throws(
+    () => cycle.complete(),
+    ValidationError,
+    'ReviewCycle should reject invalid lifecycle transitions',
+  );
 
   cycle.start();
   assert.equal(cycle.status, reviewCycleStatus.ACTIVE);
@@ -74,20 +81,24 @@ export async function runTests(): Promise<void> {
     ValidationError,
     'workflow should reject invalid state jumps',
   );
+  assert.equal(workflow.transitionHistory.length, 4);
 
   assert.throws(
     () => workflow.approve(workflowActorRole.FACULTY),
     ValidationError,
     'role policy should reject unauthorized transitions',
   );
+  assert.equal(workflow.transitionHistory.length, 4);
 
   assert.throws(
     () => workflow.approve(workflowActorRole.REVIEWER),
     ValidationError,
     'approval should fail when required evidence is insufficient',
   );
+  assert.equal(workflow.transitionHistory.length, 4);
 
   workflow.approve(workflowActorRole.REVIEWER, {
+    actorId: 'person_reviewer_1',
     evidenceSummary: {
       requiredCount: 1,
       foundCount: 1,
@@ -99,14 +110,17 @@ export async function runTests(): Promise<void> {
     },
   });
   assert.equal(workflow.state, reviewWorkflowState.APPROVED);
+  assert.equal(workflow.transitionHistory[4].actorId, 'person_reviewer_1');
 
   assert.throws(
     () => workflow.submitFinal(workflowActorRole.REVIEWER),
     ValidationError,
     'submitted transition is restricted to admin role',
   );
+  assert.equal(workflow.transitionHistory.length, 5);
 
   workflow.submitFinal(workflowActorRole.ADMIN, {
+    actorId: 'person_admin_1',
     evidenceSummary: {
       requiredCount: 1,
       foundCount: 1,
@@ -119,6 +133,7 @@ export async function runTests(): Promise<void> {
   });
   assert.equal(workflow.state, reviewWorkflowState.SUBMITTED);
   assert.equal(workflow.transitionHistory[workflow.transitionHistory.length - 1].sequence, 5);
+  assert.equal(workflow.transitionHistory[workflow.transitionHistory.length - 1].actorId, 'person_admin_1');
 
   assert.throws(
     () =>

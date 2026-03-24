@@ -64,6 +64,7 @@ function toReviewWorkflowSnapshot(workflow) {
       fromState: item.fromState,
       toState: item.toState,
       actorRole: item.actorRole,
+      actorId: item.actorId ?? null,
       reason: item.reason,
       evidenceSummary: item.evidenceSummary ?? null,
       transitionedAt: item.transitionedAt,
@@ -247,6 +248,7 @@ export class SqliteReviewWorkflowRepository extends ReviewWorkflowRepository {
         this.#assertTransitionHistoryAppendOnly(validated);
       }
       this.#assertCycleTargetUnique(validated);
+      this.#assertEvidenceCollectionBoundToCycle(validated);
 
       this.database.run(
         `INSERT INTO workflow_review_workflows
@@ -292,9 +294,9 @@ export class SqliteReviewWorkflowRepository extends ReviewWorkflowRepository {
         }
         this.database.run(
           `INSERT INTO workflow_review_workflow_transitions
-             (id, workflow_id, transition_sequence, from_state, to_state, actor_role, reason, evidence_summary_json, transitioned_at, created_at)
+             (id, workflow_id, transition_sequence, from_state, to_state, actor_role, actor_id, reason, evidence_summary_json, transitioned_at, created_at)
            VALUES
-             (@id, @workflowId, @sequence, @fromState, @toState, @actorRole, @reason, @evidenceSummaryJson, @transitionedAt, @createdAt)`,
+             (@id, @workflowId, @sequence, @fromState, @toState, @actorRole, @actorId, @reason, @evidenceSummaryJson, @transitionedAt, @createdAt)`,
           {
             id: entry.id,
             workflowId: entry.workflowId,
@@ -302,6 +304,7 @@ export class SqliteReviewWorkflowRepository extends ReviewWorkflowRepository {
             fromState: entry.fromState,
             toState: entry.toState,
             actorRole: entry.actorRole,
+            actorId: entry.actorId ?? null,
             reason: entry.reason,
             evidenceSummaryJson: entry.evidenceSummary ? JSON.stringify(entry.evidenceSummary) : null,
             transitionedAt: entry.transitionedAt,
@@ -378,6 +381,7 @@ export class SqliteReviewWorkflowRepository extends ReviewWorkflowRepository {
             fromState: item.from_state,
             toState: item.to_state,
             actorRole: item.actor_role,
+            actorId: item.actor_id,
             reason: item.reason,
             evidenceSummary: item.evidence_summary_json ? JSON.parse(item.evidence_summary_json) : null,
             transitionedAt: item.transitioned_at,
@@ -424,9 +428,11 @@ export class SqliteReviewWorkflowRepository extends ReviewWorkflowRepository {
       current.fromState !== persistedRow.from_state ||
       current.toState !== persistedRow.to_state ||
       current.actorRole !== persistedRow.actor_role ||
+      (current.actorId ?? null) !== (persistedRow.actor_id ?? null) ||
       current.reason !== persistedRow.reason ||
       JSON.stringify(current.evidenceSummary ?? null) !== JSON.stringify(persistedSummary) ||
-      current.transitionedAt !== persistedRow.transitioned_at
+      current.transitionedAt !== persistedRow.transitioned_at ||
+      current.createdAt !== persistedRow.created_at
     ) {
       throw new ValidationError(`Workflow transition history is append-only: ${persistedRow.id} cannot be modified`);
     }
@@ -450,6 +456,25 @@ export class SqliteReviewWorkflowRepository extends ReviewWorkflowRepository {
     if (duplicate) {
       throw new ValidationError(
         `ReviewWorkflow cycle-target must be unique (existing: ${duplicate.id})`,
+      );
+    }
+  }
+
+  #assertEvidenceCollectionBoundToCycle(next) {
+    if (!next.evidenceCollectionId) {
+      return;
+    }
+    const cycle = this.database.get(
+      `SELECT evidence_set_ids_json FROM workflow_review_cycles WHERE id = @id`,
+      { id: next.reviewCycleId },
+    );
+    if (!cycle) {
+      throw new ValidationError(`ReviewCycle not found for workflow: ${next.reviewCycleId}`);
+    }
+    const evidenceSetIds = parseJsonList(cycle.evidence_set_ids_json);
+    if (!evidenceSetIds.includes(next.evidenceCollectionId)) {
+      throw new ValidationError(
+        `ReviewWorkflow evidenceCollectionId must be declared on ReviewCycle.evidenceSetIds: ${next.evidenceCollectionId}`,
       );
     }
   }

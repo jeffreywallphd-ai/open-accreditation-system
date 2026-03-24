@@ -41,6 +41,7 @@ function toReviewWorkflowSnapshot(workflow) {
       fromState: item.fromState,
       toState: item.toState,
       actorRole: item.actorRole,
+      actorId: item.actorId ?? null,
       reason: item.reason,
       evidenceSummary: item.evidenceSummary,
       transitionedAt: item.transitionedAt,
@@ -242,9 +243,11 @@ export class InMemoryReviewWorkflowRepository extends ReviewWorkflowRepository {
         candidate.fromState !== persisted.fromState ||
         candidate.toState !== persisted.toState ||
         candidate.actorRole !== persisted.actorRole ||
+        candidate.actorId !== (persisted.actorId ?? null) ||
         candidate.reason !== persisted.reason ||
         JSON.stringify(candidate.evidenceSummary ?? null) !== JSON.stringify(persisted.evidenceSummary ?? null) ||
-        candidate.transitionedAt !== persisted.transitionedAt
+        candidate.transitionedAt !== persisted.transitionedAt ||
+        candidate.createdAt !== persisted.createdAt
       ) {
         throw new ValidationError(`Workflow transition history is append-only: ${persisted.id} cannot be modified`);
       }

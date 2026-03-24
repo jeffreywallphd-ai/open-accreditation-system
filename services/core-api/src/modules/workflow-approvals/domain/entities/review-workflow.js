@@ -35,6 +35,7 @@ export class WorkflowTransitionRecord {
     this.fromState = props.fromState;
     this.toState = props.toState;
     this.actorRole = props.actorRole;
+    this.actorId = props.actorId ? `${props.actorId}`.trim() || null : null;
     this.reason = props.reason ?? null;
     this.evidenceSummary = props.evidenceSummary ?? null;
     this.transitionedAt = props.transitionedAt;
@@ -50,6 +51,7 @@ export class WorkflowTransitionRecord {
       fromState: input.fromState,
       toState: input.toState,
       actorRole: input.actorRole,
+      actorId: input.actorId,
       reason: input.reason,
       evidenceSummary: input.evidenceSummary ?? null,
       transitionedAt: now,
@@ -146,6 +148,7 @@ export class ReviewWorkflow {
       fromState: previousState,
       toState: nextState,
       actorRole,
+      actorId: options.actorId,
       reason: options.reason,
       evidenceSummary: options.evidenceSummary ?? null,
     });

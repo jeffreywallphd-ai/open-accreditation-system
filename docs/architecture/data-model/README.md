@@ -1065,7 +1065,9 @@ Implementation note (current `core-api` slice): the `workflow-approvals` module 
 - Role-governed transitions are enforced in domain logic and constrained to `faculty`, `reviewer`, and `admin` policy.
 - `ReviewWorkflow` transition behavior is exposed through explicit domain methods (`submitForReview`, `requestRevision`, `returnToDraft`, `approve`, `submitFinal`) that enforce both state-map and role-policy constraints.
 - `ReviewWorkflow` transition history is append-only; existing transition records cannot be mutated or removed by repository save paths.
+- `WorkflowTransitionRecord` stores `actorRole` and optional canonical `actorId` with each state transition.
 - `ReviewWorkflow` transition history is sequence-backed and must remain contiguous (`1..n`) with valid state chaining (`fromState` = previous `toState`) and terminal state consistency (`ReviewWorkflow.state` = last transition `toState`).
+- Transition-history persistence applies append-only hardening at the storage layer (immutable transition rows; delete/update blocked) in addition to aggregate/repository validation.
 - `ReviewWorkflow` is unique per cycle-target tuple (`reviewCycleId`, `targetType`, `targetId`) so workflow state retrieval by cycle/report target is deterministic.
 - Workflow evidence integration remains reference-based (`evidenceItemIds`, `evidenceCollectionId`) and does not embed workflow state in `EvidenceItem`.
 - `ReviewWorkflow.evidenceCollectionId` must map to a `ReviewCycle.evidenceSetIds` entry so collection/set membership remains cycle-governed.
@@ -1076,6 +1078,7 @@ Implementation note (current `core-api` slice): the `workflow-approvals` module 
   - currentness (non-superseded) where required for governed transitions
   - target-scoped collection sufficiency for the owning cycle/report target context, constrained by `evidenceCollectionId` + `EvidenceItem.evidenceSetIds`
   - evidence sufficiency summary persisted on transition history records for inspection/audit
+- Phase 3 behavioral validation now includes domain, application, and persistence/integration coverage for lifecycle/state transitions, role restrictions, evidence-gated approvals/submissions, round-trip reconstruction, and invalid persisted-history rejection.
 
 ## Implementation-ready curriculum linkage invariants (Epic 2 Phase 0 groundwork)
 

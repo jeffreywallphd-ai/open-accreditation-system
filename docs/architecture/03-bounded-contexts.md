@@ -278,7 +278,8 @@ Defined contexts:
   - `submitted`
 - Workflow transitions are governed by explicit domain transition maps and role policy (`faculty`, `reviewer`, `admin`) with append-only transition history.
 - `ReviewWorkflow` exposes explicit transition methods (`submitForReview`, `requestRevision`, `returnToDraft`, `approve`, `submitFinal`) and preserves a compatibility transition entrypoint for orchestrated use-case routing.
-- Transition history is sequence-backed and reconstruction-validated (`transition_sequence` persistence + aggregate checks for contiguous state-chain progression and terminal state consistency).
+- Transition history is sequence-backed and reconstruction-validated (`transition_sequence` persistence + aggregate checks for contiguous state-chain progression and terminal state consistency), and stores actor role plus optional actor identity (`actorId`) with timestamp/reason/evidence-readiness summary.
+- Workflow transition-history persistence is append-only at both repository and storage boundaries (immutable transition records; no in-place mutation/deletion).
 - Evidence integration is reference-based (`evidenceItemIds`, `evidenceCollectionId`) and evaluated through an evidence-management application contract (`evaluateWorkflowEvidenceReadiness`) with explicit readiness policy input; workflow state is not embedded in `EvidenceItem`.
 - `ReviewWorkflow.evidenceCollectionId` must reference a collection/set key declared on `ReviewCycle.evidenceSetIds`, preserving cycle-level container ownership while delegating evidence readiness/usability evaluation to evidence-management.
 - `EvidenceItem.evidenceSetIds` is evidence-owned metadata used for collection/set readiness evaluation; workflow references set keys but does not own evidence membership semantics.
@@ -293,6 +294,7 @@ Defined contexts:
   - `transitionWorkflowState`
   - `getWorkflowState` (cycle-wide and cycle-target variants)
 - The workflow application service requires the evidence-readiness contract and does not allow governed transitions (`approved`, `submitted`) to bypass evidence evaluation.
+- Persistence and application/integration tests now cover round-trip reconstruction for cycle/workflow state, minimal transition history, evidence integration references, role policy enforcement, and evidence-gated transition behavior (missing/incomplete/unusable/superseded vs sufficient/current evidence).
 
 ### `narratives-reporting`
 

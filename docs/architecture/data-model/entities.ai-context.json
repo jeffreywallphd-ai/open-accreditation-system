@@ -1,7 +1,7 @@
 {
   "meta": {
     "document": "Open Accreditation System entity model AI context",
-    "version": "1.6.2",
+    "version": "1.6.3",
     "source_docs": [
       "README.md",
       "docs/architecture/README.md",
@@ -795,7 +795,9 @@
       "ReviewWorkflow transition behavior is exposed through explicit methods: submitForReview, requestRevision, returnToDraft, approve, submitFinal.",
       "Workflow role policy is enforced for faculty, reviewer, and admin transitions.",
       "Workflow transition history is append-only and cannot be mutated in-place.",
+      "Workflow transition records carry actorRole and optional actorId for minimal but reliable transition attribution.",
       "Workflow transition history is sequence-backed and must remain contiguous with valid from/to state chaining.",
+      "Workflow transition-history persistence blocks in-place update/delete operations in addition to aggregate/repository append-only checks.",
       "ReviewWorkflow is unique per (reviewCycleId, targetType, targetId) to preserve deterministic cycle-target state retrieval.",
       "Workflow evidence integration is reference-based (evidenceItemIds/evidenceCollectionId) and does not embed workflow state in EvidenceItem.",
       "ReviewWorkflow.evidenceCollectionId must resolve to a ReviewCycle.evidenceSetIds key for the owning cycle.",

@@ -221,6 +221,7 @@ export async function runTests(): Promise<void> {
     workflowActorRole.FACULTY,
     {
       reason: 'Submitted for review',
+      actorId: 'person_faculty_1',
     },
   );
 
@@ -249,13 +250,27 @@ export async function runTests(): Promise<void> {
   await evidenceManagement.markEvidenceComplete(draftEvidence.id);
   await evidenceManagement.activateEvidenceItem(draftEvidence.id);
 
+  await assert.rejects(
+    () =>
+      transitionReviewWorkflowState.execute(
+        workflow.id,
+        reviewWorkflowState.APPROVED,
+        workflowActorRole.FACULTY,
+        { actorId: 'person_faculty_1' },
+      ),
+    ValidationError,
+    'role restrictions should still block approval when evidence is sufficient',
+  );
+
   const approved = await transitionReviewWorkflowState.execute(
     workflow.id,
     reviewWorkflowState.APPROVED,
     workflowActorRole.REVIEWER,
+    { actorId: 'person_reviewer_1' },
   );
   assert.equal(approved.state, reviewWorkflowState.APPROVED);
   assert.equal(approved.transitionHistory.length, 2);
+  assert.equal(approved.transitionHistory[1].actorId, 'person_reviewer_1');
   assert.equal(approved.transitionHistory[1].evidenceSummary.collectionRequirementSatisfied, true);
 
   await assert.rejects(
@@ -273,6 +288,7 @@ export async function runTests(): Promise<void> {
     workflow.id,
     reviewWorkflowState.SUBMITTED,
     workflowActorRole.ADMIN,
+    { actorId: 'person_admin_1' },
   );
 
   const persistedSubmittedWorkflow = await workflows.getById(workflow.id);
@@ -287,6 +303,7 @@ export async function runTests(): Promise<void> {
   const cycleWorkflows = await getWorkflowStateForCycle.execute(cycle.id);
   assert.equal(cycleWorkflows.length, 1);
   assert.equal(cycleWorkflows[0].state, reviewWorkflowState.SUBMITTED);
+  assert.equal(cycleWorkflows[0].transitionHistory[2].actorId, 'person_admin_1');
   assert.equal(cycleWorkflows[0].transitionHistory[2].evidenceSummary.requiredUsableEvidenceCount, 1);
   assert.equal(cycleWorkflows[0].transitionHistory[2].evidenceSummary.isSufficient, true);
 
