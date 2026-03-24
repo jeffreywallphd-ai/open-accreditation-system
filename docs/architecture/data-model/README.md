@@ -922,7 +922,7 @@ Additional rules:
 
 This section is the implementation contract for the first domain slice under `services/core-api/src/modules/accreditation-frameworks`. It narrows ambiguous behavior into enforceable invariants.
 
-Implementation note (current `core-api` slice): `AccreditationScopeProgram` and `AccreditationScopeOrganizationUnit` are persisted as explicit child records of `AccreditationScope`, and decision corrections are exposed as explicit supersession operations that append a new `DecisionRecord`.
+Implementation note (current `core-api` slice): `AccreditationScopeProgram` and `AccreditationScopeOrganizationUnit` are persisted as explicit child records of `AccreditationScope`, decision corrections are exposed as explicit supersession operations that append a new `DecisionRecord`, and read-side retrieval is available for `FrameworkVersion`, `AccreditationCycle`, `ReviewTeam`, and `ReviewerProfile` via bounded-context application/API queries that enforce the same ownership/supersession integrity checks used by write paths.
 
 ### Aggregate ownership and mutation
 

@@ -496,6 +496,8 @@ export class AccreditationCycle {
   }
 
   #assertAggregateIntegrity() {
+    const decisionById = new Map(this.decisionRecords.map((item) => [item.id, item]));
+
     for (const scope of this.scopes) {
       if (scope.accreditationCycleId !== this.id) {
         throw new ValidationError(`AccreditationScope.accreditationCycleId must match AccreditationCycle.id: ${scope.id}`);
@@ -544,7 +546,11 @@ export class AccreditationCycle {
         throw new ValidationError(`DecisionRecord.reviewEventId not found in AccreditationCycle: ${decision.reviewEventId}`);
       }
       if (decision.supersedesDecisionRecordId) {
-        if (!this.decisionRecords.some((item) => item.id === decision.supersedesDecisionRecordId)) {
+        if (decision.supersedesDecisionRecordId === decision.id) {
+          throw new ValidationError('DecisionRecord cannot supersede itself');
+        }
+        const superseded = decisionById.get(decision.supersedesDecisionRecordId);
+        if (!superseded) {
           throw new ValidationError(
             `DecisionRecord.supersedesDecisionRecordId not found: ${decision.supersedesDecisionRecordId}`,
           );
@@ -552,7 +558,32 @@ export class AccreditationCycle {
         if (supersededIds.has(decision.supersedesDecisionRecordId)) {
           throw new ValidationError('DecisionRecord already superseded and cannot be superseded twice');
         }
+        if (superseded.supersededByDecisionRecordId !== decision.id) {
+          throw new ValidationError('DecisionRecord supersession link must include reciprocal supersededByDecisionRecordId');
+        }
         supersededIds.add(decision.supersedesDecisionRecordId);
+      }
+
+      if (decision.supersededByDecisionRecordId) {
+        if (decision.supersededByDecisionRecordId === decision.id) {
+          throw new ValidationError('DecisionRecord cannot be superseded by itself');
+        }
+        const superseding = decisionById.get(decision.supersededByDecisionRecordId);
+        if (!superseding) {
+          throw new ValidationError(
+            `DecisionRecord.supersededByDecisionRecordId not found: ${decision.supersededByDecisionRecordId}`,
+          );
+        }
+        if (superseding.supersedesDecisionRecordId !== decision.id) {
+          throw new ValidationError('DecisionRecord supersededBy link must match superseding record reference');
+        }
+      }
+
+      if (decision.status === decisionRecordStatus.SUPERSEDED && !decision.supersededByDecisionRecordId) {
+        throw new ValidationError('Superseded DecisionRecord must include supersededByDecisionRecordId');
+      }
+      if (decision.status !== decisionRecordStatus.SUPERSEDED && decision.supersededByDecisionRecordId) {
+        throw new ValidationError('Only superseded DecisionRecord can set supersededByDecisionRecordId');
       }
     }
   }

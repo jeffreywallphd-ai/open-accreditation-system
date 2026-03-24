@@ -407,8 +407,23 @@ export class FrameworkVersion {
           `CriterionElement.frameworkVersionId must match FrameworkVersion.id: ${criterionElement.id}`,
         );
       }
-      if (!this.criteria.some((item) => item.id === criterionElement.criterionId)) {
+      const parentCriterion = this.criteria.find((item) => item.id === criterionElement.criterionId);
+      if (!parentCriterion) {
         throw new ValidationError(`CriterionElement.criterionId not found in FrameworkVersion: ${criterionElement.criterionId}`);
+      }
+      if (criterionElement.supersedesElementId) {
+        if (criterionElement.supersedesElementId === criterionElement.id) {
+          throw new ValidationError('CriterionElement cannot supersede itself');
+        }
+        const supersededElement = this.criterionElements.find((item) => item.id === criterionElement.supersedesElementId);
+        if (!supersededElement) {
+          throw new ValidationError(
+            `CriterionElement.supersedesElementId not found in FrameworkVersion: ${criterionElement.supersedesElementId}`,
+          );
+        }
+        if (supersededElement.criterionId !== parentCriterion.id) {
+          throw new ValidationError('CriterionElement.supersedesElementId must reference an element in the same Criterion');
+        }
       }
     }
 
@@ -438,6 +453,20 @@ export class FrameworkVersion {
         if (evidenceRequirement.criterionId && element.criterionId !== evidenceRequirement.criterionId) {
           throw new ValidationError(
             'EvidenceRequirement.criterionId must match CriterionElement.criterionId when both set',
+          );
+        }
+      }
+
+      if (evidenceRequirement.supersedesRequirementId) {
+        if (evidenceRequirement.supersedesRequirementId === evidenceRequirement.id) {
+          throw new ValidationError('EvidenceRequirement cannot supersede itself');
+        }
+        const supersededRequirement = this.evidenceRequirements.find(
+          (item) => item.id === evidenceRequirement.supersedesRequirementId,
+        );
+        if (!supersededRequirement) {
+          throw new ValidationError(
+            `EvidenceRequirement.supersedesRequirementId not found in FrameworkVersion: ${evidenceRequirement.supersedesRequirementId}`,
           );
         }
       }

@@ -197,6 +197,10 @@ export class AccreditationFrameworksService {
     return this.frameworkVersions.getById(id);
   }
 
+  async listFrameworkVersions(filter = {}) {
+    return this.frameworkVersions.findByFilter(filter);
+  }
+
   async getAccreditationCycleById(id) {
     const cycle = await this.cycles.getById(id);
     if (!cycle) {
@@ -206,6 +210,14 @@ export class AccreditationFrameworksService {
     return cycle;
   }
 
+  async listAccreditationCycles(filter = {}) {
+    const cycles = await this.cycles.findByFilter(filter);
+    for (const cycle of cycles) {
+      await this.#assertCycleReviewEventTeamsBelongToCycle(cycle);
+    }
+    return cycles;
+  }
+
   async getReviewTeamById(id) {
     const team = await this.reviewTeams.getById(id);
     if (!team) {
@@ -213,6 +225,22 @@ export class AccreditationFrameworksService {
     }
     await this.#assertTeamMembershipsAlignToReviewerProfiles(team);
     return team;
+  }
+
+  async listReviewTeams(filter = {}) {
+    const teams = await this.reviewTeams.findByFilter(filter);
+    for (const team of teams) {
+      await this.#assertTeamMembershipsAlignToReviewerProfiles(team);
+    }
+    return teams;
+  }
+
+  async getReviewerProfileById(id) {
+    return this.reviewerProfiles.getById(id);
+  }
+
+  async listReviewerProfiles(filter = {}) {
+    return this.reviewerProfiles.findByFilter(filter);
   }
 
   async #requireFrameworkVersion(id) {
