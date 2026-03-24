@@ -32,6 +32,30 @@ export const evidenceArtifactStatus = Object.freeze({
 });
 export const EVIDENCE_ARTIFACT_STATUS_VALUES = Object.freeze(Object.values(evidenceArtifactStatus));
 
+export const evidenceReferenceTargetType = Object.freeze({
+  CRITERION: 'criterion',
+  CRITERION_ELEMENT: 'criterion-element',
+  LEARNING_OUTCOME: 'learning-outcome',
+  NARRATIVE_SECTION: 'narrative-section',
+});
+export const EVIDENCE_REFERENCE_TARGET_TYPE_VALUES = Object.freeze(Object.values(evidenceReferenceTargetType));
+
+export const evidenceReferenceRelationshipType = Object.freeze({
+  SUPPORTS: 'supports',
+  DEMONSTRATES: 'demonstrates',
+  DOCUMENTS: 'documents',
+  MEASURES: 'measures',
+  SUBSTANTIATES: 'substantiates',
+  RESPONDS_TO: 'responds-to',
+  REQUIRED_BY: 'required-by',
+  INCLUDED_IN: 'included-in',
+  DERIVED_FROM: 'derived-from',
+  CONTEXT_FOR: 'context-for',
+});
+export const EVIDENCE_REFERENCE_RELATIONSHIP_TYPE_VALUES = Object.freeze(
+  Object.values(evidenceReferenceRelationshipType),
+);
+
 const EVIDENCE_TYPES_REQUIRING_ARTIFACT_FOR_ACTIVATION_SET = new Set([
   evidenceType.DOCUMENT,
   evidenceType.DATASET,
@@ -55,6 +79,16 @@ export function parseEvidenceStatus(value, field = 'EvidenceItem.status') {
 
 export function parseEvidenceArtifactStatus(value, field = 'EvidenceArtifact.status') {
   assertOneOf(value, field, EVIDENCE_ARTIFACT_STATUS_VALUES);
+  return value;
+}
+
+export function parseEvidenceReferenceTargetType(value, field = 'EvidenceReference.targetType') {
+  assertOneOf(value, field, EVIDENCE_REFERENCE_TARGET_TYPE_VALUES);
+  return value;
+}
+
+export function parseEvidenceReferenceRelationshipType(value, field = 'EvidenceReference.relationshipType') {
+  assertOneOf(value, field, EVIDENCE_REFERENCE_RELATIONSHIP_TYPE_VALUES);
   return value;
 }
 

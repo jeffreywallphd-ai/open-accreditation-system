@@ -188,7 +188,11 @@ Defined contexts:
 - Artifact registration is limited to editable statuses (`draft`, `incomplete`) in this phase; `active`, `superseded`, and `archived` do not allow artifact mutation.
 - `superseded` and `archived` statuses are terminal for lifecycle transitions in this phase.
 - Supersession orchestration validates successor existence and institution alignment before calling aggregate transitions.
-- Application-layer use cases are implemented for create, attach artifact metadata, retrieve, and governed status transitions (complete, incomplete, activate, supersede, archive) including a unified lifecycle-action entry point.
+- `EvidenceItem` now carries version-lineage semantics (`evidenceLineageId`, `versionNumber`, `supersedesEvidenceItemId`, `supersededByEvidenceItemId`) so superseding revisions can preserve historical records.
+- Application-layer use cases include explicit superseding-version creation (`createSupersedingEvidenceVersion`) in addition to governed status transitions.
+- `EvidenceReference` is implemented as an append-only owned child on `EvidenceItem`, with accreditation-centered target types (`criterion`, `criterion-element`, `learning-outcome`, `narrative-section`) and governed relationship semantics.
+- Persistence and repository boundaries enforce append-only behavior for artifacts and references and reject in-place mutation of evidence identity/version-anchor fields.
+- Application-layer retrieval now supports lineage/current-version queries and reference-target queries (criterion/subcriterion/outcome retrieval foundations) without introducing a reporting-engine abstraction.
 
 ### `assessment-improvement`
 

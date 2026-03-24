@@ -18,6 +18,16 @@ export class AttachEvidenceArtifactCommand {
   }
 }
 
+export class AttachEvidenceReferenceCommand {
+  constructor(service) {
+    this.service = service;
+  }
+
+  async execute(evidenceItemId, input) {
+    return this.service.addEvidenceReference(evidenceItemId, input);
+  }
+}
+
 export class MarkEvidenceCompleteCommand {
   constructor(service) {
     this.service = service;
@@ -75,5 +85,15 @@ export class UpdateEvidenceItemStatusCommand {
 
   async execute(evidenceItemId, action, input = {}) {
     return this.service.updateEvidenceItemStatus(evidenceItemId, action, input);
+  }
+}
+
+export class CreateSupersedingEvidenceVersionCommand {
+  constructor(service) {
+    this.service = service;
+  }
+
+  async execute(evidenceItemId, input = {}) {
+    return this.service.createSupersedingEvidenceVersion(evidenceItemId, input);
   }
 }

@@ -4,9 +4,16 @@ import os from 'node:os';
 import path from 'node:path';
 import { createCoreApiApp } from '../../src/bootstrap/create-core-api-app.js';
 import { EVID_SERVICE } from '../../src/modules/evidence-management/evidence-management.module.js';
+import { AFR_SERVICE } from '../../src/modules/accreditation-frameworks/accreditation-frameworks.module.js';
+import { CURR_SERVICE } from '../../src/modules/curriculum-mapping/curriculum-mapping.module.js';
 import { ORG_SERVICE } from '../../src/modules/organization-registry/organization-registry.module.js';
 import { ValidationError } from '../../src/modules/shared/kernel/errors.js';
-import { evidenceSourceType, evidenceType } from '../../src/modules/evidence-management/domain/value-objects/evidence-classifications.js';
+import {
+  evidenceReferenceRelationshipType,
+  evidenceReferenceTargetType,
+  evidenceSourceType,
+  evidenceType,
+} from '../../src/modules/evidence-management/domain/value-objects/evidence-classifications.js';
 
 function createTempDbPath(): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'core-api-evidence-persistence-'));
@@ -19,15 +26,82 @@ export async function runTests(): Promise<void> {
 
   let institutionId = '';
   let evidenceItemId = '';
+  let evidenceLineageId = '';
+  let criterionId = '';
+  let criterionElementId = '';
+  let outcomeId = '';
   try {
     const org = app.get(ORG_SERVICE);
     const evidenceService = app.get(EVID_SERVICE);
+    const accreditation = app.get(AFR_SERVICE);
+    const curriculum = app.get(CURR_SERVICE);
 
     const institution = await org.createInstitution({
       name: 'Evidence Persistence University',
       code: 'EPU',
     });
     institutionId = institution.id;
+
+    const accreditor = await accreditation.createAccreditor({
+      name: 'Higher Learning Council',
+      code: 'HLC',
+      description: 'HLC accreditor baseline for evidence integration tests.',
+    });
+    const framework = await accreditation.createFramework({
+      accreditorId: accreditor.id,
+      name: 'Institutional Quality Framework',
+      code: 'IQF',
+      description: 'Framework for integration evidence references.',
+    });
+    const version = await accreditation.createFrameworkVersion({
+      frameworkId: framework.id,
+      versionTag: 'v1.0',
+    });
+    const versionWithStandard = await accreditation.addStandard(version.id, {
+      code: 'S1',
+      title: 'Mission and Integrity',
+      sequence: 1,
+    });
+    const standard = versionWithStandard.standards.find((item) => item.code === 'S1');
+    assert.ok(standard);
+
+    const versionWithCriterion = await accreditation.addCriterion(version.id, {
+      standardId: standard.id,
+      code: 'C1',
+      title: 'Evidence and Outcomes',
+      sequence: 1,
+    });
+    const criterion = versionWithCriterion.criteria.find((item) => item.code === 'C1');
+    assert.ok(criterion);
+    criterionId = criterion.id;
+
+    const versionWithCriterionElement = await accreditation.addCriterionElement(version.id, {
+      criterionId: criterion.id,
+      code: 'C1.1',
+      title: 'Outcome evidence',
+      statement: 'Institution provides direct evidence of outcomes.',
+      elementType: 'subcriterion',
+      requiredFlag: true,
+      sequence: 1,
+    });
+    const criterionElement = versionWithCriterionElement.criterionElements.find((item) => item.code === 'C1.1');
+    assert.ok(criterionElement);
+    criterionElementId = criterionElement.id;
+
+    const program = await curriculum.createProgram({
+      institutionId: institution.id,
+      name: 'BS Computer Science',
+      code: 'BSCS',
+    });
+    const learningOutcome = await curriculum.createLearningOutcome({
+      institutionId: institution.id,
+      code: 'LO-1',
+      title: 'Analyze complex computing problems',
+      statement: 'Graduates analyze complex computing problems and apply principles of computing.',
+      scopeType: 'program',
+      programId: program.id,
+    });
+    outcomeId = learningOutcome.id;
 
     const created = await evidenceService.createEvidenceItem({
       institutionId: institution.id,
@@ -38,6 +112,7 @@ export async function runTests(): Promise<void> {
       sourceType: evidenceSourceType.MANUAL,
     });
     evidenceItemId = created.id;
+    evidenceLineageId = created.evidenceLineageId;
 
     await evidenceService.addEvidenceArtifact(created.id, {
       artifactName: 'outcomes-narrative.pdf',
@@ -59,18 +134,67 @@ export async function runTests(): Promise<void> {
       storageKey: '2026/outcomes-narrative-v2.pdf',
       sourceChecksum: 'sha256:def456',
     });
+    await evidenceService.addEvidenceReference(created.id, {
+      targetType: evidenceReferenceTargetType.CRITERION,
+      targetEntityId: criterionId,
+      relationshipType: evidenceReferenceRelationshipType.SUPPORTS,
+    });
+    await evidenceService.addEvidenceReference(created.id, {
+      targetType: evidenceReferenceTargetType.CRITERION_ELEMENT,
+      targetEntityId: criterionElementId,
+      relationshipType: evidenceReferenceRelationshipType.RESPONDS_TO,
+    });
+    await evidenceService.addEvidenceReference(created.id, {
+      targetType: evidenceReferenceTargetType.LEARNING_OUTCOME,
+      targetEntityId: outcomeId,
+      relationshipType: evidenceReferenceRelationshipType.DEMONSTRATES,
+    });
     await evidenceService.markEvidenceComplete(created.id);
     await evidenceService.activateEvidenceItem(created.id);
+
+    const successor = await evidenceService.createSupersedingEvidenceVersion(created.id, {
+      title: '2026 Program Learning Outcomes Narrative - Revised',
+      description: 'Revised narrative evidence for outcomes alignment.',
+    });
+
+    await evidenceService.addEvidenceArtifact(successor.id, {
+      artifactName: 'outcomes-narrative-v3.pdf',
+      artifactType: 'primary',
+      mimeType: 'application/pdf',
+      fileExtension: 'pdf',
+      byteSize: 4096,
+      storageBucket: 'evidence',
+      storageKey: '2026/outcomes-narrative-v3.pdf',
+      sourceChecksum: 'sha256:ghi789',
+    });
+    await evidenceService.addEvidenceReference(successor.id, {
+      targetType: evidenceReferenceTargetType.CRITERION_ELEMENT,
+      targetEntityId: criterionElementId,
+      relationshipType: evidenceReferenceRelationshipType.SUPPORTS,
+      rationale: 'Updated version maps to same criterion element with revised alignment details.',
+    });
+    await evidenceService.markEvidenceComplete(successor.id);
+    await evidenceService.activateEvidenceItem(successor.id);
 
     const activeItems = await evidenceService.listEvidenceItems({
       institutionId: institution.id,
       status: 'active',
     });
     assert.equal(activeItems.length, 1);
-    assert.equal(activeItems[0].id, created.id);
-    assert.equal(activeItems[0].artifacts.length, 2);
+    assert.notEqual(activeItems[0].id, created.id);
+    assert.equal(activeItems[0].evidenceLineageId, evidenceLineageId);
+    assert.equal(activeItems[0].versionNumber, 2);
+    assert.equal(activeItems[0].artifacts.length, 1);
+    assert.equal(activeItems[0].references.length, 1);
     assert.equal(activeItems[0].usability.isUsable, true);
-    assert.equal(activeItems[0].usability.currentArtifactId, activeItems[0].artifacts[1].id);
+    assert.equal(activeItems[0].usability.currentArtifactId, activeItems[0].artifacts[0].id);
+
+    const criterionReferences = await evidenceService.listEvidenceByReference(
+      evidenceReferenceTargetType.CRITERION_ELEMENT,
+      criterionElementId,
+      { institutionId: institution.id },
+    );
+    assert.equal(criterionReferences.length, 2);
   } finally {
     await app.close();
   }
@@ -82,9 +206,12 @@ export async function runTests(): Promise<void> {
     assert.ok(restored);
     assert.equal(restored?.institutionId, institutionId);
     assert.equal(restored?.artifacts.length, 2);
+    assert.equal(restored?.references.length, 3);
+    assert.equal(restored?.versionNumber, 1);
+    assert.equal(restored?.supersededByEvidenceItemId !== null, true);
     assert.equal(restored?.artifacts[0].storageBucket, 'evidence');
     assert.equal(restored?.artifacts[1].storageKey, '2026/outcomes-narrative-v2.pdf');
-    assert.equal(restored?.usability.isUsable, true);
+    assert.equal(restored?.usability.isUsable, false);
     assert.equal(restored?.usability.currentArtifactId, restored?.artifacts[1].id);
 
     await assert.rejects(
@@ -100,23 +227,43 @@ export async function runTests(): Promise<void> {
           sourceChecksum: 'sha256:ghi789',
         }),
       ValidationError,
-      'active evidence should remain artifact-immutable after rehydration',
+      'historical evidence should remain artifact-immutable after rehydration',
     );
 
-    await evidenceService.markEvidenceIncomplete(evidenceItemId);
-    const nowIncomplete = await evidenceService.getEvidenceItemById(evidenceItemId);
-    assert.equal(nowIncomplete?.status, 'incomplete');
+    const versions = await evidenceService.listEvidenceVersions(evidenceLineageId, { includeHistorical: true });
+    assert.equal(versions.length, 2);
+    assert.deepEqual(
+      versions.map((item) => item.versionNumber),
+      [1, 2],
+    );
 
-    await evidenceService.markEvidenceComplete(evidenceItemId);
-    await evidenceService.activateEvidenceItem(evidenceItemId);
-    await evidenceService.archiveEvidenceItem(evidenceItemId);
+    const current = await evidenceService.getCurrentEvidenceVersion(evidenceLineageId);
+    assert.ok(current);
+    assert.equal(current?.versionNumber, 2);
+    assert.equal(current?.status, 'active');
 
-    const archived = await evidenceService.getEvidenceItemById(evidenceItemId);
-    assert.equal(archived?.status, 'archived');
+    const outcomeLinked = await evidenceService.listEvidenceByReference(
+      evidenceReferenceTargetType.LEARNING_OUTCOME,
+      outcomeId,
+      { institutionId, currentOnly: false },
+    );
+    assert.equal(outcomeLinked.length, 1);
+    assert.equal(outcomeLinked[0].id, evidenceItemId);
+
     await assert.rejects(
-      () => evidenceService.markEvidenceIncomplete(evidenceItemId),
+      () =>
+        evidenceService.addEvidenceArtifact(evidenceItemId, {
+          artifactName: 'outcomes-narrative-v4.pdf',
+          artifactType: 'revision',
+          mimeType: 'application/pdf',
+          fileExtension: 'pdf',
+          byteSize: 8192,
+          storageBucket: 'evidence',
+          storageKey: '2026/outcomes-narrative-v4.pdf',
+          sourceChecksum: 'sha256:jkl012',
+        }),
       ValidationError,
-      'archived evidence remains terminal after persistence round-trip',
+      'superseded historical version remains artifact-immutable after persistence round-trip',
     );
   } finally {
     await secondApp.close();

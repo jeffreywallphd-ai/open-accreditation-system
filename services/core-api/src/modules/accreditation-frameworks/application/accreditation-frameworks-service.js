@@ -203,6 +203,28 @@ export class AccreditationFrameworksService {
     return this.frameworkVersions.getById(id);
   }
 
+  async getCriterionById(id) {
+    const versions = await this.frameworkVersions.findByFilter({});
+    for (const version of versions) {
+      const criterion = version.criteria.find((item) => item.id === id);
+      if (criterion) {
+        return criterion;
+      }
+    }
+    return null;
+  }
+
+  async getCriterionElementById(id) {
+    const versions = await this.frameworkVersions.findByFilter({});
+    for (const version of versions) {
+      const criterionElement = version.criterionElements.find((item) => item.id === id);
+      if (criterionElement) {
+        return criterionElement;
+      }
+    }
+    return null;
+  }
+
   async listFrameworkVersions(filter = {}) {
     return this.frameworkVersions.findByFilter(filter);
   }

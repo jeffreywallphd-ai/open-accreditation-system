@@ -1,7 +1,7 @@
 {
   "meta": {
     "document": "Open Accreditation System entity model AI context",
-    "version": "1.4.0",
+    "version": "1.5.0",
     "source_docs": [
       "README.md",
       "docs/architecture/README.md",
@@ -734,6 +734,8 @@
       "EvidenceItem.status must be one of: draft, active, superseded, incomplete, archived.",
       "EvidenceItem lifecycle status is evidence-governance state and must not duplicate workflow approval state.",
       "EvidenceItem.create starts with status=draft, isComplete=false, and no supersededByEvidenceItemId.",
+      "EvidenceItem.evidenceLineageId identifies evidence lineage and defaults to the initial EvidenceItem.id for version 1.",
+      "EvidenceItem.versionNumber starts at 1 and versionNumber>1 requires supersedesEvidenceItemId.",
       "EvidenceItem must not embed artifact storage fields; storage metadata belongs to EvidenceArtifact child records.",
       "EvidenceArtifact.evidenceItemId must match the owning EvidenceItem.id.",
       "EvidenceItem lifecycle transitions are explicit: draft->(incomplete|active|archived), incomplete->(draft|archived), active->(incomplete|superseded|archived), superseded/archived terminal.",
@@ -746,7 +748,8 @@
       "Artifact registration is allowed only while EvidenceItem.status is draft or incomplete.",
       "EvidenceItem.status=superseded and EvidenceItem.status=archived are terminal for lifecycle transitions in this phase.",
       "Superseding EvidenceItem requires successor existence and same institution.",
-      "EvidenceArtifact persistence is append-only in this phase; existing artifact metadata cannot be changed or removed in-place."
+      "EvidenceArtifact persistence is append-only in this phase; existing artifact metadata cannot be changed or removed in-place.",
+      "EvidenceReference target associations are append-only in this phase; existing reference metadata cannot be changed or removed in-place."
     ],
     "crossContextReferenceRules": [
       "accreditation-frameworks validates local shape and ownership invariants for framework and cycle aggregates.",

@@ -3,8 +3,12 @@ import { ValidationError } from '../../../shared/kernel/errors.js';
 import { createId, nowIso } from '../../../shared/kernel/identity.js';
 import {
   evidenceArtifactStatus,
+  evidenceReferenceRelationshipType,
+  evidenceReferenceTargetType,
   evidenceStatus,
   parseEvidenceArtifactStatus,
+  parseEvidenceReferenceRelationshipType,
+  parseEvidenceReferenceTargetType,
   parseEvidenceSourceType,
   parseEvidenceStatus,
   parseEvidenceType,
@@ -80,6 +84,52 @@ export class EvidenceArtifact {
   }
 }
 
+export class EvidenceReference {
+  constructor(props) {
+    assertRequired(props.id, 'EvidenceReference.id');
+    assertRequired(props.evidenceItemId, 'EvidenceReference.evidenceItemId');
+    parseEvidenceReferenceTargetType(props.targetType);
+    assertRequired(props.targetEntityId, 'EvidenceReference.targetEntityId');
+    parseEvidenceReferenceRelationshipType(props.relationshipType);
+
+    if (props.rationale !== undefined && props.rationale !== null && typeof props.rationale !== 'string') {
+      throw new ValidationError('EvidenceReference.rationale must be a string when provided');
+    }
+    if (props.anchorPath !== undefined && props.anchorPath !== null && typeof props.anchorPath !== 'string') {
+      throw new ValidationError('EvidenceReference.anchorPath must be a string when provided');
+    }
+
+    this.id = props.id;
+    this.evidenceItemId = props.evidenceItemId;
+    this.targetType = props.targetType;
+    this.targetEntityId = props.targetEntityId;
+    this.relationshipType = props.relationshipType;
+    this.rationale = props.rationale ?? null;
+    this.anchorPath = props.anchorPath ?? null;
+    this.createdAt = props.createdAt;
+    this.updatedAt = props.updatedAt;
+  }
+
+  static create(input) {
+    const now = nowIso();
+    return new EvidenceReference({
+      id: input.id ?? createId('ev_ref'),
+      evidenceItemId: input.evidenceItemId,
+      targetType: input.targetType,
+      targetEntityId: input.targetEntityId,
+      relationshipType: input.relationshipType ?? evidenceReferenceRelationshipType.SUPPORTS,
+      rationale: input.rationale,
+      anchorPath: input.anchorPath,
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+
+  static rehydrate(input) {
+    return new EvidenceReference(input);
+  }
+}
+
 export class EvidenceItem {
   constructor(props) {
     assertRequired(props.id, 'EvidenceItem.id');
@@ -99,17 +149,26 @@ export class EvidenceItem {
     this.sourceType = props.sourceType;
     this.status = props.status;
     this.isComplete = props.isComplete ?? false;
+    this.evidenceLineageId = props.evidenceLineageId ?? this.id;
+    this.versionNumber = props.versionNumber ?? 1;
+    this.supersedesEvidenceItemId = props.supersedesEvidenceItemId ?? null;
     this.supersededByEvidenceItemId = props.supersededByEvidenceItemId ?? null;
     this.reportingPeriodId = props.reportingPeriodId ?? null;
     this.reviewCycleId = props.reviewCycleId ?? null;
     this.artifacts = (props.artifacts ?? []).map((item) =>
       item instanceof EvidenceArtifact ? item : EvidenceArtifact.rehydrate(item),
     );
+    this.references = (props.references ?? []).map((item) =>
+      item instanceof EvidenceReference ? item : EvidenceReference.rehydrate(item),
+    );
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
 
     this.#assertArtifactOwnershipIntegrity();
+    this.#assertReferenceOwnershipIntegrity();
+    this.#assertReferenceUniquenessIntegrity();
     this.#assertUsabilityIntegrity();
+    this.#assertVersionIntegrity();
     this.#assertSupersessionIntegrity();
   }
 
@@ -134,10 +193,14 @@ export class EvidenceItem {
       sourceType: input.sourceType,
       status: evidenceStatus.DRAFT,
       isComplete: false,
+      evidenceLineageId: input.evidenceLineageId ?? input.id ?? null,
+      versionNumber: input.versionNumber ?? 1,
+      supersedesEvidenceItemId: input.supersedesEvidenceItemId ?? null,
       supersededByEvidenceItemId: null,
       reportingPeriodId: input.reportingPeriodId,
       reviewCycleId: input.reviewCycleId,
       artifacts: input.artifacts ?? [],
+      references: input.references ?? [],
       createdAt: now,
       updatedAt: now,
     });
@@ -161,6 +224,38 @@ export class EvidenceItem {
 
   addArtifact(input) {
     return this.registerArtifactMetadata(input);
+  }
+
+  addReference(input) {
+    this.#assertReferenceMutationAllowed('add evidence reference');
+    const reference = EvidenceReference.create({
+      ...input,
+      evidenceItemId: this.id,
+    });
+    this.#assertNoDuplicateReference(reference);
+    this.references.push(reference);
+    this.updatedAt = nowIso();
+    return reference;
+  }
+
+  createSupersedingVersion(input = {}) {
+    if (this.status !== evidenceStatus.ACTIVE) {
+      throw new ValidationError('Only active EvidenceItem can create a superseding version');
+    }
+
+    return EvidenceItem.create({
+      ...input,
+      institutionId: this.institutionId,
+      title: input.title ?? this.title,
+      description: input.description ?? this.description ?? undefined,
+      evidenceType: this.evidenceType,
+      sourceType: this.sourceType,
+      reportingPeriodId: input.reportingPeriodId ?? this.reportingPeriodId ?? undefined,
+      reviewCycleId: input.reviewCycleId ?? this.reviewCycleId ?? undefined,
+      evidenceLineageId: this.evidenceLineageId,
+      versionNumber: this.versionNumber + 1,
+      supersedesEvidenceItemId: this.id,
+    });
   }
 
   markReadyForUse() {
@@ -257,6 +352,27 @@ export class EvidenceItem {
     }
   }
 
+  #assertReferenceOwnershipIntegrity() {
+    for (const reference of this.references) {
+      if (reference.evidenceItemId !== this.id) {
+        throw new ValidationError('EvidenceReference.evidenceItemId must match owning EvidenceItem.id');
+      }
+    }
+  }
+
+  #assertReferenceUniquenessIntegrity() {
+    const keys = new Set();
+    for (const reference of this.references) {
+      const key = this.#referenceKey(reference);
+      if (keys.has(key)) {
+        throw new ValidationError(
+          `EvidenceReference duplicate association is not allowed for target=${reference.targetType}:${reference.targetEntityId}`,
+        );
+      }
+      keys.add(key);
+    }
+  }
+
   #assertUsabilityIntegrity() {
     if (this.status === evidenceStatus.INCOMPLETE && this.isComplete) {
       throw new ValidationError('EvidenceItem.status=incomplete requires isComplete=false');
@@ -273,6 +389,20 @@ export class EvidenceItem {
     }
     if (this.status !== evidenceStatus.SUPERSEDED && this.supersededByEvidenceItemId) {
       throw new ValidationError('EvidenceItem.supersededByEvidenceItemId is only valid when status is superseded');
+    }
+  }
+
+  #assertVersionIntegrity() {
+    assertRequired(this.evidenceLineageId, 'EvidenceItem.evidenceLineageId');
+    if (!Number.isInteger(this.versionNumber) || this.versionNumber < 1) {
+      throw new ValidationError('EvidenceItem.versionNumber must be an integer >= 1');
+    }
+
+    if (this.versionNumber === 1 && this.supersedesEvidenceItemId) {
+      throw new ValidationError('EvidenceItem.versionNumber=1 cannot set supersedesEvidenceItemId');
+    }
+    if (this.versionNumber > 1 && !this.supersedesEvidenceItemId) {
+      throw new ValidationError('EvidenceItem.versionNumber>1 requires supersedesEvidenceItemId');
     }
   }
 
@@ -316,6 +446,12 @@ export class EvidenceItem {
     }
   }
 
+  #assertReferenceMutationAllowed(action) {
+    if (this.status === evidenceStatus.SUPERSEDED || this.status === evidenceStatus.ARCHIVED) {
+      throw new ValidationError(`EvidenceItem cannot ${action} while status is ${this.status}`);
+    }
+  }
+
   #assertActivationMetadata() {
     if (!this.description || typeof this.description !== 'string' || this.description.trim() === '') {
       throw new ValidationError('EvidenceItem.status=active requires non-empty description');
@@ -337,5 +473,20 @@ export class EvidenceItem {
         'EvidenceItem.status=active requires at least one available EvidenceArtifact for the current evidenceType/sourceType',
       );
     }
+  }
+
+  #assertNoDuplicateReference(candidate) {
+    const candidateKey = this.#referenceKey(candidate);
+    for (const reference of this.references) {
+      if (this.#referenceKey(reference) === candidateKey) {
+        throw new ValidationError(
+          `EvidenceReference duplicate association is not allowed for target=${candidate.targetType}:${candidate.targetEntityId}`,
+        );
+      }
+    }
+  }
+
+  #referenceKey(reference) {
+    return `${reference.targetType}|${reference.targetEntityId}|${reference.relationshipType}|${reference.anchorPath ?? ''}`;
   }
 }

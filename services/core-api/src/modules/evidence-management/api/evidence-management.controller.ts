@@ -4,6 +4,8 @@ import { ZodValidationPipe } from '../../../common/http/zod-validation.pipe.js';
 import { EVID_SERVICE } from '../evidence-management.module.js';
 import {
   EVIDENCE_ARTIFACT_STATUS_VALUES,
+  EVIDENCE_REFERENCE_RELATIONSHIP_TYPE_VALUES,
+  EVIDENCE_REFERENCE_TARGET_TYPE_VALUES,
   EVIDENCE_SOURCE_TYPE_VALUES,
   EVIDENCE_TYPE_VALUES,
 } from '../domain/value-objects/evidence-classifications.js';
@@ -32,6 +34,23 @@ const addEvidenceArtifactSchema = z.object({
   sourceChecksum: z.string().optional(),
   status: z.string().refine((value) => EVIDENCE_ARTIFACT_STATUS_VALUES.includes(value), 'Invalid artifact status').optional(),
   uploadedAt: z.string().optional(),
+});
+
+const addEvidenceReferenceSchema = z.object({
+  id: z.string().optional(),
+  targetType: z
+    .string()
+    .refine((value) => EVIDENCE_REFERENCE_TARGET_TYPE_VALUES.includes(value), 'Invalid evidence reference targetType'),
+  targetEntityId: z.string().min(1),
+  relationshipType: z
+    .string()
+    .refine(
+      (value) => EVIDENCE_REFERENCE_RELATIONSHIP_TYPE_VALUES.includes(value),
+      'Invalid evidence reference relationshipType',
+    )
+    .optional(),
+  rationale: z.string().optional(),
+  anchorPath: z.string().optional(),
 });
 
 const supersedeEvidenceSchema = z.object({
@@ -86,6 +105,10 @@ export class EvidenceManagementController {
     @Query('evidenceType') evidenceType?: string,
     @Query('sourceType') sourceType?: string,
     @Query('status') status?: string,
+    @Query('evidenceLineageId') evidenceLineageId?: string,
+    @Query('currentOnly') currentOnly?: string,
+    @Query('targetType') targetType?: string,
+    @Query('targetEntityId') targetEntityId?: string,
   ) {
     return {
       data: await this.service.listEvidenceItems({
@@ -93,6 +116,10 @@ export class EvidenceManagementController {
         evidenceType,
         sourceType,
         status,
+        evidenceLineageId,
+        currentOnly: currentOnly === 'true',
+        targetType,
+        targetEntityId,
       }),
     };
   }
@@ -103,6 +130,14 @@ export class EvidenceManagementController {
     @Body(new ZodValidationPipe(addEvidenceArtifactSchema)) body,
   ) {
     return { data: await this.service.addEvidenceArtifact(evidenceItemId, body) };
+  }
+
+  @Post('evidence-items/:evidenceItemId/references')
+  async addEvidenceReference(
+    @Param('evidenceItemId') evidenceItemId: string,
+    @Body(new ZodValidationPipe(addEvidenceReferenceSchema)) body,
+  ) {
+    return { data: await this.service.addEvidenceReference(evidenceItemId, body) };
   }
 
   @Post('evidence-items/:evidenceItemId/complete')

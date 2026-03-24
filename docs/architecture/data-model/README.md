@@ -981,7 +981,7 @@ Implementation note (current `core-api` slice): `AccreditationScopeProgram` and 
 
 ## Implementation-ready evidence invariants (Epic 2 Phase 1 foundation)
 
-Implementation note (current `core-api` slice): the `evidence-management` module now includes a first-class `EvidenceItem` aggregate with `EvidenceArtifact` children and explicit classification/lifecycle semantics to establish the Phase 1 foundation.
+Implementation note (current `core-api` slice): the `evidence-management` module now includes a first-class `EvidenceItem` aggregate with `EvidenceArtifact` and `EvidenceReference` children, explicit classification/lifecycle semantics, and Phase 2 inner-layer foundations for version lineage and reference-target retrieval.
 
 ### EvidenceItem and EvidenceArtifact invariants
 
@@ -990,6 +990,9 @@ Implementation note (current `core-api` slice): the `evidence-management` module
 - `EvidenceItem.status` is constrained to evidence lifecycle values: `draft`, `active`, `superseded`, `incomplete`, `archived`.
 - `EvidenceItem.status` is evidence-governance state only and must not be used as workflow approval state.
 - `EvidenceItem` creation starts in `status=draft`, `isComplete=false`, and cannot set `supersededByEvidenceItemId`.
+- `EvidenceItem.evidenceLineageId` identifies evidence record lineage; initial items default lineage to their own `id`.
+- `EvidenceItem.versionNumber` starts at `1` and increments for lineage successors.
+- `EvidenceItem.versionNumber>1` requires `supersedesEvidenceItemId`; version `1` must not set `supersedesEvidenceItemId`.
 - `EvidenceItem` must not embed artifact storage fields (such as bucket/key/mime/byte size); those belong to `EvidenceArtifact`.
 - `EvidenceArtifact` is always owned by exactly one `EvidenceItem`.
 - Aggregate rehydration must reject `EvidenceArtifact` records whose `evidenceItemId` does not match the owning `EvidenceItem.id`.
@@ -1005,10 +1008,14 @@ Implementation note (current `core-api` slice): the `evidence-management` module
 - `EvidenceItem.currentArtifact` resolves to the most recent `available` artifact (or `null` when none are available), allowing items to exist with no artifact yet while preserving future multi-artifact/version history.
 - `EvidenceItem.status=incomplete` requires `isComplete=false`.
 - `EvidenceItem.status=superseded` requires `supersededByEvidenceItemId`.
+- Lineage-consistent supersession requires predecessor and successor to share `evidenceLineageId` and preserve direct successor linkage (`successor.supersedesEvidenceItemId = predecessor.id`).
 - Artifact registration is allowed only while `status=draft` or `status=incomplete`; `active`, `superseded`, and `archived` reject artifact changes in this phase.
 - `EvidenceItem.status=superseded` and `EvidenceItem.status=archived` are terminal for lifecycle transitions in this phase.
 - Superseding an evidence item requires successor existence and same-institution alignment (application orchestration invariant).
 - `EvidenceArtifact` persistence is append-only in this phase (existing artifact metadata cannot be silently rewritten or removed in-place).
+- `EvidenceReference` is an owned `EvidenceItem` child and append-only in persistence (existing reference metadata cannot be silently rewritten or removed in-place).
+- `EvidenceReference.targetType` is constrained in implementation to `criterion`, `criterion-element`, `learning-outcome`, and `narrative-section`.
+- Duplicate `EvidenceReference` associations (same target type/entity, relationship type, and anchor path within one item) are rejected.
 
 ## Implementation-ready curriculum linkage invariants (Epic 2 Phase 0 groundwork)
 

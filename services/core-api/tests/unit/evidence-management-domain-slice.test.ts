@@ -3,6 +3,8 @@ import { ValidationError } from '../../src/modules/shared/kernel/errors.js';
 import { EvidenceItem } from '../../src/modules/evidence-management/domain/entities/evidence-item.js';
 import {
   evidenceArtifactStatus,
+  evidenceReferenceRelationshipType,
+  evidenceReferenceTargetType,
   evidenceSourceType,
   evidenceStatus,
   evidenceType,
@@ -53,6 +55,9 @@ export async function runTests(): Promise<void> {
   const evidenceItem = EvidenceItem.create(createBaseEvidenceItemInput());
   assert.equal(evidenceItem.status, evidenceStatus.DRAFT);
   assert.equal(evidenceItem.isComplete, false);
+  assert.equal(evidenceItem.evidenceLineageId, evidenceItem.id);
+  assert.equal(evidenceItem.versionNumber, 1);
+  assert.equal(evidenceItem.supersedesEvidenceItemId, null);
   assert.equal(evidenceItem.supersededByEvidenceItemId, null);
 
   assert.throws(
@@ -97,6 +102,25 @@ export async function runTests(): Promise<void> {
     storageBucket: 'evidence-bucket',
     storageKey: 'evidence/program-narrative.pdf',
   });
+  evidenceItem.addReference({
+    targetType: evidenceReferenceTargetType.CRITERION,
+    targetEntityId: 'criterion_1',
+    relationshipType: evidenceReferenceRelationshipType.SUPPORTS,
+    rationale: 'Direct evidence alignment to criterion requirement.',
+  });
+  assert.equal(evidenceItem.references.length, 1);
+
+  assert.throws(
+    () =>
+      evidenceItem.addReference({
+        targetType: evidenceReferenceTargetType.CRITERION,
+        targetEntityId: 'criterion_1',
+        relationshipType: evidenceReferenceRelationshipType.SUPPORTS,
+      }),
+    ValidationError,
+    'duplicate evidence reference association should be rejected',
+  );
+
   evidenceItem.markReadyForUse();
   assert.equal(evidenceItem.status, evidenceStatus.DRAFT);
   assert.equal(evidenceItem.isComplete, true);
@@ -120,6 +144,23 @@ export async function runTests(): Promise<void> {
     ValidationError,
     'active evidence must not accept new artifact registration',
   );
+  evidenceItem.addReference({
+    targetType: evidenceReferenceTargetType.LEARNING_OUTCOME,
+    targetEntityId: 'outcome_1',
+    relationshipType: evidenceReferenceRelationshipType.DEMONSTRATES,
+  });
+  assert.equal(evidenceItem.references.length, 2);
+
+  const successorDraft = evidenceItem.createSupersedingVersion({
+    title: 'Program Review Narrative v2',
+    description: 'Superseding version of narrative evidence.',
+  });
+  assert.equal(successorDraft.status, evidenceStatus.DRAFT);
+  assert.equal(successorDraft.evidenceLineageId, evidenceItem.evidenceLineageId);
+  assert.equal(successorDraft.versionNumber, evidenceItem.versionNumber + 1);
+  assert.equal(successorDraft.supersedesEvidenceItemId, evidenceItem.id);
+  assert.equal(successorDraft.supersededByEvidenceItemId, null);
+  assert.equal(successorDraft.references.length, 0);
 
   evidenceItem.markIncomplete();
   assert.equal(evidenceItem.status, evidenceStatus.INCOMPLETE);
@@ -142,6 +183,16 @@ export async function runTests(): Promise<void> {
     }),
     ValidationError,
     'superseded evidence cannot be modified',
+  );
+  assert.throws(
+    () =>
+      evidenceItem.addReference({
+        targetType: evidenceReferenceTargetType.CRITERION_ELEMENT,
+        targetEntityId: 'criterion_element_1',
+        relationshipType: evidenceReferenceRelationshipType.RESPONDS_TO,
+      }),
+    ValidationError,
+    'superseded evidence cannot accept new references',
   );
   assert.throws(
     () => evidenceItem.archive(),
@@ -320,5 +371,56 @@ export async function runTests(): Promise<void> {
       }),
     ValidationError,
     'removed artifacts cannot be registered as new artifact records',
+  );
+
+  assert.throws(
+    () =>
+      EvidenceItem.rehydrate({
+        id: 'ev_item_invalid_version',
+        institutionId: 'inst_1',
+        title: 'Invalid Version',
+        evidenceType: evidenceType.NARRATIVE,
+        sourceType: evidenceSourceType.MANUAL,
+        status: evidenceStatus.DRAFT,
+        isComplete: false,
+        evidenceLineageId: 'lineage_1',
+        versionNumber: 2,
+        supersedesEvidenceItemId: null,
+        artifacts: [],
+        references: [],
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      }),
+    ValidationError,
+    'versionNumber > 1 requires supersedesEvidenceItemId',
+  );
+
+  assert.throws(
+    () =>
+      EvidenceItem.rehydrate({
+        id: 'ev_item_invalid_reference_owner',
+        institutionId: 'inst_1',
+        title: 'Invalid Reference Owner',
+        evidenceType: evidenceType.NARRATIVE,
+        sourceType: evidenceSourceType.MANUAL,
+        status: evidenceStatus.DRAFT,
+        isComplete: false,
+        references: [
+          {
+            id: 'ev_ref_invalid',
+            evidenceItemId: 'different_item',
+            targetType: evidenceReferenceTargetType.CRITERION,
+            targetEntityId: 'criterion_1',
+            relationshipType: evidenceReferenceRelationshipType.SUPPORTS,
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          },
+        ],
+        artifacts: [],
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      }),
+    ValidationError,
+    'reference ownership must remain inside the EvidenceItem aggregate',
   );
 }

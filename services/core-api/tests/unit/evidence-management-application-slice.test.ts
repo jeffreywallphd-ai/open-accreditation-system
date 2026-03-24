@@ -2,26 +2,64 @@ import assert from 'node:assert/strict';
 import { EvidenceManagementService } from '../../src/modules/evidence-management/application/evidence-management-service.js';
 import {
   ActivateEvidenceItemCommand,
+  AttachEvidenceReferenceCommand,
   AttachEvidenceArtifactCommand,
+  CreateSupersedingEvidenceVersionCommand,
   CreateEvidenceItemCommand,
   MarkEvidenceCompleteCommand,
   UpdateEvidenceItemStatusCommand,
 } from '../../src/modules/evidence-management/application/commands/evidence-management-commands.js';
-import { GetEvidenceItemByIdQuery } from '../../src/modules/evidence-management/application/queries/evidence-management-queries.js';
-import { evidenceSourceType, evidenceStatus, evidenceType } from '../../src/modules/evidence-management/domain/value-objects/evidence-classifications.js';
+import {
+  GetCurrentEvidenceVersionQuery,
+  GetEvidenceItemByIdQuery,
+  ListEvidenceByReferenceQuery,
+  ListEvidenceVersionsQuery,
+} from '../../src/modules/evidence-management/application/queries/evidence-management-queries.js';
+import {
+  evidenceReferenceRelationshipType,
+  evidenceReferenceTargetType,
+  evidenceSourceType,
+  evidenceStatus,
+  evidenceType,
+} from '../../src/modules/evidence-management/domain/value-objects/evidence-classifications.js';
 import { InMemoryEvidenceItemRepository } from '../../src/modules/evidence-management/infrastructure/persistence/in-memory-evidence-management-repositories.js';
 import { Institution } from '../../src/modules/organization-registry/domain/entities/institution.js';
 import { InMemoryInstitutionRepository } from '../../src/modules/organization-registry/infrastructure/persistence/in-memory-organization-registry-repositories.js';
 import { NotFoundError, ValidationError } from '../../src/modules/shared/kernel/errors.js';
 import { evidenceLifecycleAction } from '../../src/modules/evidence-management/application/evidence-management-service.js';
+import { EvidenceItem } from '../../src/modules/evidence-management/domain/entities/evidence-item.js';
 
 export async function runTests(): Promise<void> {
   const institutions = new InMemoryInstitutionRepository();
   const evidenceItems = new InMemoryEvidenceItemRepository();
-  const service = new EvidenceManagementService({ institutions, evidenceItems });
+  const institutionId = 'inst_application_slice';
+  const knownCriterionId = 'criterion_known';
+  const knownCriterionElementId = 'criterion_element_known';
+  const knownOutcomeId = 'outcome_known';
+
+  const accreditationFrameworks = {
+    async getCriterionById(id: string) {
+      return id === knownCriterionId ? { id } : null;
+    },
+    async getCriterionElementById(id: string) {
+      return id === knownCriterionElementId ? { id } : null;
+    },
+  };
+  const curriculumMapping = {
+    async getLearningOutcomeById(id: string) {
+      if (id !== knownOutcomeId) {
+        return null;
+      }
+      return {
+        id,
+        institutionId,
+      };
+    },
+  };
+  const service = new EvidenceManagementService({ institutions, evidenceItems, accreditationFrameworks, curriculumMapping });
 
   const institution = Institution.create({
-    id: 'inst_application_slice',
+    id: institutionId,
     name: 'Application Slice University',
     code: 'ASU',
   });
@@ -35,10 +73,15 @@ export async function runTests(): Promise<void> {
 
   const createEvidenceItem = new CreateEvidenceItemCommand(service);
   const attachEvidenceArtifact = new AttachEvidenceArtifactCommand(service);
+  const attachEvidenceReference = new AttachEvidenceReferenceCommand(service);
+  const createSupersedingEvidenceVersion = new CreateSupersedingEvidenceVersionCommand(service);
   const markEvidenceComplete = new MarkEvidenceCompleteCommand(service);
   const activateEvidenceItem = new ActivateEvidenceItemCommand(service);
   const updateEvidenceItemStatus = new UpdateEvidenceItemStatusCommand(service);
   const getEvidenceItemById = new GetEvidenceItemByIdQuery(service);
+  const getCurrentEvidenceVersion = new GetCurrentEvidenceVersionQuery(service);
+  const listEvidenceVersions = new ListEvidenceVersionsQuery(service);
+  const listEvidenceByReference = new ListEvidenceByReferenceQuery(service);
 
   const evidenceItem = await createEvidenceItem.execute({
     institutionId: institution.id,
@@ -69,6 +112,18 @@ export async function runTests(): Promise<void> {
 
   await markEvidenceComplete.execute(evidenceItem.id);
   await activateEvidenceItem.execute(evidenceItem.id);
+  await attachEvidenceReference.execute(evidenceItem.id, {
+    targetType: evidenceReferenceTargetType.CRITERION,
+    targetEntityId: knownCriterionId,
+    relationshipType: evidenceReferenceRelationshipType.SUPPORTS,
+    rationale: 'Supports criterion argumentation.',
+  });
+
+  await attachEvidenceReference.execute(evidenceItem.id, {
+    targetType: evidenceReferenceTargetType.LEARNING_OUTCOME,
+    targetEntityId: knownOutcomeId,
+    relationshipType: evidenceReferenceRelationshipType.DEMONSTRATES,
+  });
 
   const restored = await getEvidenceItemById.execute(evidenceItem.id);
   assert.ok(restored);
@@ -76,6 +131,7 @@ export async function runTests(): Promise<void> {
   assert.equal(restored?.artifacts.length, 1);
   assert.equal(restored?.usability.isUsable, true);
   assert.equal(restored?.usability.currentArtifactId, restored?.artifacts[0].id);
+  assert.equal(restored?.references.length, 2);
   await assert.rejects(
     () =>
       attachEvidenceArtifact.execute(evidenceItem.id, {
@@ -113,6 +169,11 @@ export async function runTests(): Promise<void> {
     storageKey: 'assessments/2026/metrics.csv',
   });
   await updateEvidenceItemStatus.execute(uploadMetric.id, evidenceLifecycleAction.ACTIVATE);
+  await attachEvidenceReference.execute(uploadMetric.id, {
+    targetType: evidenceReferenceTargetType.CRITERION_ELEMENT,
+    targetEntityId: knownCriterionElementId,
+    relationshipType: evidenceReferenceRelationshipType.RESPONDS_TO,
+  });
 
   await assert.rejects(
     () =>
@@ -183,10 +244,92 @@ export async function runTests(): Promise<void> {
   });
   assert.equal(superseded.status, evidenceStatus.SUPERSEDED);
 
+  const supersedingDraft = await createSupersedingEvidenceVersion.execute(successor.id, {
+    title: 'Integration Metric Upload - Successor v3 Draft',
+  });
+  assert.equal(supersedingDraft.status, evidenceStatus.DRAFT);
+  assert.equal(supersedingDraft.evidenceLineageId, successor.evidenceLineageId);
+  assert.equal(supersedingDraft.versionNumber, successor.versionNumber + 1);
+  assert.equal(supersedingDraft.supersedesEvidenceItemId, successor.id);
+
+  const currentByLineage = await getCurrentEvidenceVersion.execute(successor.evidenceLineageId);
+  assert.ok(currentByLineage);
+  assert.equal(currentByLineage?.id, supersedingDraft.id);
+
+  const allVersions = await listEvidenceVersions.execute(successor.evidenceLineageId, { includeHistorical: true });
+  assert.equal(allVersions.length, 3);
+  assert.deepEqual(
+    allVersions.map((item) => item.versionNumber),
+    [1, 2, 3],
+  );
+
+  const criterionEvidence = await listEvidenceByReference.execute(
+    evidenceReferenceTargetType.CRITERION,
+    knownCriterionId,
+    { currentOnly: true },
+  );
+  assert.equal(criterionEvidence.length, 1);
+  assert.equal(criterionEvidence[0].id, evidenceItem.id);
+
   await assert.rejects(
     () =>
       updateEvidenceItemStatus.execute(uploadMetric.id, evidenceLifecycleAction.ARCHIVE),
     ValidationError,
     'superseded evidence remains terminal and cannot be archived later',
+  );
+
+  await assert.rejects(
+    () =>
+      attachEvidenceReference.execute(evidenceItem.id, {
+        targetType: evidenceReferenceTargetType.LEARNING_OUTCOME,
+        targetEntityId: 'missing_outcome',
+        relationshipType: evidenceReferenceRelationshipType.SUPPORTS,
+      }),
+    ValidationError,
+    'reference targets should be validated against owning context contracts',
+  );
+
+  const tamperedType = await evidenceItems.getById(evidenceItem.id);
+  assert.ok(tamperedType);
+  tamperedType.evidenceType = evidenceType.DOCUMENT;
+  await assert.rejects(
+    () => evidenceItems.save(tamperedType),
+    ValidationError,
+    'repository should reject in-place mutation of EvidenceItem identity fields',
+  );
+
+  const tamperedArtifact = await evidenceItems.getById(evidenceItem.id);
+  assert.ok(tamperedArtifact);
+  tamperedArtifact.artifacts[0].storageKey = 'tampered/path.pdf';
+  await assert.rejects(
+    () => evidenceItems.save(tamperedArtifact),
+    ValidationError,
+    'repository should reject in-place mutation of existing artifact records',
+  );
+
+  const tamperedReference = await evidenceItems.getById(evidenceItem.id);
+  assert.ok(tamperedReference);
+  tamperedReference.references[0].targetEntityId = 'criterion_tampered';
+  await assert.rejects(
+    () => evidenceItems.save(tamperedReference),
+    ValidationError,
+    'repository should reject in-place mutation of existing reference records',
+  );
+
+  const invalidSuccessor = EvidenceItem.create({
+    institutionId: institution.id,
+    title: 'Invalid Successor',
+    description: 'Invalid version linkage should be rejected by repository boundary checks.',
+    reviewCycleId: 'cycle_2026',
+    evidenceType: evidenceType.NARRATIVE,
+    sourceType: evidenceSourceType.MANUAL,
+    evidenceLineageId: successor.evidenceLineageId,
+    versionNumber: 99,
+    supersedesEvidenceItemId: successor.id,
+  });
+  await assert.rejects(
+    () => evidenceItems.save(invalidSuccessor),
+    ValidationError,
+    'repository should enforce predecessor-successor version increments on insert',
   );
 }

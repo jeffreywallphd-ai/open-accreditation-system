@@ -7,6 +7,14 @@ export class EvidenceItemRepository {
     throw new Error('EvidenceItemRepository.getById not implemented');
   }
 
+  async getCurrentByLineageId(_evidenceLineageId) {
+    throw new Error('EvidenceItemRepository.getCurrentByLineageId not implemented');
+  }
+
+  async listByLineageId(_evidenceLineageId) {
+    throw new Error('EvidenceItemRepository.listByLineageId not implemented');
+  }
+
   async findByFilter(_filter) {
     throw new Error('EvidenceItemRepository.findByFilter not implemented');
   }

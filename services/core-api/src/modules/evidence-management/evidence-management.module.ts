@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { DATABASE_CONNECTION } from '../../infrastructure/persistence/persistence.tokens.js';
+import { AFR_SERVICE, AccreditationFrameworksModule } from '../accreditation-frameworks/accreditation-frameworks.module.js';
+import { CURR_SERVICE, CurriculumMappingModule } from '../curriculum-mapping/curriculum-mapping.module.js';
 import { ORG_REPOSITORY_TOKENS, OrganizationRegistryModule } from '../organization-registry/organization-registry.module.js';
 import { EvidenceManagementController } from './api/evidence-management.controller.js';
 import { EvidenceManagementService } from './application/evidence-management-service.js';
@@ -12,7 +14,7 @@ export const EVID_REPOSITORY_TOKENS = {
 export const EVID_SERVICE = Symbol('EVID_SERVICE');
 
 @Module({
-  imports: [OrganizationRegistryModule],
+  imports: [OrganizationRegistryModule, AccreditationFrameworksModule, CurriculumMappingModule],
   controllers: [EvidenceManagementController],
   providers: [
     {
@@ -22,11 +24,13 @@ export const EVID_SERVICE = Symbol('EVID_SERVICE');
     },
     {
       provide: EVID_SERVICE,
-      inject: [EVID_REPOSITORY_TOKENS.evidenceItems, ORG_REPOSITORY_TOKENS.institutions],
-      useFactory: (evidenceItems, institutions) =>
+      inject: [EVID_REPOSITORY_TOKENS.evidenceItems, ORG_REPOSITORY_TOKENS.institutions, AFR_SERVICE, CURR_SERVICE],
+      useFactory: (evidenceItems, institutions, accreditationFrameworks, curriculumMapping) =>
         new EvidenceManagementService({
           evidenceItems,
           institutions,
+          accreditationFrameworks,
+          curriculumMapping,
         }),
     },
   ],
