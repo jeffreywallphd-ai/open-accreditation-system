@@ -991,10 +991,14 @@ Implementation note (current `core-api` slice): the `evidence-management` module
 - `EvidenceItem.status` is evidence-governance state only and must not be used as workflow approval state.
 - `EvidenceItem` must not embed artifact storage fields (such as bucket/key/mime/byte size); those belong to `EvidenceArtifact`.
 - `EvidenceArtifact` is always owned by exactly one `EvidenceItem`.
+- Aggregate rehydration must reject `EvidenceArtifact` records whose `evidenceItemId` does not match the owning `EvidenceItem.id`.
 - `EvidenceArtifact.status` is constrained to `available`, `quarantined`, or `removed`.
 - `EvidenceItem.status=active` requires `isComplete=true` and at least one `EvidenceArtifact` in `available` status.
+- `EvidenceItem.currentArtifact` resolves to the most recent `available` artifact (or `null` when none are available), allowing items to exist with no artifact yet while preserving future multi-artifact/version history.
 - `EvidenceItem.status=incomplete` requires `isComplete=false`.
 - `EvidenceItem.status=superseded` requires `supersededByEvidenceItemId`.
+- `EvidenceItem.status=superseded` is terminal for evidence metadata mutation in this phase.
+- `EvidenceItem.status=archived` is terminal for evidence metadata mutation in this phase.
 
 ## Implementation-ready curriculum linkage invariants (Epic 2 Phase 0 groundwork)
 

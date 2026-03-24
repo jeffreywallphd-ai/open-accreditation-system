@@ -176,7 +176,9 @@ Defined contexts:
 - `EvidenceItem` classification is constrained to canonical evidence types (`document`, `metric`, `narrative`, `dataset`, `assessment-artifact`) and provenance types (`manual`, `upload`, `integration`).
 - `EvidenceItem` lifecycle status (`draft`, `active`, `superseded`, `incomplete`, `archived`) is separate from workflow approval state.
 - Usability is modeled explicitly from evidence lifecycle + completeness + available artifacts.
+- The aggregate enforces artifact ownership (`EvidenceArtifact.evidenceItemId` must match owning `EvidenceItem.id`) and exposes a computed "current artifact" as the most recent `available` artifact.
 - Binary/file storage metadata is modeled in `EvidenceArtifact`, not in `EvidenceItem`.
+- Application-layer use cases are implemented for create, attach artifact metadata, retrieve, and governed status transitions (complete, incomplete, activate, supersede, archive).
 
 ### `assessment-improvement`
 

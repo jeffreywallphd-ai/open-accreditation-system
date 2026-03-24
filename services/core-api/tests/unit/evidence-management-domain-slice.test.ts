@@ -73,4 +73,62 @@ export async function runTests(): Promise<void> {
   evidenceItem.markIncomplete();
   assert.equal(evidenceItem.status, evidenceStatus.INCOMPLETE);
   assert.equal(evidenceItem.usability.isUsable, false);
+  assert.equal(evidenceItem.usability.currentArtifactId !== null, true);
+
+  const successorId = 'ev_item_successor';
+  evidenceItem.supersedeBy(successorId);
+  assert.equal(evidenceItem.status, evidenceStatus.SUPERSEDED);
+  assert.equal(evidenceItem.supersededByEvidenceItemId, successorId);
+
+  assert.throws(
+    () => evidenceItem.addArtifact({
+      artifactName: 'replacement.pdf',
+      artifactType: 'primary',
+      mimeType: 'application/pdf',
+      storageBucket: 'evidence',
+      storageKey: 'replacement.pdf',
+    }),
+    ValidationError,
+    'superseded evidence cannot be modified',
+  );
+
+  assert.throws(
+    () =>
+      new EvidenceItem({
+        id: 'ev_item_mismatch',
+        institutionId: 'inst_1',
+        title: 'Mismatch',
+        evidenceType: evidenceType.DOCUMENT,
+        sourceType: evidenceSourceType.UPLOAD,
+        status: evidenceStatus.DRAFT,
+        isComplete: false,
+        artifacts: [
+          {
+            id: 'ev_art_wrong',
+            evidenceItemId: 'different_item',
+            artifactName: 'mismatch.pdf',
+            artifactType: 'primary',
+            mimeType: 'application/pdf',
+            storageBucket: 'evidence',
+            storageKey: 'mismatch.pdf',
+            status: 'available',
+            uploadedAt: '2026-01-01T00:00:00.000Z',
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          },
+        ],
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      }),
+    ValidationError,
+    'artifact ownership must remain inside the EvidenceItem aggregate',
+  );
+
+  const archived = EvidenceItem.create({
+    ...createBaseEvidenceItemInput(),
+    evidenceType: evidenceType.DOCUMENT,
+    sourceType: evidenceSourceType.UPLOAD,
+  });
+  archived.archive();
+  assert.throws(() => archived.markComplete(), ValidationError, 'archived evidence cannot be modified');
 }

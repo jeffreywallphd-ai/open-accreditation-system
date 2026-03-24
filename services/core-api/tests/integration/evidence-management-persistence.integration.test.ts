@@ -58,6 +58,7 @@ export async function runTests(): Promise<void> {
     assert.equal(activeItems[0].id, created.id);
     assert.equal(activeItems[0].artifacts.length, 1);
     assert.equal(activeItems[0].usability.isUsable, true);
+    assert.equal(activeItems[0].usability.currentArtifactId, activeItems[0].artifacts[0].id);
   } finally {
     await app.close();
   }
@@ -71,6 +72,7 @@ export async function runTests(): Promise<void> {
     assert.equal(restored?.artifacts.length, 1);
     assert.equal(restored?.artifacts[0].storageBucket, 'evidence');
     assert.equal(restored?.usability.isUsable, true);
+    assert.equal(restored?.usability.currentArtifactId, restored?.artifacts[0].id);
   } finally {
     await secondApp.close();
   }
