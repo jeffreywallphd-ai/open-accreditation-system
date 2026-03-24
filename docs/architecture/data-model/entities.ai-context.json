@@ -734,9 +734,13 @@
       "EvidenceItem.status must be one of: draft, active, superseded, incomplete, archived.",
       "EvidenceItem lifecycle status is evidence-governance state and must not duplicate workflow approval state.",
       "EvidenceItem must not embed artifact storage fields; storage metadata belongs to EvidenceArtifact child records.",
+      "EvidenceArtifact.evidenceItemId must match the owning EvidenceItem.id.",
+      "EvidenceItem.currentArtifact resolves to the most recent available artifact or null when none are available.",
       "EvidenceItem.status=active requires isComplete=true and at least one available EvidenceArtifact.",
       "EvidenceItem.status=incomplete requires isComplete=false.",
-      "EvidenceItem.status=superseded requires supersededByEvidenceItemId."
+      "EvidenceItem.status=superseded requires supersededByEvidenceItemId.",
+      "EvidenceItem.status=superseded is terminal for metadata mutation in this phase.",
+      "EvidenceItem.status=archived is terminal for metadata mutation in this phase."
     ],
     "crossContextReferenceRules": [
       "accreditation-frameworks validates local shape and ownership invariants for framework and cycle aggregates.",

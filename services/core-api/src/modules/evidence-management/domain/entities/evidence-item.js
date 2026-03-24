@@ -2,10 +2,12 @@ import { assertOneOf, assertRequired, assertString } from '../../../shared/kerne
 import { ValidationError } from '../../../shared/kernel/errors.js';
 import { createId, nowIso } from '../../../shared/kernel/identity.js';
 import {
+  EVIDENCE_ARTIFACT_STATUS_VALUES,
+  EVIDENCE_SOURCE_TYPE_VALUES,
+  EVIDENCE_STATUS_VALUES,
+  EVIDENCE_TYPE_VALUES,
   evidenceArtifactStatus,
-  evidenceSourceType,
   evidenceStatus,
-  evidenceType,
 } from '../value-objects/evidence-classifications.js';
 
 export class EvidenceArtifact {
@@ -17,7 +19,7 @@ export class EvidenceArtifact {
     assertString(props.mimeType, 'EvidenceArtifact.mimeType');
     assertString(props.storageBucket, 'EvidenceArtifact.storageBucket');
     assertString(props.storageKey, 'EvidenceArtifact.storageKey');
-    assertOneOf(props.status, 'EvidenceArtifact.status', Object.values(evidenceArtifactStatus));
+    assertOneOf(props.status, 'EvidenceArtifact.status', EVIDENCE_ARTIFACT_STATUS_VALUES);
 
     if (props.byteSize !== undefined && props.byteSize !== null && (!Number.isInteger(props.byteSize) || props.byteSize < 0)) {
       throw new ValidationError('EvidenceArtifact.byteSize must be a non-negative integer');
@@ -65,9 +67,9 @@ export class EvidenceItem {
     assertRequired(props.id, 'EvidenceItem.id');
     assertRequired(props.institutionId, 'EvidenceItem.institutionId');
     assertString(props.title, 'EvidenceItem.title');
-    assertOneOf(props.evidenceType, 'EvidenceItem.evidenceType', Object.values(evidenceType));
-    assertOneOf(props.sourceType, 'EvidenceItem.sourceType', Object.values(evidenceSourceType));
-    assertOneOf(props.status, 'EvidenceItem.status', Object.values(evidenceStatus));
+    assertOneOf(props.evidenceType, 'EvidenceItem.evidenceType', EVIDENCE_TYPE_VALUES);
+    assertOneOf(props.sourceType, 'EvidenceItem.sourceType', EVIDENCE_SOURCE_TYPE_VALUES);
+    assertOneOf(props.status, 'EvidenceItem.status', EVIDENCE_STATUS_VALUES);
 
     this.#assertNoArtifactStorageFields(props);
 
@@ -86,6 +88,7 @@ export class EvidenceItem {
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
 
+    this.#assertArtifactOwnershipIntegrity();
     this.#assertUsabilityIntegrity();
     this.#assertSupersessionIntegrity();
   }
@@ -187,13 +190,31 @@ export class EvidenceItem {
   }
 
   get usability() {
-    const hasAvailableArtifact = this.artifacts.some((artifact) => artifact.status === evidenceArtifactStatus.AVAILABLE);
+    const hasAvailableArtifact = this.currentArtifact !== null;
     const isUsable = this.status === evidenceStatus.ACTIVE && this.isComplete && hasAvailableArtifact;
     return {
       isComplete: this.isComplete,
       hasAvailableArtifact,
+      currentArtifactId: this.currentArtifact?.id ?? null,
       isUsable,
     };
+  }
+
+  get currentArtifact() {
+    for (let index = this.artifacts.length - 1; index >= 0; index -= 1) {
+      if (this.artifacts[index].status === evidenceArtifactStatus.AVAILABLE) {
+        return this.artifacts[index];
+      }
+    }
+    return null;
+  }
+
+  #assertArtifactOwnershipIntegrity() {
+    for (const artifact of this.artifacts) {
+      if (artifact.evidenceItemId !== this.id) {
+        throw new ValidationError('EvidenceArtifact.evidenceItemId must match owning EvidenceItem.id');
+      }
+    }
   }
 
   #assertUsabilityIntegrity() {
