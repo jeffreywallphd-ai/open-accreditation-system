@@ -1,6 +1,14 @@
 import { NotFoundError, ValidationError } from '../../shared/kernel/errors.js';
 import { EvidenceItem } from '../domain/entities/evidence-item.js';
 
+export const evidenceLifecycleAction = Object.freeze({
+  COMPLETE: 'complete',
+  INCOMPLETE: 'incomplete',
+  ACTIVATE: 'activate',
+  SUPERSEDE: 'supersede',
+  ARCHIVE: 'archive',
+});
+
 export class EvidenceManagementService {
   constructor(deps) {
     this.evidenceItems = deps.evidenceItems;
@@ -15,13 +23,13 @@ export class EvidenceManagementService {
 
   async addEvidenceArtifact(evidenceItemId, input) {
     const evidenceItem = await this.#requireEvidenceItem(evidenceItemId);
-    evidenceItem.addArtifact(input);
+    evidenceItem.registerArtifactMetadata(input);
     return this.evidenceItems.save(evidenceItem);
   }
 
   async markEvidenceComplete(evidenceItemId) {
     const evidenceItem = await this.#requireEvidenceItem(evidenceItemId);
-    evidenceItem.markComplete();
+    evidenceItem.markReadyForUse();
     return this.evidenceItems.save(evidenceItem);
   }
 
@@ -33,7 +41,7 @@ export class EvidenceManagementService {
 
   async activateEvidenceItem(evidenceItemId) {
     const evidenceItem = await this.#requireEvidenceItem(evidenceItemId);
-    evidenceItem.activate();
+    evidenceItem.activateForUse();
     return this.evidenceItems.save(evidenceItem);
   }
 
@@ -47,6 +55,25 @@ export class EvidenceManagementService {
     const evidenceItem = await this.#requireEvidenceItem(evidenceItemId);
     evidenceItem.archive();
     return this.evidenceItems.save(evidenceItem);
+  }
+
+  async updateEvidenceItemStatus(evidenceItemId, action, input = {}) {
+    switch (action) {
+      case evidenceLifecycleAction.COMPLETE:
+        return this.markEvidenceComplete(evidenceItemId);
+      case evidenceLifecycleAction.INCOMPLETE:
+        return this.markEvidenceIncomplete(evidenceItemId);
+      case evidenceLifecycleAction.ACTIVATE:
+        return this.activateEvidenceItem(evidenceItemId);
+      case evidenceLifecycleAction.SUPERSEDE:
+        return this.supersedeEvidenceItem(evidenceItemId, input.successorEvidenceItemId);
+      case evidenceLifecycleAction.ARCHIVE:
+        return this.archiveEvidenceItem(evidenceItemId);
+      default:
+        throw new ValidationError(
+          `Unsupported evidence lifecycle action: ${action}. Allowed actions: ${Object.values(evidenceLifecycleAction).join(', ')}`,
+        );
+    }
   }
 
   async getEvidenceItemById(id) {

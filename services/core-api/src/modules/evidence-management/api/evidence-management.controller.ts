@@ -2,15 +2,22 @@ import { Body, Controller, Get, HttpCode, HttpStatus, Inject, Param, Post, Query
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/http/zod-validation.pipe.js';
 import { EVID_SERVICE } from '../evidence-management.module.js';
+import {
+  EVIDENCE_ARTIFACT_STATUS_VALUES,
+  EVIDENCE_SOURCE_TYPE_VALUES,
+  EVIDENCE_STATUS_VALUES,
+  EVIDENCE_TYPE_VALUES,
+} from '../domain/value-objects/evidence-classifications.js';
+import { evidenceLifecycleAction } from '../application/evidence-management-service.js';
 
 const createEvidenceItemSchema = z.object({
   id: z.string().optional(),
   institutionId: z.string().min(1),
   title: z.string().min(1),
   description: z.string().optional(),
-  evidenceType: z.string().min(1),
-  sourceType: z.string().min(1),
-  status: z.string().optional(),
+  evidenceType: z.string().refine((value) => EVIDENCE_TYPE_VALUES.includes(value), 'Invalid evidenceType'),
+  sourceType: z.string().refine((value) => EVIDENCE_SOURCE_TYPE_VALUES.includes(value), 'Invalid sourceType'),
+  status: z.string().refine((value) => EVIDENCE_STATUS_VALUES.includes(value), 'Invalid status').optional(),
   isComplete: z.boolean().optional(),
   reportingPeriodId: z.string().optional(),
   reviewCycleId: z.string().optional(),
@@ -26,13 +33,40 @@ const addEvidenceArtifactSchema = z.object({
   storageBucket: z.string().min(1),
   storageKey: z.string().min(1),
   sourceChecksum: z.string().optional(),
-  status: z.string().optional(),
+  status: z.string().refine((value) => EVIDENCE_ARTIFACT_STATUS_VALUES.includes(value), 'Invalid artifact status').optional(),
   uploadedAt: z.string().optional(),
 });
 
 const supersedeEvidenceSchema = z.object({
   successorEvidenceItemId: z.string().min(1),
 });
+
+const lifecycleActionSchema = z
+  .object({
+    action: z
+      .string()
+      .refine(
+        (value) =>
+          [
+            evidenceLifecycleAction.COMPLETE,
+            evidenceLifecycleAction.INCOMPLETE,
+            evidenceLifecycleAction.ACTIVATE,
+            evidenceLifecycleAction.SUPERSEDE,
+            evidenceLifecycleAction.ARCHIVE,
+          ].includes(value),
+        'Invalid lifecycle action',
+      ),
+    successorEvidenceItemId: z.string().optional(),
+  })
+  .superRefine((body, ctx) => {
+    if (body.action === evidenceLifecycleAction.SUPERSEDE && !body.successorEvidenceItemId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'successorEvidenceItemId is required for supersede action',
+        path: ['successorEvidenceItemId'],
+      });
+    }
+  });
 
 @Controller('evidence-management')
 export class EvidenceManagementController {
@@ -100,5 +134,17 @@ export class EvidenceManagementController {
   @Post('evidence-items/:evidenceItemId/archive')
   async archiveEvidenceItem(@Param('evidenceItemId') evidenceItemId: string) {
     return { data: await this.service.archiveEvidenceItem(evidenceItemId) };
+  }
+
+  @Post('evidence-items/:evidenceItemId/status')
+  async updateEvidenceItemStatus(
+    @Param('evidenceItemId') evidenceItemId: string,
+    @Body(new ZodValidationPipe(lifecycleActionSchema)) body,
+  ) {
+    return {
+      data: await this.service.updateEvidenceItemStatus(evidenceItemId, body.action, {
+        successorEvidenceItemId: body.successorEvidenceItemId,
+      }),
+    };
   }
 }

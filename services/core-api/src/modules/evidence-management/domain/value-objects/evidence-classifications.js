@@ -1,3 +1,5 @@
+import { assertOneOf } from '../../../shared/kernel/assertions.js';
+
 export const evidenceType = Object.freeze({
   DOCUMENT: 'document',
   METRIC: 'metric',
@@ -29,3 +31,33 @@ export const evidenceArtifactStatus = Object.freeze({
   REMOVED: 'removed',
 });
 export const EVIDENCE_ARTIFACT_STATUS_VALUES = Object.freeze(Object.values(evidenceArtifactStatus));
+
+const EVIDENCE_TYPES_REQUIRING_ARTIFACT_FOR_ACTIVATION_SET = new Set([
+  evidenceType.DOCUMENT,
+  evidenceType.DATASET,
+  evidenceType.ASSESSMENT_ARTIFACT,
+]);
+
+export function parseEvidenceType(value, field = 'EvidenceItem.evidenceType') {
+  assertOneOf(value, field, EVIDENCE_TYPE_VALUES);
+  return value;
+}
+
+export function parseEvidenceSourceType(value, field = 'EvidenceItem.sourceType') {
+  assertOneOf(value, field, EVIDENCE_SOURCE_TYPE_VALUES);
+  return value;
+}
+
+export function parseEvidenceStatus(value, field = 'EvidenceItem.status') {
+  assertOneOf(value, field, EVIDENCE_STATUS_VALUES);
+  return value;
+}
+
+export function parseEvidenceArtifactStatus(value, field = 'EvidenceArtifact.status') {
+  assertOneOf(value, field, EVIDENCE_ARTIFACT_STATUS_VALUES);
+  return value;
+}
+
+export function requiresArtifactForActivation({ evidenceType: itemType, sourceType }) {
+  return sourceType === evidenceSourceType.UPLOAD || EVIDENCE_TYPES_REQUIRING_ARTIFACT_FOR_ACTIVATION_SET.has(itemType);
+}

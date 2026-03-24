@@ -67,3 +67,13 @@ export class ArchiveEvidenceItemCommand {
     return this.service.archiveEvidenceItem(evidenceItemId);
   }
 }
+
+export class UpdateEvidenceItemStatusCommand {
+  constructor(service) {
+    this.service = service;
+  }
+
+  async execute(evidenceItemId, action, input = {}) {
+    return this.service.updateEvidenceItemStatus(evidenceItemId, action, input);
+  }
+}

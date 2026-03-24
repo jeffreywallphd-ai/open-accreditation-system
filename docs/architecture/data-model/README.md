@@ -993,12 +993,15 @@ Implementation note (current `core-api` slice): the `evidence-management` module
 - `EvidenceArtifact` is always owned by exactly one `EvidenceItem`.
 - Aggregate rehydration must reject `EvidenceArtifact` records whose `evidenceItemId` does not match the owning `EvidenceItem.id`.
 - `EvidenceArtifact.status` is constrained to `available`, `quarantined`, or `removed`.
-- `EvidenceItem.status=active` requires `isComplete=true` and at least one `EvidenceArtifact` in `available` status.
+- `EvidenceItem.status=active` requires non-empty `description`, at least one governance scope anchor (`reportingPeriodId` or `reviewCycleId`), and `isComplete=true`.
+- `EvidenceItem.status=active` requires at least one `available` `EvidenceArtifact` when either: source type is `upload` or evidence type is `document`/`dataset`/`assessment-artifact`.
+- `EvidenceItem.status=active` does not require an artifact for `metric`/`narrative` when source type is `manual` or `integration`.
 - `EvidenceItem.currentArtifact` resolves to the most recent `available` artifact (or `null` when none are available), allowing items to exist with no artifact yet while preserving future multi-artifact/version history.
 - `EvidenceItem.status=incomplete` requires `isComplete=false`.
 - `EvidenceItem.status=superseded` requires `supersededByEvidenceItemId`.
 - `EvidenceItem.status=superseded` is terminal for evidence metadata mutation in this phase.
 - `EvidenceItem.status=archived` is terminal for evidence metadata mutation in this phase.
+- `EvidenceArtifact` persistence is append-only in this phase (existing artifact metadata cannot be silently rewritten or removed in-place).
 
 ## Implementation-ready curriculum linkage invariants (Epic 2 Phase 0 groundwork)
 

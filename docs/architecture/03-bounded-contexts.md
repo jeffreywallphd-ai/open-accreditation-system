@@ -175,10 +175,13 @@ Defined contexts:
 - `EvidenceItem` is implemented as a first-class aggregate in `services/core-api`.
 - `EvidenceItem` classification is constrained to canonical evidence types (`document`, `metric`, `narrative`, `dataset`, `assessment-artifact`) and provenance types (`manual`, `upload`, `integration`).
 - `EvidenceItem` lifecycle status (`draft`, `active`, `superseded`, `incomplete`, `archived`) is separate from workflow approval state.
-- Usability is modeled explicitly from evidence lifecycle + completeness + available artifacts.
+- Usability is modeled explicitly from evidence lifecycle + completeness + artifact requirements + available artifacts.
 - The aggregate enforces artifact ownership (`EvidenceArtifact.evidenceItemId` must match owning `EvidenceItem.id`) and exposes a computed "current artifact" as the most recent `available` artifact.
 - Binary/file storage metadata is modeled in `EvidenceArtifact`, not in `EvidenceItem`.
-- Application-layer use cases are implemented for create, attach artifact metadata, retrieve, and governed status transitions (complete, incomplete, activate, supersede, archive).
+- Activation is gated by required evidence metadata (`description` and at least one of `reportingPeriodId`/`reviewCycleId`), completeness, and artifact requirements.
+- Artifact requirements are domain-driven: `upload` sources and evidence types `document`, `dataset`, `assessment-artifact` require an available artifact for activation; `metric`/`narrative` may activate without an artifact when sourced by `manual`/`integration`.
+- `superseded` and `archived` statuses are terminal for metadata and artifact mutation in this phase.
+- Application-layer use cases are implemented for create, attach artifact metadata, retrieve, and governed status transitions (complete, incomplete, activate, supersede, archive) including a unified lifecycle-action entry point.
 
 ### `assessment-improvement`
 

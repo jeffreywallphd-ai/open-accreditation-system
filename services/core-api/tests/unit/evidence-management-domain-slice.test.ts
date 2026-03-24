@@ -11,8 +11,10 @@ function createBaseEvidenceItemInput() {
   return {
     institutionId: 'inst_1',
     title: 'Program Review Narrative',
+    description: 'Mapped narrative evidence for program review.',
     evidenceType: evidenceType.NARRATIVE,
     sourceType: evidenceSourceType.MANUAL,
+    reportingPeriodId: 'period_2026',
   };
 }
 
@@ -52,22 +54,23 @@ export async function runTests(): Promise<void> {
     status: evidenceStatus.DRAFT,
   });
 
-  assert.throws(() => evidenceItem.activate(), ValidationError, 'draft evidence cannot activate without completeness/artifact');
+  assert.throws(() => evidenceItem.activateForUse(), ValidationError, 'draft evidence cannot activate until complete');
   assert.equal(evidenceItem.usability.isUsable, false);
 
-  evidenceItem.addArtifact({
+  evidenceItem.registerArtifactMetadata({
     artifactName: 'Program Narrative.pdf',
     artifactType: 'primary',
     mimeType: 'application/pdf',
     storageBucket: 'evidence-bucket',
     storageKey: 'evidence/program-narrative.pdf',
   });
-  evidenceItem.markComplete();
-  evidenceItem.activate();
+  evidenceItem.markReadyForUse();
+  evidenceItem.activateForUse();
 
   assert.equal(evidenceItem.status, evidenceStatus.ACTIVE);
   assert.equal(evidenceItem.usability.isComplete, true);
   assert.equal(evidenceItem.usability.hasAvailableArtifact, true);
+  assert.equal(evidenceItem.usability.requiresArtifactForActivation, false);
   assert.equal(evidenceItem.usability.isUsable, true);
 
   evidenceItem.markIncomplete();
@@ -76,12 +79,12 @@ export async function runTests(): Promise<void> {
   assert.equal(evidenceItem.usability.currentArtifactId !== null, true);
 
   const successorId = 'ev_item_successor';
-  evidenceItem.supersedeBy(successorId);
+  evidenceItem.supersedeWith(successorId);
   assert.equal(evidenceItem.status, evidenceStatus.SUPERSEDED);
   assert.equal(evidenceItem.supersededByEvidenceItemId, successorId);
 
   assert.throws(
-    () => evidenceItem.addArtifact({
+    () => evidenceItem.registerArtifactMetadata({
       artifactName: 'replacement.pdf',
       artifactType: 'primary',
       mimeType: 'application/pdf',
@@ -130,5 +133,67 @@ export async function runTests(): Promise<void> {
     sourceType: evidenceSourceType.UPLOAD,
   });
   archived.archive();
-  assert.throws(() => archived.markComplete(), ValidationError, 'archived evidence cannot be modified');
+  assert.throws(() => archived.markReadyForUse(), ValidationError, 'archived evidence cannot be modified');
+
+  const missingActivationMetadata = EvidenceItem.create({
+    institutionId: 'inst_1',
+    title: 'Upload Missing Metadata',
+    evidenceType: evidenceType.DOCUMENT,
+    sourceType: evidenceSourceType.UPLOAD,
+  });
+  missingActivationMetadata.markReadyForUse();
+  missingActivationMetadata.registerArtifactMetadata({
+    artifactName: 'doc.pdf',
+    artifactType: 'primary',
+    mimeType: 'application/pdf',
+    storageBucket: 'evidence',
+    storageKey: 'doc.pdf',
+  });
+  assert.throws(
+    () => missingActivationMetadata.activateForUse(),
+    ValidationError,
+    'active evidence must satisfy core metadata requirements',
+  );
+
+  const uploadRequiresArtifact = EvidenceItem.create({
+    institutionId: 'inst_1',
+    title: 'Upload Needs Artifact',
+    description: 'Evidence imported by upload.',
+    evidenceType: evidenceType.METRIC,
+    sourceType: evidenceSourceType.UPLOAD,
+    reviewCycleId: 'cycle_2026',
+  });
+  uploadRequiresArtifact.markReadyForUse();
+  assert.equal(uploadRequiresArtifact.requiresArtifactForActivation, true);
+  assert.throws(
+    () => uploadRequiresArtifact.activateForUse(),
+    ValidationError,
+    'upload evidence cannot activate without an available artifact',
+  );
+
+  const manualNarrativeWithoutArtifact = EvidenceItem.create({
+    institutionId: 'inst_1',
+    title: 'Manual Narrative',
+    description: 'Narrative entered directly into system metadata.',
+    evidenceType: evidenceType.NARRATIVE,
+    sourceType: evidenceSourceType.MANUAL,
+    reviewCycleId: 'cycle_2026',
+  });
+  manualNarrativeWithoutArtifact.markReadyForUse();
+  manualNarrativeWithoutArtifact.activateForUse();
+  assert.equal(manualNarrativeWithoutArtifact.usability.requiresArtifactForActivation, false);
+  assert.equal(manualNarrativeWithoutArtifact.usability.hasAvailableArtifact, false);
+  assert.equal(manualNarrativeWithoutArtifact.usability.isUsable, true);
+
+  const archivedCannotBeSuperseded = EvidenceItem.create({
+    ...createBaseEvidenceItemInput(),
+    evidenceType: evidenceType.DATASET,
+    sourceType: evidenceSourceType.INTEGRATION,
+  });
+  archivedCannotBeSuperseded.archive();
+  assert.throws(
+    () => archivedCannotBeSuperseded.supersedeWith('ev_item_newer'),
+    ValidationError,
+    'archived evidence cannot be superseded',
+  );
 }

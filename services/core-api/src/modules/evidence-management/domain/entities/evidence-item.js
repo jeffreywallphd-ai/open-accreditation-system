@@ -1,13 +1,14 @@
-import { assertOneOf, assertRequired, assertString } from '../../../shared/kernel/assertions.js';
+import { assertRequired, assertString } from '../../../shared/kernel/assertions.js';
 import { ValidationError } from '../../../shared/kernel/errors.js';
 import { createId, nowIso } from '../../../shared/kernel/identity.js';
 import {
-  EVIDENCE_ARTIFACT_STATUS_VALUES,
-  EVIDENCE_SOURCE_TYPE_VALUES,
-  EVIDENCE_STATUS_VALUES,
-  EVIDENCE_TYPE_VALUES,
   evidenceArtifactStatus,
   evidenceStatus,
+  parseEvidenceArtifactStatus,
+  parseEvidenceSourceType,
+  parseEvidenceStatus,
+  parseEvidenceType,
+  requiresArtifactForActivation,
 } from '../value-objects/evidence-classifications.js';
 
 export class EvidenceArtifact {
@@ -19,7 +20,7 @@ export class EvidenceArtifact {
     assertString(props.mimeType, 'EvidenceArtifact.mimeType');
     assertString(props.storageBucket, 'EvidenceArtifact.storageBucket');
     assertString(props.storageKey, 'EvidenceArtifact.storageKey');
-    assertOneOf(props.status, 'EvidenceArtifact.status', EVIDENCE_ARTIFACT_STATUS_VALUES);
+    parseEvidenceArtifactStatus(props.status);
 
     if (props.byteSize !== undefined && props.byteSize !== null && (!Number.isInteger(props.byteSize) || props.byteSize < 0)) {
       throw new ValidationError('EvidenceArtifact.byteSize must be a non-negative integer');
@@ -60,6 +61,10 @@ export class EvidenceArtifact {
       updatedAt: now,
     });
   }
+
+  static rehydrate(input) {
+    return new EvidenceArtifact(input);
+  }
 }
 
 export class EvidenceItem {
@@ -67,9 +72,9 @@ export class EvidenceItem {
     assertRequired(props.id, 'EvidenceItem.id');
     assertRequired(props.institutionId, 'EvidenceItem.institutionId');
     assertString(props.title, 'EvidenceItem.title');
-    assertOneOf(props.evidenceType, 'EvidenceItem.evidenceType', EVIDENCE_TYPE_VALUES);
-    assertOneOf(props.sourceType, 'EvidenceItem.sourceType', EVIDENCE_SOURCE_TYPE_VALUES);
-    assertOneOf(props.status, 'EvidenceItem.status', EVIDENCE_STATUS_VALUES);
+    parseEvidenceType(props.evidenceType);
+    parseEvidenceSourceType(props.sourceType);
+    parseEvidenceStatus(props.status);
 
     this.#assertNoArtifactStorageFields(props);
 
@@ -84,7 +89,9 @@ export class EvidenceItem {
     this.supersededByEvidenceItemId = props.supersededByEvidenceItemId ?? null;
     this.reportingPeriodId = props.reportingPeriodId ?? null;
     this.reviewCycleId = props.reviewCycleId ?? null;
-    this.artifacts = (props.artifacts ?? []).map((item) => (item instanceof EvidenceArtifact ? item : new EvidenceArtifact(item)));
+    this.artifacts = (props.artifacts ?? []).map((item) =>
+      item instanceof EvidenceArtifact ? item : EvidenceArtifact.rehydrate(item),
+    );
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
 
@@ -113,10 +120,13 @@ export class EvidenceItem {
     });
   }
 
-  addArtifact(input) {
-    if (this.status === evidenceStatus.SUPERSEDED || this.status === evidenceStatus.ARCHIVED) {
-      throw new ValidationError(`EvidenceItem cannot accept artifacts while status is ${this.status}`);
-    }
+  static rehydrate(input) {
+    return new EvidenceItem(input);
+  }
+
+  registerArtifactMetadata(input) {
+    this.#assertMutableForMetadataChanges('register artifact metadata');
+
     const artifact = EvidenceArtifact.create({
       ...input,
       evidenceItemId: this.id,
@@ -126,10 +136,12 @@ export class EvidenceItem {
     return artifact;
   }
 
-  markComplete() {
-    if (this.status === evidenceStatus.ARCHIVED || this.status === evidenceStatus.SUPERSEDED) {
-      throw new ValidationError(`EvidenceItem cannot be completed while status is ${this.status}`);
-    }
+  addArtifact(input) {
+    return this.registerArtifactMetadata(input);
+  }
+
+  markReadyForUse() {
+    this.#assertMutableForMetadataChanges('mark complete');
     this.isComplete = true;
     if (this.status === evidenceStatus.INCOMPLETE) {
       this.status = evidenceStatus.DRAFT;
@@ -138,29 +150,28 @@ export class EvidenceItem {
     return this;
   }
 
+  markComplete() {
+    return this.markReadyForUse();
+  }
+
   markIncomplete() {
-    if (this.status === evidenceStatus.ARCHIVED || this.status === evidenceStatus.SUPERSEDED) {
-      throw new ValidationError(`EvidenceItem cannot be marked incomplete while status is ${this.status}`);
-    }
+    this.#assertMutableForMetadataChanges('mark incomplete');
     this.isComplete = false;
     this.status = evidenceStatus.INCOMPLETE;
     this.updatedAt = nowIso();
     return this;
   }
 
-  activate() {
-    if (this.status === evidenceStatus.SUPERSEDED || this.status === evidenceStatus.ARCHIVED) {
-      throw new ValidationError(`EvidenceItem cannot be activated while status is ${this.status}`);
-    }
-    if (!this.isComplete) {
-      throw new ValidationError('EvidenceItem.status=active requires isComplete=true');
-    }
-    if (!this.usability.hasAvailableArtifact) {
-      throw new ValidationError('EvidenceItem.status=active requires at least one available EvidenceArtifact');
-    }
+  activateForUse() {
+    this.#assertMutableForMetadataChanges('activate');
+    this.#assertCanActivate();
     this.status = evidenceStatus.ACTIVE;
     this.updatedAt = nowIso();
     return this;
+  }
+
+  activate() {
+    return this.activateForUse();
   }
 
   supersedeBy(successorEvidenceItemId) {
@@ -180,21 +191,32 @@ export class EvidenceItem {
     return this;
   }
 
+  supersedeWith(successorEvidenceItemId) {
+    return this.supersedeBy(successorEvidenceItemId);
+  }
+
   archive() {
-    if (this.status === evidenceStatus.SUPERSEDED) {
-      throw new ValidationError('Superseded EvidenceItem cannot be archived');
-    }
+    this.#assertMutableForMetadataChanges('archive');
     this.status = evidenceStatus.ARCHIVED;
     this.updatedAt = nowIso();
     return this;
   }
 
+  get requiresArtifactForActivation() {
+    return requiresArtifactForActivation({
+      evidenceType: this.evidenceType,
+      sourceType: this.sourceType,
+    });
+  }
+
   get usability() {
     const hasAvailableArtifact = this.currentArtifact !== null;
-    const isUsable = this.status === evidenceStatus.ACTIVE && this.isComplete && hasAvailableArtifact;
+    const hasRequiredArtifact = this.requiresArtifactForActivation ? hasAvailableArtifact : true;
+    const isUsable = this.status === evidenceStatus.ACTIVE && this.isComplete && hasRequiredArtifact;
     return {
       isComplete: this.isComplete,
       hasAvailableArtifact,
+      requiresArtifactForActivation: this.requiresArtifactForActivation,
       currentArtifactId: this.currentArtifact?.id ?? null,
       isUsable,
     };
@@ -223,12 +245,7 @@ export class EvidenceItem {
     }
 
     if (this.status === evidenceStatus.ACTIVE) {
-      if (!this.isComplete) {
-        throw new ValidationError('EvidenceItem.status=active requires isComplete=true');
-      }
-      if (!this.usability.hasAvailableArtifact) {
-        throw new ValidationError('EvidenceItem.status=active requires at least one available EvidenceArtifact');
-      }
+      this.#assertCanActivate();
     }
   }
 
@@ -250,6 +267,35 @@ export class EvidenceItem {
     ) {
       throw new ValidationError(
         'EvidenceItem must not embed artifact storage metadata; use EvidenceArtifact child records instead',
+      );
+    }
+  }
+
+  #assertMutableForMetadataChanges(action) {
+    if (this.status === evidenceStatus.SUPERSEDED || this.status === evidenceStatus.ARCHIVED) {
+      throw new ValidationError(`EvidenceItem cannot ${action} while status is ${this.status}`);
+    }
+  }
+
+  #assertActivationMetadata() {
+    if (!this.description || typeof this.description !== 'string' || this.description.trim() === '') {
+      throw new ValidationError('EvidenceItem.status=active requires non-empty description');
+    }
+    if (!this.reportingPeriodId && !this.reviewCycleId) {
+      throw new ValidationError('EvidenceItem.status=active requires reportingPeriodId or reviewCycleId');
+    }
+  }
+
+  #assertCanActivate() {
+    this.#assertActivationMetadata();
+
+    if (!this.isComplete) {
+      throw new ValidationError('EvidenceItem.status=active requires isComplete=true');
+    }
+
+    if (this.requiresArtifactForActivation && !this.usability.hasAvailableArtifact) {
+      throw new ValidationError(
+        'EvidenceItem.status=active requires at least one available EvidenceArtifact for the current evidenceType/sourceType',
       );
     }
   }

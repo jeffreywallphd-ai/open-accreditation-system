@@ -736,11 +736,14 @@
       "EvidenceItem must not embed artifact storage fields; storage metadata belongs to EvidenceArtifact child records.",
       "EvidenceArtifact.evidenceItemId must match the owning EvidenceItem.id.",
       "EvidenceItem.currentArtifact resolves to the most recent available artifact or null when none are available.",
-      "EvidenceItem.status=active requires isComplete=true and at least one available EvidenceArtifact.",
+      "EvidenceItem.status=active requires non-empty description, at least one of reportingPeriodId/reviewCycleId, and isComplete=true.",
+      "EvidenceItem.status=active requires at least one available EvidenceArtifact when sourceType=upload or evidenceType=document/dataset/assessment-artifact.",
+      "EvidenceItem.status=active may omit artifacts for evidenceType=metric/narrative when sourceType=manual/integration.",
       "EvidenceItem.status=incomplete requires isComplete=false.",
       "EvidenceItem.status=superseded requires supersededByEvidenceItemId.",
       "EvidenceItem.status=superseded is terminal for metadata mutation in this phase.",
-      "EvidenceItem.status=archived is terminal for metadata mutation in this phase."
+      "EvidenceItem.status=archived is terminal for metadata mutation in this phase.",
+      "EvidenceArtifact persistence is append-only in this phase; existing artifact metadata cannot be changed or removed in-place."
     ],
     "crossContextReferenceRules": [
       "accreditation-frameworks validates local shape and ownership invariants for framework and cycle aggregates.",

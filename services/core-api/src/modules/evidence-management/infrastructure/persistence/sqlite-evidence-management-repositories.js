@@ -1,3 +1,4 @@
+import { ValidationError } from '../../../shared/kernel/errors.js';
 import { EvidenceItem, EvidenceArtifact } from '../../domain/entities/evidence-item.js';
 import { EvidenceItemRepository } from '../../domain/repositories/repositories.js';
 
@@ -58,11 +59,19 @@ export class SqliteEvidenceItemRepository extends EvidenceItemRepository {
         },
       );
 
-      this.database.run('DELETE FROM evidence_management_artifacts WHERE evidence_item_id = @evidenceItemId', {
-        evidenceItemId: evidenceItem.id,
-      });
+      const persistedArtifacts = this.database.all(
+        `SELECT * FROM evidence_management_artifacts WHERE evidence_item_id = @evidenceItemId`,
+        { evidenceItemId: evidenceItem.id },
+      );
+      const persistedById = new Map(persistedArtifacts.map((artifact) => [artifact.id, artifact]));
 
       for (const artifact of evidenceItem.artifacts) {
+        const persisted = persistedById.get(artifact.id);
+        if (persisted) {
+          this.#assertArtifactUnchanged(artifact, persisted);
+          continue;
+        }
+
         this.database.run(
           `INSERT INTO evidence_management_artifacts
            (id, evidence_item_id, artifact_name, artifact_type, mime_type, file_extension, byte_size,
@@ -99,7 +108,7 @@ export class SqliteEvidenceItemRepository extends EvidenceItemRepository {
     }
 
     const artifacts = this.#listArtifactsByEvidenceItemId(id);
-    return new EvidenceItem({
+    return EvidenceItem.rehydrate({
       id: row.id,
       institutionId: row.institution_id,
       title: row.title,
@@ -128,7 +137,7 @@ export class SqliteEvidenceItemRepository extends EvidenceItemRepository {
     const rows = this.database.all(`SELECT * FROM evidence_management_items ${sql} ORDER BY created_at ASC`, params);
     return rows.map(
       (row) =>
-        new EvidenceItem({
+        EvidenceItem.rehydrate({
           id: row.id,
           institutionId: row.institution_id,
           title: row.title,
@@ -156,7 +165,7 @@ export class SqliteEvidenceItemRepository extends EvidenceItemRepository {
     );
     return rows.map(
       (row) =>
-        new EvidenceArtifact({
+        EvidenceArtifact.rehydrate({
           id: row.id,
           evidenceItemId: row.evidence_item_id,
           artifactName: row.artifact_name,
@@ -173,5 +182,39 @@ export class SqliteEvidenceItemRepository extends EvidenceItemRepository {
           updatedAt: row.updated_at,
         }),
     );
+  }
+
+  #assertArtifactUnchanged(currentArtifact, persistedRow) {
+    const persisted = {
+      evidenceItemId: persistedRow.evidence_item_id,
+      artifactName: persistedRow.artifact_name,
+      artifactType: persistedRow.artifact_type,
+      mimeType: persistedRow.mime_type,
+      fileExtension: persistedRow.file_extension,
+      byteSize: persistedRow.byte_size,
+      storageBucket: persistedRow.storage_bucket,
+      storageKey: persistedRow.storage_key,
+      status: persistedRow.artifact_status,
+      sourceChecksum: persistedRow.source_checksum,
+      uploadedAt: persistedRow.uploaded_at,
+    };
+
+    if (
+      currentArtifact.evidenceItemId !== persisted.evidenceItemId ||
+      currentArtifact.artifactName !== persisted.artifactName ||
+      currentArtifact.artifactType !== persisted.artifactType ||
+      currentArtifact.mimeType !== persisted.mimeType ||
+      currentArtifact.fileExtension !== persisted.fileExtension ||
+      currentArtifact.byteSize !== persisted.byteSize ||
+      currentArtifact.storageBucket !== persisted.storageBucket ||
+      currentArtifact.storageKey !== persisted.storageKey ||
+      currentArtifact.status !== persisted.status ||
+      currentArtifact.sourceChecksum !== persisted.sourceChecksum ||
+      currentArtifact.uploadedAt !== persisted.uploadedAt
+    ) {
+      throw new ValidationError(
+        `EvidenceArtifact ${currentArtifact.id} is append-only and cannot be updated in-place`,
+      );
+    }
   }
 }

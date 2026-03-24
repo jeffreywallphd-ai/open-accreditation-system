@@ -32,6 +32,7 @@ export async function runTests(): Promise<void> {
       institutionId: institution.id,
       title: '2026 Program Learning Outcomes Narrative',
       description: 'Narrative evidence for outcomes alignment.',
+      reportingPeriodId: 'period_2026',
       evidenceType: evidenceType.NARRATIVE,
       sourceType: evidenceSourceType.MANUAL,
     });
@@ -47,6 +48,16 @@ export async function runTests(): Promise<void> {
       storageKey: '2026/outcomes-narrative.pdf',
       sourceChecksum: 'sha256:abc123',
     });
+    await evidenceService.addEvidenceArtifact(created.id, {
+      artifactName: 'outcomes-narrative-v2.pdf',
+      artifactType: 'revision',
+      mimeType: 'application/pdf',
+      fileExtension: 'pdf',
+      byteSize: 2048,
+      storageBucket: 'evidence',
+      storageKey: '2026/outcomes-narrative-v2.pdf',
+      sourceChecksum: 'sha256:def456',
+    });
     await evidenceService.markEvidenceComplete(created.id);
     await evidenceService.activateEvidenceItem(created.id);
 
@@ -56,9 +67,9 @@ export async function runTests(): Promise<void> {
     });
     assert.equal(activeItems.length, 1);
     assert.equal(activeItems[0].id, created.id);
-    assert.equal(activeItems[0].artifacts.length, 1);
+    assert.equal(activeItems[0].artifacts.length, 2);
     assert.equal(activeItems[0].usability.isUsable, true);
-    assert.equal(activeItems[0].usability.currentArtifactId, activeItems[0].artifacts[0].id);
+    assert.equal(activeItems[0].usability.currentArtifactId, activeItems[0].artifacts[1].id);
   } finally {
     await app.close();
   }
@@ -69,10 +80,11 @@ export async function runTests(): Promise<void> {
     const restored = await evidenceService.getEvidenceItemById(evidenceItemId);
     assert.ok(restored);
     assert.equal(restored?.institutionId, institutionId);
-    assert.equal(restored?.artifacts.length, 1);
+    assert.equal(restored?.artifacts.length, 2);
     assert.equal(restored?.artifacts[0].storageBucket, 'evidence');
+    assert.equal(restored?.artifacts[1].storageKey, '2026/outcomes-narrative-v2.pdf');
     assert.equal(restored?.usability.isUsable, true);
-    assert.equal(restored?.usability.currentArtifactId, restored?.artifacts[0].id);
+    assert.equal(restored?.usability.currentArtifactId, restored?.artifacts[1].id);
   } finally {
     await secondApp.close();
   }
