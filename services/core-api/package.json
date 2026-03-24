@@ -1,4 +1,8 @@
 {
-  "name": "placeholder",
-  "private": true
+  "name": "@open-accreditation/core-api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node ./tests/run-tests.js"
+  }
 }
