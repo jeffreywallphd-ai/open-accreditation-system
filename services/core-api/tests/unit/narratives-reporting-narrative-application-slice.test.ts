@@ -17,7 +17,8 @@ import {
   InMemoryReviewCycleRepository,
   InMemoryReviewWorkflowRepository,
 } from '../../src/modules/workflow-approvals/infrastructure/persistence/in-memory-workflow-approvals-repositories.js';
-import { NarrativesReportingService } from '../../src/modules/narratives-reporting/application/narratives-reporting-service.js';
+import { NarrativeApplicationService } from '../../src/modules/narratives-reporting/application/narrative-application-service.js';
+import { SubmissionPackageApplicationService } from '../../src/modules/narratives-reporting/application/submission-package-application-service.js';
 import {
   InMemoryNarrativeRepository,
   InMemorySubmissionPackageRepository,
@@ -91,21 +92,25 @@ export async function runTests(): Promise<void> {
   await workflowApprovals.transitionWorkflowState(sectionWorkflow.id, reviewWorkflowState.IN_REVIEW, workflowActorRole.FACULTY);
   await workflowApprovals.transitionWorkflowState(sectionWorkflow.id, reviewWorkflowState.APPROVED, workflowActorRole.REVIEWER);
 
-  const service = new NarrativesReportingService({
+  const submissionPackagesService = new SubmissionPackageApplicationService({
     submissionPackages,
-    narratives,
     reviewCycles: workflowApprovals,
     workflowTargets: workflowApprovals,
     evidenceReadiness,
   });
+  const service = new NarrativeApplicationService({
+    narratives,
+    submissionPackages,
+    evidenceReadiness,
+  });
 
-  const submissionPackage = await service.createSubmissionPackage({
+  const submissionPackage = await submissionPackagesService.createSubmissionPackage({
     reviewCycleId: reviewCycle.id,
     scopeType: 'report-bundle',
     scopeId: 'narrative-phase5',
     name: 'Narrative package',
   });
-  const withSection = await service.addSubmissionPackageItem(submissionPackage.id, {
+  const withSection = await submissionPackagesService.addSubmissionPackageItem(submissionPackage.id, {
     itemType: 'report-section',
     targetType: 'report-section',
     targetId: 'report_sec_1',
@@ -190,6 +195,11 @@ export async function runTests(): Promise<void> {
 
   const inReview = await service.submitNarrativeForReview(narrative.id);
   assert.equal(inReview.status, narrativeStatus.IN_REVIEW);
+
+  const context = await service.getNarrativeWithSectionContext(narrative.id);
+  assert.equal(context.sectionContext.length, 2);
+  assert.equal(context.sectionContext[0].packageLinks.length, 1);
+  assert.equal(context.sectionContext[0].evidenceSummary?.missingEvidenceItemIds.length, 0);
 
   const finalized = await service.finalizeNarrative(narrative.id);
   assert.equal(finalized.status, narrativeStatus.FINALIZED);

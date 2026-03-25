@@ -728,6 +728,67 @@ export class SqliteNarrativeRepository extends NarrativeRepository {
     return row ? this.#rehydrate(row) : null;
   }
 
+  async getSectionById(sectionId) {
+    const row = this.database.get(
+      `SELECT
+         s.*,
+         n.institution_id AS narrative_institution_id,
+         n.review_cycle_id AS narrative_review_cycle_id,
+         n.submission_package_id AS narrative_submission_package_id
+       FROM narratives_narrative_sections s
+       JOIN narratives_narratives n
+         ON n.id = s.narrative_id
+       WHERE s.id = @sectionId
+       LIMIT 1`,
+      { sectionId },
+    );
+    if (!row) {
+      return null;
+    }
+
+    return {
+      id: row.id,
+      narrativeId: row.narrative_id,
+      sequence: row.section_sequence,
+      sectionType: row.section_type,
+      sectionKey: row.section_key,
+      parentSectionKey: row.parent_section_key,
+      title: row.title,
+      content: row.content,
+      ownerId: row.owner_id,
+      evidenceLinks: this.database.all(
+        `SELECT * FROM narratives_narrative_section_evidence_links
+         WHERE section_id = @sectionId
+         ORDER BY created_at ASC`,
+        { sectionId: row.id },
+      ).map((link) => ({
+        id: link.id,
+        sectionId: link.section_id,
+        evidenceItemId: link.evidence_item_id,
+        relationshipType: link.relationship_type,
+        rationale: link.rationale,
+        createdAt: link.created_at,
+      })),
+      packageLinks: this.database.all(
+        `SELECT * FROM narratives_narrative_section_package_links
+         WHERE section_id = @sectionId
+         ORDER BY created_at ASC`,
+        { sectionId: row.id },
+      ).map((link) => ({
+        id: link.id,
+        sectionId: link.section_id,
+        submissionPackageItemId: link.submission_package_item_id,
+        linkType: link.link_type,
+        createdAt: link.created_at,
+      })),
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      institutionId: row.narrative_institution_id,
+      reviewCycleId: row.narrative_review_cycle_id,
+      submissionPackageId: row.narrative_submission_package_id,
+    };
+  }
+
   #rehydrate(row) {
     const sections = this.database.all(
       `SELECT * FROM narratives_narrative_sections

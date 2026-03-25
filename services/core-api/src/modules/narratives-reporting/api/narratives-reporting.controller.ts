@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/http/zod-validation.pipe.js';
-import { NARR_SERVICE } from '../narratives-reporting.module.js';
+import { NARR_APPLICATION_TOKENS } from '../narratives-reporting.module.js';
 import {
   NARRATIVE_EVIDENCE_LINK_TYPE_VALUES,
   NARRATIVE_PACKAGE_LINK_TYPE_VALUES,
@@ -125,17 +125,20 @@ const linkNarrativeSectionPackageItemSchema = z.object({
 
 @Controller('narratives-reporting')
 export class NarrativesReportingController {
-  constructor(@Inject(NARR_SERVICE) private readonly service) {}
+  constructor(
+    @Inject(NARR_APPLICATION_TOKENS.submissionPackages) private readonly submissionPackages,
+    @Inject(NARR_APPLICATION_TOKENS.narratives) private readonly narratives,
+  ) {}
 
   @Post('submission-packages')
   @HttpCode(HttpStatus.CREATED)
   async createSubmissionPackage(@Body(new ZodValidationPipe(createSubmissionPackageSchema)) body) {
-    return { data: await this.service.createSubmissionPackage(body) };
+    return { data: await this.submissionPackages.createSubmissionPackage(body) };
   }
 
   @Get('submission-packages/:submissionPackageId')
   async getSubmissionPackageById(@Param('submissionPackageId') submissionPackageId: string) {
-    return { data: await this.service.getSubmissionPackageById(submissionPackageId) };
+    return { data: await this.submissionPackages.getSubmissionPackageById(submissionPackageId) };
   }
 
   @Get('submission-packages')
@@ -149,7 +152,7 @@ export class NarrativesReportingController {
     @Query('assemblyRole') assemblyRole?: string,
   ) {
     return {
-      data: await this.service.listSubmissionPackages({
+      data: await this.submissionPackages.listSubmissionPackages({
         id,
         institutionId,
         reviewCycleId,
@@ -166,7 +169,7 @@ export class NarrativesReportingController {
     @Param('submissionPackageId') submissionPackageId: string,
     @Body(new ZodValidationPipe(addSubmissionPackageItemSchema)) body,
   ) {
-    return { data: await this.service.addSubmissionPackageItem(submissionPackageId, body) };
+    return { data: await this.submissionPackages.addSubmissionPackageItem(submissionPackageId, body) };
   }
 
   @Delete('submission-packages/:submissionPackageId/items/:itemId')
@@ -174,7 +177,7 @@ export class NarrativesReportingController {
     @Param('submissionPackageId') submissionPackageId: string,
     @Param('itemId') itemId: string,
   ) {
-    return { data: await this.service.removeSubmissionPackageItem(submissionPackageId, itemId) };
+    return { data: await this.submissionPackages.removeSubmissionPackageItem(submissionPackageId, itemId) };
   }
 
   @Post('submission-packages/:submissionPackageId/items/:itemId/reorder')
@@ -183,7 +186,7 @@ export class NarrativesReportingController {
     @Param('itemId') itemId: string,
     @Body(new ZodValidationPipe(reorderItemSchema)) body,
   ) {
-    return { data: await this.service.reorderSubmissionPackageItem(submissionPackageId, itemId, body.newPosition) };
+    return { data: await this.submissionPackages.reorderSubmissionPackageItem(submissionPackageId, itemId, body.newPosition) };
   }
 
   @Post('submission-packages/:submissionPackageId/snapshots')
@@ -191,7 +194,7 @@ export class NarrativesReportingController {
     @Param('submissionPackageId') submissionPackageId: string,
     @Body(new ZodValidationPipe(captureSnapshotSchema)) body,
   ) {
-    return { data: await this.service.snapshotSubmissionPackage(submissionPackageId, body) };
+    return { data: await this.submissionPackages.snapshotSubmissionPackage(submissionPackageId, body) };
   }
 
   @Post('submission-packages/:submissionPackageId/finalize')
@@ -200,7 +203,7 @@ export class NarrativesReportingController {
     @Body(new ZodValidationPipe(finalizePackageSchema)) body,
   ) {
     return {
-      data: await this.service.snapshotSubmissionPackage(submissionPackageId, {
+      data: await this.submissionPackages.snapshotSubmissionPackage(submissionPackageId, {
         ...body,
         finalize: true,
       }),
@@ -209,18 +212,23 @@ export class NarrativesReportingController {
 
   @Get('submission-packages/:submissionPackageId/context')
   async getSubmissionPackageWithContext(@Param('submissionPackageId') submissionPackageId: string) {
-    return { data: await this.service.getSubmissionPackageWithItemContext(submissionPackageId) };
+    return { data: await this.submissionPackages.getSubmissionPackageWithItemContext(submissionPackageId) };
   }
 
   @Post('narratives')
   @HttpCode(HttpStatus.CREATED)
   async createNarrative(@Body(new ZodValidationPipe(createNarrativeSchema)) body) {
-    return { data: await this.service.createNarrative(body) };
+    return { data: await this.narratives.createNarrative(body) };
   }
 
   @Get('narratives/:narrativeId')
   async getNarrativeById(@Param('narrativeId') narrativeId: string) {
-    return { data: await this.service.getNarrativeById(narrativeId) };
+    return { data: await this.narratives.getNarrativeById(narrativeId) };
+  }
+
+  @Get('narratives/:narrativeId/context')
+  async getNarrativeWithContext(@Param('narrativeId') narrativeId: string) {
+    return { data: await this.narratives.getNarrativeWithSectionContext(narrativeId) };
   }
 
   @Get('narratives')
@@ -232,7 +240,7 @@ export class NarrativesReportingController {
     @Query('status') status?: string,
   ) {
     return {
-      data: await this.service.listNarratives({
+      data: await this.narratives.listNarratives({
         id,
         institutionId,
         reviewCycleId,
@@ -247,7 +255,7 @@ export class NarrativesReportingController {
     @Param('narrativeId') narrativeId: string,
     @Body(new ZodValidationPipe(addNarrativeSectionSchema)) body,
   ) {
-    return { data: await this.service.addNarrativeSection(narrativeId, body) };
+    return { data: await this.narratives.addNarrativeSection(narrativeId, body) };
   }
 
   @Post('narratives/:narrativeId/sections/:sectionId')
@@ -256,7 +264,7 @@ export class NarrativesReportingController {
     @Param('sectionId') sectionId: string,
     @Body(new ZodValidationPipe(updateNarrativeSectionSchema)) body,
   ) {
-    return { data: await this.service.updateNarrativeSection(narrativeId, sectionId, body) };
+    return { data: await this.narratives.updateNarrativeSection(narrativeId, sectionId, body) };
   }
 
   @Delete('narratives/:narrativeId/sections/:sectionId')
@@ -264,7 +272,7 @@ export class NarrativesReportingController {
     @Param('narrativeId') narrativeId: string,
     @Param('sectionId') sectionId: string,
   ) {
-    return { data: await this.service.removeNarrativeSection(narrativeId, sectionId) };
+    return { data: await this.narratives.removeNarrativeSection(narrativeId, sectionId) };
   }
 
   @Post('narratives/:narrativeId/sections/:sectionId/reorder')
@@ -273,7 +281,7 @@ export class NarrativesReportingController {
     @Param('sectionId') sectionId: string,
     @Body(new ZodValidationPipe(reorderItemSchema)) body,
   ) {
-    return { data: await this.service.reorderNarrativeSection(narrativeId, sectionId, body.newPosition) };
+    return { data: await this.narratives.reorderNarrativeSection(narrativeId, sectionId, body.newPosition) };
   }
 
   @Post('narratives/:narrativeId/sections/:sectionId/evidence-links')
@@ -282,7 +290,7 @@ export class NarrativesReportingController {
     @Param('sectionId') sectionId: string,
     @Body(new ZodValidationPipe(linkNarrativeSectionEvidenceSchema)) body,
   ) {
-    return { data: await this.service.linkNarrativeSectionEvidence(narrativeId, sectionId, body) };
+    return { data: await this.narratives.linkNarrativeSectionEvidence(narrativeId, sectionId, body) };
   }
 
   @Delete('narratives/:narrativeId/sections/:sectionId/evidence-links/:linkId')
@@ -291,7 +299,7 @@ export class NarrativesReportingController {
     @Param('sectionId') sectionId: string,
     @Param('linkId') linkId: string,
   ) {
-    return { data: await this.service.unlinkNarrativeSectionEvidence(narrativeId, sectionId, linkId) };
+    return { data: await this.narratives.unlinkNarrativeSectionEvidence(narrativeId, sectionId, linkId) };
   }
 
   @Post('narratives/:narrativeId/sections/:sectionId/package-links')
@@ -300,7 +308,7 @@ export class NarrativesReportingController {
     @Param('sectionId') sectionId: string,
     @Body(new ZodValidationPipe(linkNarrativeSectionPackageItemSchema)) body,
   ) {
-    return { data: await this.service.linkNarrativeSectionToPackageItem(narrativeId, sectionId, body) };
+    return { data: await this.narratives.linkNarrativeSectionToPackageItem(narrativeId, sectionId, body) };
   }
 
   @Delete('narratives/:narrativeId/sections/:sectionId/package-links/:submissionPackageItemId')
@@ -309,21 +317,21 @@ export class NarrativesReportingController {
     @Param('sectionId') sectionId: string,
     @Param('submissionPackageItemId') submissionPackageItemId: string,
   ) {
-    return { data: await this.service.unlinkNarrativeSectionFromPackageItem(narrativeId, sectionId, submissionPackageItemId) };
+    return { data: await this.narratives.unlinkNarrativeSectionFromPackageItem(narrativeId, sectionId, submissionPackageItemId) };
   }
 
   @Post('narratives/:narrativeId/submit-for-review')
   async submitNarrativeForReview(@Param('narrativeId') narrativeId: string) {
-    return { data: await this.service.submitNarrativeForReview(narrativeId) };
+    return { data: await this.narratives.submitNarrativeForReview(narrativeId) };
   }
 
   @Post('narratives/:narrativeId/return-to-draft')
   async returnNarrativeToDraft(@Param('narrativeId') narrativeId: string) {
-    return { data: await this.service.returnNarrativeToDraft(narrativeId) };
+    return { data: await this.narratives.returnNarrativeToDraft(narrativeId) };
   }
 
   @Post('narratives/:narrativeId/finalize')
   async finalizeNarrative(@Param('narrativeId') narrativeId: string) {
-    return { data: await this.service.finalizeNarrative(narrativeId) };
+    return { data: await this.narratives.finalizeNarrative(narrativeId) };
   }
 }

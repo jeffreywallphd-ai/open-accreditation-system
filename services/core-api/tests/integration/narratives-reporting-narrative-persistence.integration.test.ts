@@ -160,6 +160,10 @@ export async function runTests(): Promise<void> {
     assert.equal(restored?.sections[0].packageLinks.length, 1);
     assert.equal(restored?.status, 'finalized');
 
+    const sectionLookup = await narratives.getNarrativeSectionById(sectionId);
+    assert.equal(sectionLookup?.id, sectionId);
+    assert.equal(sectionLookup?.institutionId, restored?.institutionId);
+
     const listed = await narratives.listNarratives({ status: 'finalized' });
     assert.equal(listed.length, 1);
 
@@ -202,6 +206,26 @@ export async function runTests(): Promise<void> {
         ),
       /UNIQUE constraint failed/,
       'narrative-level package item links should be unique in persistence',
+    );
+
+    assert.throws(
+      () =>
+        database.run(
+          `INSERT INTO narratives_narrative_section_package_links
+            (id, section_id, narrative_id, submission_package_item_id, link_type, created_at)
+           VALUES
+            (@id, @sectionId, @narrativeId, @submissionPackageItemId, @linkType, @createdAt)`,
+          {
+            id: 'narrative_persistence_section_owner_mismatch',
+            sectionId,
+            narrativeId: 'narrative_mismatch_owner',
+            submissionPackageItemId,
+            linkType: 'included-item',
+            createdAt: now,
+          },
+        ),
+      /section and narrative ownership mismatch/,
+      'package link rows should enforce section ownership alignment',
     );
 
     const tampered = await narratives.getNarrativeById(narrativeId);

@@ -32,4 +32,8 @@ export class NarrativeRepository {
   async getBySubmissionPackageId(_submissionPackageId) {
     throw new Error('NarrativeRepository.getBySubmissionPackageId not implemented');
   }
+
+  async getSectionById(_sectionId) {
+    throw new Error('NarrativeRepository.getSectionById not implemented');
+  }
 }

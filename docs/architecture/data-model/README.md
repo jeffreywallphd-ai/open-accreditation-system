@@ -1058,9 +1058,9 @@ Implementation note (current `core-api` slice): `narratives-reporting` now inclu
 - Outer assembly retrieval exposes section-aware ordered projections (`orderedItems`, flat sections, root section keys, section tree, and assembly-role counts) for report/submission consumers.
 - Phase 4 behavioral validation now includes domain, application, persistence, and HTTP transport coverage for package lifecycle invariants, section-aware assembly semantics, governed item assembly/reordering, snapshot/finalization semantics, workflow/evidence contract constraints, and repository round-trip reconstruction.
 
-## Implementation-ready narrative composition invariants (Phase 5 foundation)
+## Implementation-ready narrative composition invariants (Phase 5 stories 5.5-5.8)
 
-Implementation note (current `core-api` slice): `narratives-reporting` now includes an implemented `Narrative` aggregate with explicit `NarrativeSection` composition and first-class evidence/package linkages, anchored to the Phase 4 `SubmissionPackage` foundation.
+Implementation note (current `core-api` slice): `narratives-reporting` now includes an implemented `Narrative` aggregate with explicit `NarrativeSection` composition and first-class evidence/package linkages, anchored to the Phase 4 `SubmissionPackage` foundation, plus separated application orchestration for package vs narrative use cases.
 
 ### Narrative and NarrativeSection invariants
 
@@ -1086,7 +1086,7 @@ Implementation note (current `core-api` slice): `narratives-reporting` now inclu
   - `linkType=included-item` cannot target governed-section package items.
 - Narrative package-link persistence hardens narrative-level uniqueness (`narrative_id + submission_package_item_id`) and enforces section-ownership alignment for each link row.
 - Finalized narratives are immutable in aggregate behavior and repository save boundaries.
-- Phase 5 foundation validation now includes domain, application, and persistence round-trip coverage for narrative lifecycle semantics, section ordering/hierarchy invariants, evidence/package linkage validation, and finalized-state immutability hardening.
+- Phase 5 validation now includes domain, application, persistence, and HTTP coverage for narrative lifecycle semantics, section ordering/hierarchy invariants, evidence/package linkage validation, narrative context retrieval, and finalized-state immutability hardening.
 
 ## Implementation-ready curriculum linkage invariants (Epic 2 Phase 0 groundwork)
 

@@ -17,9 +17,8 @@ import {
   InMemoryReviewCycleRepository,
   InMemoryReviewWorkflowRepository,
 } from '../../src/modules/workflow-approvals/infrastructure/persistence/in-memory-workflow-approvals-repositories.js';
-import { NarrativesReportingService } from '../../src/modules/narratives-reporting/application/narratives-reporting-service.js';
+import { SubmissionPackageApplicationService } from '../../src/modules/narratives-reporting/application/submission-package-application-service.js';
 import {
-  InMemoryNarrativeRepository,
   InMemorySubmissionPackageRepository,
 } from '../../src/modules/narratives-reporting/infrastructure/persistence/in-memory-narratives-reporting-repositories.js';
 import {
@@ -34,7 +33,6 @@ export async function runTests(): Promise<void> {
   const cycles = new InMemoryReviewCycleRepository();
   const workflows = new InMemoryReviewWorkflowRepository();
   const submissionPackages = new InMemorySubmissionPackageRepository();
-  const narratives = new InMemoryNarrativeRepository();
 
   const institution = Institution.create({
     id: 'inst_narratives_app',
@@ -99,9 +97,8 @@ export async function runTests(): Promise<void> {
     workflowActorRole.REVIEWER,
   );
 
-  const service = new NarrativesReportingService({
+  const service = new SubmissionPackageApplicationService({
     submissionPackages,
-    narratives,
     reviewCycles: workflowApprovals,
     workflowTargets: workflowApprovals,
     evidenceReadiness,

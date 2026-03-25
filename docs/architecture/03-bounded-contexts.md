@@ -331,7 +331,7 @@ Defined contexts:
   - `ReportPackage` is mutable until finalized
   - `ExportJob` is append-only per execution attempt
 
-**Current implementation note (Phase 4 completion + Phase 5 inner foundation)**
+**Current implementation note (Phase 4 completion + Phase 5 stories 5.5-5.8)**
 
 - `SubmissionPackage` is now implemented as a governed aggregate in `narratives-reporting`, anchored to `reviewCycleId` and scope (`scopeType`, `scopeId`) with uniqueness enforced per cycle+scope.
 - Package lifecycle is explicit (`draft`, `finalized`) and intentionally separate from `ReviewWorkflow` lifecycle.
@@ -351,7 +351,11 @@ Defined contexts:
   - `reorderSubmissionPackageItem`
   - `snapshotSubmissionPackage` (checkpoint and finalization modes)
   - `getSubmissionPackageWithItemContext`
-- Phase 5 inner-layer narrative foundations are now implemented in the same bounded context without introducing a competing architecture:
+- Phase 5 narrative and outward-layer completion is implemented in the same bounded context without introducing a competing architecture:
+  - Narrative orchestration is now explicit and separated from package orchestration:
+    - `SubmissionPackageApplicationService` owns package-item/snapshot orchestration
+    - `NarrativeApplicationService` owns narrative/section/linkage orchestration
+  - Compatibility facade (`NarrativesReportingService`) composes both application services for legacy consumers while preserving the split use-case boundaries.
   - `Narrative` aggregate is anchored to `submissionPackageId` (`1:1`) and inherits governance context (`institutionId`, `reviewCycleId`) from the owning package.
   - `Narrative` lifecycle is explicit and draft-oriented (`draft -> in-review -> finalized`, with `in-review -> draft` revision loop), and finalized narratives are immutable in both aggregate and repository boundaries.
   - `NarrativeSection` is an owned structured child with explicit identity (`id`, `sectionKey`), ordering (`sequence`), optional section hierarchy (`parentSectionKey`), and section typing aligned to report/package structure (`report-section`/`narrative-section`).
@@ -364,7 +368,8 @@ Defined contexts:
     - governing-section package links additionally require explicit `sectionKey` alignment and are limited to one governing link per narrative section
     - included-item package links cannot target governed-section package items (avoids ambiguous dual semantics)
   - Narrative package-link persistence now hardens narrative-level uniqueness (`narrative_id + submission_package_item_id`) and trigger-enforced section ownership alignment at the storage boundary.
-  - Persistence coverage now includes durable narrative + section + linkage round-trip reconstruction and finalized-state immutability checks.
+  - API transport now includes dedicated narrative endpoints for create/read/list, section add/update/reorder/remove, linkage operations, lifecycle operations, and narrative context retrieval (`GET /narratives-reporting/narratives/:narrativeId/context`).
+  - Test coverage now includes narrative domain/application/persistence/http paths in the standard `services/core-api/tests/run-tests.ts` runner, including section ordering/ownership, round-trip reconstruction, and invalid-state rejection checks.
 
 ### `faculty-intelligence`
 
