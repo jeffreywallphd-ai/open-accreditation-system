@@ -1,808 +1,783 @@
 {
-  "meta": {
-    "document": "Open Accreditation System entity model AI context",
-    "version": "1.6.1",
-    "source_docs": [
-      "README.md",
-      "docs/architecture/README.md",
-      "docs/architecture/03-bounded-contexts.md",
-      "docs/architecture/04-integration-architecture.md",
-      "docs/architecture/data-model/README.md",
-      "docs/product/vision-document.md"
-    ],
-    "notes": [
-      "Logical model only; not a finalized physical schema.",
-      "Keep the core domain accreditor-agnostic across AACSB, ABET, HLC, and future frameworks.",
-      "Person is the canonical human concept; User is the authenticated platform identity projection of a person.",
-      "EvidenceReference uses a governed polymorphic target pattern with explicit allowed target types and owning-context validation responsibilities.",
-      "Assessment scope is expressed through canonical program/course/section/term/outcome references, not accreditor-specific templates.",
-      "AI outputs are advisory and require human review."
-    ]
-  },
-  "boundedContexts": {
-    "identity-access": [
-      "User",
-      "Role",
-      "Permission",
-      "RolePermissionGrant",
-      "UserRoleAssignment",
-      "ServicePrincipal"
-    ],
-    "organization-registry": [
-      "Institution",
-      "Person",
-      "OrganizationUnit",
-      "Committee"
-    ],
-    "accreditation-frameworks": [
-      "Accreditor",
-      "AccreditationFramework",
-      "FrameworkVersion",
-      "Standard",
-      "Criterion",
-      "CriterionElement",
-      "EvidenceRequirement",
-      "AccreditationCycle",
-      "AccreditationScope",
-      "AccreditationScopeProgram",
-      "AccreditationScopeOrganizationUnit",
-      "CycleMilestone",
-      "ReviewerProfile",
-      "ReviewTeam",
-      "ReviewTeamMembership",
-      "ReviewEvent",
-      "DecisionRecord"
-    ],
-    "evidence-management": [
-      "EvidenceItem",
-      "EvidenceArtifact",
-      "EvidenceCollection",
-      "EvidenceRequest",
-      "EvidenceReview",
-      "EvidenceRetentionPolicy",
-      "EvidenceReference"
-    ],
-    "curriculum-mapping": [
-      "Program",
-      "Course",
-      "AcademicTerm",
-      "CourseSection",
-      "LearningOutcome",
-      "Competency",
-      "ProgramOutcomeMap",
-      "CourseOutcomeMap",
-      "StandardsAlignment"
-    ],
-    "assessment-improvement": [
-      "AssessmentPlan",
-      "AssessmentMeasure",
-      "AssessmentInstrument",
-      "BenchmarkTarget",
-      "AssessmentResult",
-      "Finding",
-      "ActionPlan",
-      "ActionPlanTask",
-      "ImprovementClosureReview"
-    ],
-    "workflow-approvals": [
-      "WorkflowTemplate",
-      "WorkflowStep",
-      "Submission",
-      "ReviewCycle",
-      "ReviewWorkflow",
-      "WorkflowTransitionRecord",
-      "WorkflowAssignment",
-      "WorkflowDecision",
-      "WorkflowComment",
-      "WorkflowDelegation",
-      "WorkflowEscalationEvent",
-      "SubmissionSnapshot",
-      "SubmissionPackageItem"
-    ],
-    "narratives-reporting": [
-      "Narrative",
-      "NarrativeSection",
-      "ReportPackage",
-      "ExportJob"
-    ],
-    "faculty-intelligence": [
-      "FacultyProfile",
-      "FacultyAppointment",
-      "FacultyDeployment",
-      "FacultyActivity",
-      "FacultyQualification",
-      "QualificationBasis",
-      "QualificationReview"
-    ],
-    "compliance-audit": [
-      "AuditEvent",
-      "ControlAttestation",
-      "PolicyException"
-    ],
-    "supporting-services": [
-      "SourceSystem",
-      "IntegrationMapping",
-      "SyncJob",
-      "Notification",
-      "AIArtifact"
-    ]
-  },
-  "entityPriorities": {
-    "coreSystemOfRecord": [
-      "Institution",
-      "Person",
-      "OrganizationUnit",
-      "User",
-      "Accreditor",
-      "AccreditationFramework",
-      "FrameworkVersion",
-      "Standard",
-      "Criterion",
-      "CriterionElement",
-      "AccreditationCycle",
-      "AccreditationScope",
-      "CycleMilestone",
-      "ReviewEvent",
-      "DecisionRecord",
-      "EvidenceItem",
-      "EvidenceArtifact",
-      "EvidenceReference",
-      "Program",
-      "Course",
-      "AcademicTerm",
-      "CourseSection",
-      "LearningOutcome",
-      "AssessmentPlan",
-      "AssessmentMeasure",
-      "BenchmarkTarget",
-      "AssessmentResult",
-      "Finding",
-      "ActionPlan",
-      "Submission",
-      "ReviewCycle",
-      "ReviewWorkflow",
-      "SubmissionSnapshot",
-      "Narrative",
-      "NarrativeSection",
-      "FacultyProfile",
-      "FacultyQualification",
-      "AuditEvent"
-    ],
-    "joinEntities": [
-      "RolePermissionGrant",
-      "UserRoleAssignment",
-      "AccreditationScopeProgram",
-      "AccreditationScopeOrganizationUnit",
-      "ReviewTeamMembership",
-      "ProgramOutcomeMap",
-      "CourseOutcomeMap",
-      "StandardsAlignment",
-      "SubmissionPackageItem"
-    ],
-    "supportingGovernance": [
-      "Committee",
-      "EvidenceCollection",
-      "EvidenceRequest",
-      "EvidenceReview",
-      "EvidenceRetentionPolicy",
-      "WorkflowTransitionRecord",
-      "WorkflowComment",
-      "WorkflowDelegation",
-      "WorkflowEscalationEvent",
-      "ExportJob",
-      "QualificationBasis",
-      "QualificationReview",
-      "ControlAttestation",
-      "PolicyException",
-      "Notification",
-      "AIArtifact"
-    ],
-    "integrationBoundary": [
-      "SourceSystem",
-      "IntegrationMapping",
-      "SyncJob"
-    ]
-  },
-  "relationships": [
-    {
-      "from": "Institution",
-      "to": "Person",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "Institution",
-      "to": "OrganizationUnit",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "Institution",
-      "to": "Committee",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "Institution",
-      "to": "Program",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "Institution",
-      "to": "User",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "Person",
-      "to": "User",
-      "cardinality": "1:0..1"
-    },
-    {
-      "from": "Role",
-      "to": "RolePermissionGrant",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "Permission",
-      "to": "RolePermissionGrant",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "User",
-      "to": "UserRoleAssignment",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "Accreditor",
-      "to": "AccreditationFramework",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "AccreditationFramework",
-      "to": "FrameworkVersion",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "FrameworkVersion",
-      "to": "Standard",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "Standard",
-      "to": "Criterion",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "Criterion",
-      "to": "CriterionElement",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "FrameworkVersion",
-      "to": "EvidenceRequirement",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "FrameworkVersion",
-      "to": "AccreditationCycle",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "AccreditationCycle",
-      "to": "AccreditationScope",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "AccreditationScope",
-      "to": "AccreditationScopeProgram",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "AccreditationScope",
-      "to": "AccreditationScopeOrganizationUnit",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "Program",
-      "to": "AccreditationScopeProgram",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "OrganizationUnit",
-      "to": "AccreditationScopeOrganizationUnit",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "AccreditationCycle",
-      "to": "CycleMilestone",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "AccreditationCycle",
-      "to": "ReviewEvent",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "AccreditationCycle",
-      "to": "DecisionRecord",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "AccreditationCycle",
-      "to": "ReviewTeam",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "Person",
-      "to": "ReviewerProfile",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "ReviewTeam",
-      "to": "ReviewTeamMembership",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "Person",
-      "to": "ReviewTeamMembership",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "Program",
-      "to": "LearningOutcome",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "Course",
-      "to": "CourseSection",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "AcademicTerm",
-      "to": "CourseSection",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "Program",
-      "to": "ProgramOutcomeMap",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "Course",
-      "to": "CourseOutcomeMap",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "AssessmentPlan",
-      "to": "AssessmentMeasure",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "AssessmentMeasure",
-      "to": "AssessmentInstrument",
-      "cardinality": "N:1"
-    },
-    {
-      "from": "AssessmentMeasure",
-      "to": "BenchmarkTarget",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "AssessmentMeasure",
-      "to": "AssessmentResult",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "AssessmentResult",
-      "to": "Finding",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "Finding",
-      "to": "ActionPlan",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "ActionPlan",
-      "to": "ActionPlanTask",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "ActionPlan",
-      "to": "ImprovementClosureReview",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "EvidenceItem",
-      "to": "EvidenceArtifact",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "EvidenceItem",
-      "to": "EvidenceReference",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "EvidenceItem",
-      "to": "EvidenceReview",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "EvidenceRetentionPolicy",
-      "to": "EvidenceItem",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "EvidenceRequest",
-      "to": "EvidenceItem",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "WorkflowTemplate",
-      "to": "WorkflowStep",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "WorkflowTemplate",
-      "to": "Submission",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "ReviewCycle",
-      "to": "ReviewWorkflow",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "ReviewWorkflow",
-      "to": "WorkflowTransitionRecord",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "ReviewWorkflow",
-      "to": "EvidenceItem",
-      "cardinality": "N:M"
-    },
-    {
-      "from": "ReviewCycle",
-      "to": "EvidenceCollection",
-      "cardinality": "N:M"
-    },
-    {
-      "from": "Submission",
-      "to": "WorkflowAssignment",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "Submission",
-      "to": "WorkflowDecision",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "Submission",
-      "to": "WorkflowComment",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "Submission",
-      "to": "WorkflowDelegation",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "Submission",
-      "to": "WorkflowEscalationEvent",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "Submission",
-      "to": "SubmissionSnapshot",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "SubmissionSnapshot",
-      "to": "SubmissionPackageItem",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "AccreditationCycle",
-      "to": "Narrative",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "Narrative",
-      "to": "NarrativeSection",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "AccreditationCycle",
-      "to": "ReportPackage",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "ReportPackage",
-      "to": "ExportJob",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "Person",
-      "to": "FacultyProfile",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "FacultyProfile",
-      "to": "FacultyAppointment",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "FacultyProfile",
-      "to": "FacultyDeployment",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "FacultyProfile",
-      "to": "FacultyActivity",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "FacultyProfile",
-      "to": "FacultyQualification",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "FacultyQualification",
-      "to": "QualificationBasis",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "FacultyQualification",
-      "to": "QualificationReview",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "SourceSystem",
-      "to": "IntegrationMapping",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "SourceSystem",
-      "to": "SyncJob",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "Submission",
-      "to": "AuditEvent",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "WorkflowAssignment",
-      "to": "Notification",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "ReviewerProfile",
-      "to": "ReviewTeamMembership",
-      "cardinality": "1:N"
-    },
-    {
-      "from": "ReviewEvent",
-      "to": "DecisionRecord",
-      "cardinality": "1:N"
-    }
-  ],
-  "temporalModeling": {
-    "mutableInPlace": [
-      "User",
-      "Person",
-      "OrganizationUnit",
-      "Committee",
-      "FacultyProfile",
-      "Program",
-      "Course",
-      "AcademicTerm",
-      "CourseSection",
-      "Narrative"
-    ],
-    "appendOnly": [
-      "AuditEvent",
-      "DecisionRecord",
-      "EvidenceReview",
-      "WorkflowComment",
-      "WorkflowDelegation",
-      "WorkflowEscalationEvent",
-      "SubmissionSnapshot",
-      "SubmissionPackageItem",
-      "QualificationReview",
-      "ImprovementClosureReview"
-    ],
-    "effectiveDatedOrSupersedable": [
-      "EvidenceRequirement",
-      "AssessmentPlan",
-      "AssessmentMeasure",
-      "BenchmarkTarget",
-      "FacultyAppointment",
-      "FacultyDeployment",
-      "FacultyQualification",
-      "QualificationBasis",
-      "ReviewTeamMembership",
-      "CycleMilestone",
-      "EvidenceRetentionPolicy"
-    ],
-    "entityRules": {
-      "NarrativeSection": "Mutable while drafting; preserve submitted/finalized versions through snapshot or explicit version capture.",
-      "AssessmentPlan": "Supersede/version after approval or after governed results depend on it.",
-      "AssessmentMeasure": "Supersede/version after results exist or design changes materially.",
-      "DecisionRecord": "Append-only after issuance; corrections create linked successor records.",
-      "EvidenceRequirement": "Versioned with FrameworkVersion; do not overwrite published requirements in place.",
-      "FacultyDeployment": "Effective-dated and supersedable for historical sufficiency analysis.",
-      "FacultyQualification": "Supersedable determination root; preserve the sequence of qualification states.",
-      "QualificationBasis": "Append-only or explicit successor-basis pattern; never silently rewrite rationale.",
-      "ReviewTeamMembership": "Effective-dated; preserve roster history and role/conflict changes.",
-      "CycleMilestone": "Effective-dated or supersedable; retain replanning history.",
-      "EvidenceReview": "Append-only review history.",
-      "SubmissionSnapshot": "Immutable forever after creation."
-    }
-  },
-  "evidenceReferenceContract": {
-    "allowedTargetEntityTypes": [
-      "AccreditationCycle",
-      "AccreditationScope",
-      "Standard",
-      "Criterion",
-      "CriterionElement",
-      "EvidenceRequirement",
-      "CycleMilestone",
-      "ReviewEvent",
-      "DecisionRecord",
-      "Program",
-      "Course",
-      "CourseSection",
-      "AcademicTerm",
-      "LearningOutcome",
-      "Competency",
-      "AssessmentPlan",
-      "AssessmentMeasure",
-      "AssessmentInstrument",
-      "BenchmarkTarget",
-      "AssessmentResult",
-      "Finding",
-      "ActionPlan",
-      "ImprovementClosureReview",
-      "Narrative",
-      "NarrativeSection",
-      "ReportPackage",
-      "Submission",
-      "SubmissionSnapshot",
-      "SubmissionPackageItem",
-      "FacultyProfile",
-      "FacultyQualification",
-      "FacultyDeployment",
-      "QualificationBasis",
-      "QualificationReview",
-      "Committee"
-    ],
-    "allowedRelationshipTypes": [
-      "supports",
-      "demonstrates",
-      "documents",
-      "measures",
-      "substantiates",
-      "responds-to",
-      "required-by",
-      "included-in",
-      "derived-from",
-      "supersedes",
-      "context-for"
-    ],
-    "validationResponsibility": {
-      "evidence-management": "validate allow-listed targetEntityType and local reference invariants",
-      "targetOwningContext": "validate target existence and state through published application interfaces"
-    },
-    "anchorPathRules": {
-      "requiredFor": [
-        "NarrativeSection",
-        "SubmissionPackageItem"
-      ],
-      "optionalFor": [
-        "CriterionElement",
-        "AssessmentMeasure",
-        "DecisionRecord",
-        "AssessmentInstrument"
-      ],
-      "forbiddenFor": [
-        "AccreditationCycle",
-        "AcademicTerm",
-        "Committee"
-      ]
-    },
-    "extensionRule": "Additive only: update docs, AI context, and target-owning contract together; consumers must tolerate newer unsupported target types."
-  },
-  "assessmentScopeGuidance": {
-    "planTargets": [
-      "Program",
-      "Course",
-      "CourseSection",
-      "LearningOutcome",
-      "AccreditationScope",
-      "AccreditationCycle",
-      "AcademicTerm"
-    ],
-    "measureTargets": [
-      "Program",
-      "Course",
-      "CourseSection",
-      "LearningOutcome",
-      "CriterionElement",
-      "AcademicTerm"
-    ],
-    "validResultsGranularity": [
-      "program-level",
-      "course-level",
-      "section-level",
-      "term-windowed",
-      "outcome-level"
-    ],
-    "invalidPatterns": [
-      "AcademicTerm alone as the only assessment subject in normal cases",
-      "Program plus unrelated CourseSection without explicit curriculum mapping or scope rationale",
-      "Measure/result scope introducing targets not present or implied in the plan"
-    ]
-  },
-  "implementationInvariants": {
-    "accreditationFrameworksEpic1": [
-      "FrameworkVersion publication requires at least one Standard and at least one CriterionElement under each Criterion.",
-      "FrameworkVersion structural children (Standard, Criterion, CriterionElement, EvidenceRequirement) are mutable only while status=draft.",
-      "EvidenceRequirement must target criterionId or criterionElementId in the same FrameworkVersion; if both are set, they must align.",
-      "AccreditationCycle must reference a published FrameworkVersion.",
-      "AccreditationScope must include at least one Program or OrganizationUnit reference.",
-      "CycleMilestone, ReviewEvent, and AccreditationScope dates must stay within AccreditationCycle start/end dates.",
-      "DecisionRecord is append-only after issuance; corrections are represented by successor records that supersede prior decisions."
-    ],
-    "evidenceManagementEpic2Phase1": [
-      "EvidenceItem is a first-class aggregate root for governed accreditation evidence metadata.",
-      "EvidenceItem.evidenceType must be one of: document, metric, narrative, dataset, assessment-artifact.",
-      "EvidenceItem.sourceType must be one of: manual, upload, integration.",
-      "EvidenceItem.status must be one of: draft, active, superseded, incomplete, archived.",
-      "EvidenceItem lifecycle status is evidence-governance state and must not duplicate workflow approval state.",
-      "EvidenceItem.create starts with status=draft, isComplete=false, and no supersededByEvidenceItemId.",
-      "EvidenceItem.evidenceLineageId identifies evidence lineage and defaults to the initial EvidenceItem.id for version 1.",
-      "EvidenceItem.versionNumber starts at 1 and versionNumber>1 requires supersedesEvidenceItemId.",
-      "EvidenceItem must not embed artifact storage fields; storage metadata belongs to EvidenceArtifact child records.",
-      "EvidenceArtifact.evidenceItemId must match the owning EvidenceItem.id.",
-      "EvidenceItem lifecycle transitions are explicit: draft->(incomplete|active|archived), incomplete->(draft|archived), active->(incomplete|superseded|archived), superseded/archived terminal.",
-      "EvidenceItem.currentArtifact resolves to the most recent available artifact or null when none are available.",
-      "EvidenceItem.status=active requires non-empty description, at least one of reportingPeriodId/reviewCycleId, and isComplete=true.",
-      "EvidenceItem.status=active requires at least one available EvidenceArtifact when sourceType=upload or evidenceType=document/dataset/assessment-artifact.",
-      "EvidenceItem.status=active may omit artifacts for evidenceType=metric/narrative when sourceType=manual/integration.",
-      "EvidenceItem.status=incomplete requires isComplete=false.",
-      "EvidenceItem.status=superseded requires supersededByEvidenceItemId.",
-      "Artifact registration is allowed only while EvidenceItem.status is draft or incomplete.",
-      "EvidenceItem.status=superseded and EvidenceItem.status=archived are terminal for lifecycle transitions in this phase.",
-      "Superseding EvidenceItem requires successor existence and same institution.",
-      "Application-layer supersession requires lineage-consistent successor identity (same evidenceLineageId, successor.supersedesEvidenceItemId = predecessor.id, and successor.versionNumber = predecessor.versionNumber + 1).",
-      "EvidenceArtifact persistence is append-only in this phase; existing artifact metadata cannot be changed or removed in-place.",
-      "EvidenceReference target associations are append-only in this phase; existing reference metadata cannot be changed or removed in-place.",
-      "Repository save boundaries rehydrate/validate EvidenceItem aggregate snapshots before persistence to prevent in-memory invariant bypass.",
-      "EvidenceReference target admissibility is validated centrally in evidence-management and target existence/admissibility checks are delegated through target-owning application interfaces.",
-      "EvidenceReference linkage annotations are normalized and target-governed; narrative-section targets require anchorPath.",
-      "Evidence retrieval supports explicit target queries (criterion, criterion-element, learning-outcome, narrative-section), lineage version-state filters (current/historical/all), linkage-context projection, cycle/reporting anchor filtering, and within-cycle vs cross-cycle supersession-readiness summaries."
-    ],
-    "workflowApprovalsPhase3": [
-      "ReviewCycle is a first-class aggregate root for workflow-governed review cycle orchestration.",
-      "ReviewCycle.status must be one of: not-started, active, completed, archived.",
-      "ReviewCycle.startDate must be strictly earlier than endDate.",
-      "Only one active ReviewCycle is allowed for the same institution+scope key (canonicalized programIds and organizationUnitIds).",
-      "ReviewWorkflow is a first-class aggregate root bound to a ReviewCycle and target context (for example report section or evidence grouping).",
-      "ReviewWorkflow.state must be one of: draft, in-review, revision-required, approved, submitted.",
-      "ReviewWorkflow state transitions are explicit and restricted to draft->in-review, in-review->revision-required|approved, revision-required->draft, approved->submitted.",
-      "Workflow role policy is enforced for faculty, reviewer, and admin transitions.",
-      "Workflow transition history is append-only and cannot be mutated in-place.",
-      "Workflow transition history is sequence-backed and must remain contiguous with valid from/to state chaining.",
-      "ReviewWorkflow is unique per (reviewCycleId, targetType, targetId) to preserve deterministic cycle-target state retrieval.",
-      "Workflow evidence integration is reference-based (evidenceItemIds/evidenceCollectionId) and does not embed workflow state in EvidenceItem.",
-      "ReviewWorkflow.evidenceCollectionId must resolve to a ReviewCycle.evidenceSetIds key for the owning cycle.",
-      "Approval/submission transitions evaluate referenced evidence readiness through an explicit workflow policy over the evidence-management readiness contract, including presence/completeness/activity/usability, current-vs-superseded checks, and target-scoped collection sufficiency."
-    ],
-    "crossContextReferenceRules": [
-      "accreditation-frameworks validates local shape and ownership invariants for framework and cycle aggregates.",
-      "organization-registry validates institution and organization-unit existence via application ports.",
-      "curriculum-mapping validates program existence via application ports.",
-      "evidence-management, workflow-approvals, and assessment-improvement may reference accreditation IDs but do not mutate accreditation-frameworks aggregates."
-    ]
-  }
+    "meta":  {
+                 "document":  "Open Accreditation System entity model AI context",
+                 "version":  "1.7.0",
+                 "source_docs":  [
+                                     "README.md",
+                                     "docs/architecture/README.md",
+                                     "docs/architecture/03-bounded-contexts.md",
+                                     "docs/architecture/04-integration-architecture.md",
+                                     "docs/architecture/data-model/README.md",
+                                     "docs/product/vision-document.md"
+                                 ],
+                 "notes":  [
+                               "Logical model only; not a finalized physical schema.",
+                               "Keep the core domain accreditor-agnostic across AACSB, ABET, HLC, and future frameworks.",
+                               "Person is the canonical human concept; User is the authenticated platform identity projection of a person.",
+                               "EvidenceReference uses a governed polymorphic target pattern with explicit allowed target types and owning-context validation responsibilities.",
+                               "Assessment scope is expressed through canonical program/course/section/term/outcome references, not accreditor-specific templates.",
+                               "AI outputs are advisory and require human review."
+                           ]
+             },
+    "boundedContexts":  {
+                            "identity-access":  [
+                                                    "User",
+                                                    "Role",
+                                                    "Permission",
+                                                    "RolePermissionGrant",
+                                                    "UserRoleAssignment",
+                                                    "ServicePrincipal"
+                                                ],
+                            "organization-registry":  [
+                                                          "Institution",
+                                                          "Person",
+                                                          "OrganizationUnit",
+                                                          "Committee"
+                                                      ],
+                            "accreditation-frameworks":  [
+                                                             "Accreditor",
+                                                             "AccreditationFramework",
+                                                             "FrameworkVersion",
+                                                             "Standard",
+                                                             "Criterion",
+                                                             "CriterionElement",
+                                                             "EvidenceRequirement",
+                                                             "AccreditationCycle",
+                                                             "AccreditationScope",
+                                                             "AccreditationScopeProgram",
+                                                             "AccreditationScopeOrganizationUnit",
+                                                             "CycleMilestone",
+                                                             "ReviewerProfile",
+                                                             "ReviewTeam",
+                                                             "ReviewTeamMembership",
+                                                             "ReviewEvent",
+                                                             "DecisionRecord"
+                                                         ],
+                            "evidence-management":  [
+                                                        "EvidenceItem",
+                                                        "EvidenceArtifact",
+                                                        "EvidenceCollection",
+                                                        "EvidenceRequest",
+                                                        "EvidenceReview",
+                                                        "EvidenceRetentionPolicy",
+                                                        "EvidenceReference"
+                                                    ],
+                            "curriculum-mapping":  [
+                                                       "Program",
+                                                       "Course",
+                                                       "AcademicTerm",
+                                                       "CourseSection",
+                                                       "LearningOutcome",
+                                                       "Competency",
+                                                       "ProgramOutcomeMap",
+                                                       "CourseOutcomeMap",
+                                                       "StandardsAlignment"
+                                                   ],
+                            "assessment-improvement":  [
+                                                           "AssessmentPlan",
+                                                           "AssessmentMeasure",
+                                                           "AssessmentInstrument",
+                                                           "BenchmarkTarget",
+                                                           "AssessmentResult",
+                                                           "Finding",
+                                                           "ActionPlan",
+                                                           "ActionPlanTask",
+                                                           "ImprovementClosureReview"
+                                                       ],
+                            "workflow-approvals":  [
+                                                       "ReviewCycle",
+                                                       "ReviewWorkflow",
+                                                       "WorkflowTransitionRecord"
+                                                   ],
+                            "narratives-reporting":  [
+                                                         "SubmissionPackage",
+                                                         "SubmissionPackageItem",
+                                                         "SubmissionPackageSnapshot",
+                                                         "SubmissionPackageSnapshotItem",
+                                                         "Narrative",
+                                                         "NarrativeSection",
+                                                         "ReportPackage",
+                                                         "ExportJob"
+                                                     ],
+                            "faculty-intelligence":  [
+                                                         "FacultyProfile",
+                                                         "FacultyAppointment",
+                                                         "FacultyDeployment",
+                                                         "FacultyActivity",
+                                                         "FacultyQualification",
+                                                         "QualificationBasis",
+                                                         "QualificationReview"
+                                                     ],
+                            "compliance-audit":  [
+                                                     "AuditEvent",
+                                                     "ControlAttestation",
+                                                     "PolicyException"
+                                                 ],
+                            "supporting-services":  [
+                                                        "SourceSystem",
+                                                        "IntegrationMapping",
+                                                        "SyncJob",
+                                                        "Notification",
+                                                        "AIArtifact"
+                                                    ]
+                        },
+    "entityPriorities":  {
+                             "coreSystemOfRecord":  [
+                                                        "Institution",
+                                                        "Person",
+                                                        "OrganizationUnit",
+                                                        "User",
+                                                        "Accreditor",
+                                                        "AccreditationFramework",
+                                                        "FrameworkVersion",
+                                                        "Standard",
+                                                        "Criterion",
+                                                        "CriterionElement",
+                                                        "AccreditationCycle",
+                                                        "AccreditationScope",
+                                                        "CycleMilestone",
+                                                        "ReviewEvent",
+                                                        "DecisionRecord",
+                                                        "EvidenceItem",
+                                                        "EvidenceArtifact",
+                                                        "EvidenceReference",
+                                                        "Program",
+                                                        "Course",
+                                                        "AcademicTerm",
+                                                        "CourseSection",
+                                                        "LearningOutcome",
+                                                        "AssessmentPlan",
+                                                        "AssessmentMeasure",
+                                                        "BenchmarkTarget",
+                                                        "AssessmentResult",
+                                                        "Finding",
+                                                        "ActionPlan",
+                                                        "ReviewCycle",
+                                                        "ReviewWorkflow",
+                                                        "Narrative",
+                                                        "NarrativeSection",
+                                                        "FacultyProfile",
+                                                        "FacultyQualification",
+                                                        "AuditEvent",
+                                                        "SubmissionPackage",
+                                                        "SubmissionPackageSnapshot"
+                                                    ],
+                             "joinEntities":  [
+                                                  "RolePermissionGrant",
+                                                  "UserRoleAssignment",
+                                                  "AccreditationScopeProgram",
+                                                  "AccreditationScopeOrganizationUnit",
+                                                  "ReviewTeamMembership",
+                                                  "ProgramOutcomeMap",
+                                                  "CourseOutcomeMap",
+                                                  "StandardsAlignment",
+                                                  "SubmissionPackageItem",
+                                                  "SubmissionPackageSnapshotItem"
+                                              ],
+                             "supportingGovernance":  [
+                                                          "Committee",
+                                                          "EvidenceCollection",
+                                                          "EvidenceRequest",
+                                                          "EvidenceReview",
+                                                          "EvidenceRetentionPolicy",
+                                                          "WorkflowTransitionRecord",
+                                                          "ExportJob",
+                                                          "QualificationBasis",
+                                                          "QualificationReview",
+                                                          "ControlAttestation",
+                                                          "PolicyException",
+                                                          "Notification",
+                                                          "AIArtifact",
+                                                          "SubmissionPackageSnapshot"
+                                                      ],
+                             "integrationBoundary":  [
+                                                         "SourceSystem",
+                                                         "IntegrationMapping",
+                                                         "SyncJob"
+                                                     ]
+                         },
+    "relationships":  [
+                          {
+                              "from":  "Institution",
+                              "to":  "Person",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "Institution",
+                              "to":  "OrganizationUnit",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "Institution",
+                              "to":  "Committee",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "Institution",
+                              "to":  "Program",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "Institution",
+                              "to":  "User",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "Person",
+                              "to":  "User",
+                              "cardinality":  "1:0..1"
+                          },
+                          {
+                              "from":  "Role",
+                              "to":  "RolePermissionGrant",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "Permission",
+                              "to":  "RolePermissionGrant",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "User",
+                              "to":  "UserRoleAssignment",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "Accreditor",
+                              "to":  "AccreditationFramework",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "AccreditationFramework",
+                              "to":  "FrameworkVersion",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "FrameworkVersion",
+                              "to":  "Standard",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "Standard",
+                              "to":  "Criterion",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "Criterion",
+                              "to":  "CriterionElement",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "FrameworkVersion",
+                              "to":  "EvidenceRequirement",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "FrameworkVersion",
+                              "to":  "AccreditationCycle",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "AccreditationCycle",
+                              "to":  "AccreditationScope",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "AccreditationScope",
+                              "to":  "AccreditationScopeProgram",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "AccreditationScope",
+                              "to":  "AccreditationScopeOrganizationUnit",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "Program",
+                              "to":  "AccreditationScopeProgram",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "OrganizationUnit",
+                              "to":  "AccreditationScopeOrganizationUnit",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "AccreditationCycle",
+                              "to":  "CycleMilestone",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "AccreditationCycle",
+                              "to":  "ReviewEvent",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "AccreditationCycle",
+                              "to":  "DecisionRecord",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "AccreditationCycle",
+                              "to":  "ReviewTeam",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "Person",
+                              "to":  "ReviewerProfile",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "ReviewTeam",
+                              "to":  "ReviewTeamMembership",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "Person",
+                              "to":  "ReviewTeamMembership",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "Program",
+                              "to":  "LearningOutcome",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "Course",
+                              "to":  "CourseSection",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "AcademicTerm",
+                              "to":  "CourseSection",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "Program",
+                              "to":  "ProgramOutcomeMap",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "Course",
+                              "to":  "CourseOutcomeMap",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "AssessmentPlan",
+                              "to":  "AssessmentMeasure",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "AssessmentMeasure",
+                              "to":  "AssessmentInstrument",
+                              "cardinality":  "N:1"
+                          },
+                          {
+                              "from":  "AssessmentMeasure",
+                              "to":  "BenchmarkTarget",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "AssessmentMeasure",
+                              "to":  "AssessmentResult",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "AssessmentResult",
+                              "to":  "Finding",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "Finding",
+                              "to":  "ActionPlan",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "ActionPlan",
+                              "to":  "ActionPlanTask",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "ActionPlan",
+                              "to":  "ImprovementClosureReview",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "EvidenceItem",
+                              "to":  "EvidenceArtifact",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "EvidenceItem",
+                              "to":  "EvidenceReference",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "EvidenceItem",
+                              "to":  "EvidenceReview",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "EvidenceRetentionPolicy",
+                              "to":  "EvidenceItem",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "EvidenceRequest",
+                              "to":  "EvidenceItem",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "ReviewCycle",
+                              "to":  "ReviewWorkflow",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "ReviewWorkflow",
+                              "to":  "WorkflowTransitionRecord",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "ReviewWorkflow",
+                              "to":  "EvidenceItem",
+                              "cardinality":  "N:M"
+                          },
+                          {
+                              "from":  "ReviewCycle",
+                              "to":  "EvidenceCollection",
+                              "cardinality":  "N:M"
+                          },
+                          {
+                              "from":  "AccreditationCycle",
+                              "to":  "Narrative",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "Narrative",
+                              "to":  "NarrativeSection",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "AccreditationCycle",
+                              "to":  "ReportPackage",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "ReportPackage",
+                              "to":  "ExportJob",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "Person",
+                              "to":  "FacultyProfile",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "FacultyProfile",
+                              "to":  "FacultyAppointment",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "FacultyProfile",
+                              "to":  "FacultyDeployment",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "FacultyProfile",
+                              "to":  "FacultyActivity",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "FacultyProfile",
+                              "to":  "FacultyQualification",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "FacultyQualification",
+                              "to":  "QualificationBasis",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "FacultyQualification",
+                              "to":  "QualificationReview",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "SourceSystem",
+                              "to":  "IntegrationMapping",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "SourceSystem",
+                              "to":  "SyncJob",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "ReviewerProfile",
+                              "to":  "ReviewTeamMembership",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "ReviewEvent",
+                              "to":  "DecisionRecord",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "ReviewCycle",
+                              "to":  "SubmissionPackage",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "SubmissionPackage",
+                              "to":  "SubmissionPackageItem",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "SubmissionPackage",
+                              "to":  "SubmissionPackageSnapshot",
+                              "cardinality":  "1:N"
+                          },
+                          {
+                              "from":  "SubmissionPackageSnapshot",
+                              "to":  "SubmissionPackageSnapshotItem",
+                              "cardinality":  "1:N"
+                          }
+                      ],
+    "temporalModeling":  {
+                             "mutableInPlace":  [
+                                                    "User",
+                                                    "Person",
+                                                    "OrganizationUnit",
+                                                    "Committee",
+                                                    "FacultyProfile",
+                                                    "Program",
+                                                    "Course",
+                                                    "AcademicTerm",
+                                                    "CourseSection",
+                                                    "Narrative"
+                                                ],
+                             "appendOnly":  [
+                                                "AuditEvent",
+                                                "DecisionRecord",
+                                                "EvidenceReview",
+                                                "QualificationReview",
+                                                "ImprovementClosureReview",
+                                                "SubmissionPackageSnapshot",
+                                                "SubmissionPackageSnapshotItem"
+                                            ],
+                             "effectiveDatedOrSupersedable":  [
+                                                                  "EvidenceRequirement",
+                                                                  "AssessmentPlan",
+                                                                  "AssessmentMeasure",
+                                                                  "BenchmarkTarget",
+                                                                  "FacultyAppointment",
+                                                                  "FacultyDeployment",
+                                                                  "FacultyQualification",
+                                                                  "QualificationBasis",
+                                                                  "ReviewTeamMembership",
+                                                                  "CycleMilestone",
+                                                                  "EvidenceRetentionPolicy"
+                                                              ],
+                             "entityRules":  {
+                                                 "NarrativeSection":  "Mutable while drafting; preserve submitted/finalized versions through snapshot or explicit version capture.",
+                                                 "AssessmentPlan":  "Supersede/version after approval or after governed results depend on it.",
+                                                 "AssessmentMeasure":  "Supersede/version after results exist or design changes materially.",
+                                                 "DecisionRecord":  "Append-only after issuance; corrections create linked successor records.",
+                                                 "EvidenceRequirement":  "Versioned with FrameworkVersion; do not overwrite published requirements in place.",
+                                                 "FacultyDeployment":  "Effective-dated and supersedable for historical sufficiency analysis.",
+                                                 "FacultyQualification":  "Supersedable determination root; preserve the sequence of qualification states.",
+                                                 "QualificationBasis":  "Append-only or explicit successor-basis pattern; never silently rewrite rationale.",
+                                                 "ReviewTeamMembership":  "Effective-dated; preserve roster history and role/conflict changes.",
+                                                 "CycleMilestone":  "Effective-dated or supersedable; retain replanning history.",
+                                                 "EvidenceReview":  "Append-only review history.",
+                                                 "SubmissionPackageSnapshot":  "Immutable forever after creation.",
+                                                 "SubmissionPackageSnapshotItem":  "Immutable forever after snapshot capture."
+                                             }
+                         },
+    "evidenceReferenceContract":  {
+                                      "allowedTargetEntityTypes":  [
+                                                                       "AccreditationCycle",
+                                                                       "AccreditationScope",
+                                                                       "Standard",
+                                                                       "Criterion",
+                                                                       "CriterionElement",
+                                                                       "EvidenceRequirement",
+                                                                       "CycleMilestone",
+                                                                       "ReviewEvent",
+                                                                       "DecisionRecord",
+                                                                       "Program",
+                                                                       "Course",
+                                                                       "CourseSection",
+                                                                       "AcademicTerm",
+                                                                       "LearningOutcome",
+                                                                       "Competency",
+                                                                       "AssessmentPlan",
+                                                                       "AssessmentMeasure",
+                                                                       "AssessmentInstrument",
+                                                                       "BenchmarkTarget",
+                                                                       "AssessmentResult",
+                                                                       "Finding",
+                                                                       "ActionPlan",
+                                                                       "ImprovementClosureReview",
+                                                                       "Narrative",
+                                                                       "NarrativeSection",
+                                                                       "ReportPackage",
+                                                                       "SubmissionPackageItem",
+                                                                       "FacultyProfile",
+                                                                       "FacultyQualification",
+                                                                       "FacultyDeployment",
+                                                                       "QualificationBasis",
+                                                                       "QualificationReview",
+                                                                       "Committee",
+                                                                       "SubmissionPackage",
+                                                                       "SubmissionPackageSnapshot",
+                                                                       "SubmissionPackageSnapshotItem"
+                                                                   ],
+                                      "allowedRelationshipTypes":  [
+                                                                       "supports",
+                                                                       "demonstrates",
+                                                                       "documents",
+                                                                       "measures",
+                                                                       "substantiates",
+                                                                       "responds-to",
+                                                                       "required-by",
+                                                                       "included-in",
+                                                                       "derived-from",
+                                                                       "supersedes",
+                                                                       "context-for"
+                                                                   ],
+                                      "validationResponsibility":  {
+                                                                       "evidence-management":  "validate allow-listed targetEntityType and local reference invariants",
+                                                                       "targetOwningContext":  "validate target existence and state through published application interfaces"
+                                                                   },
+                                      "anchorPathRules":  {
+                                                              "requiredFor":  [
+                                                                                  "NarrativeSection",
+                                                                                  "SubmissionPackageItem",
+                                                                                  "SubmissionPackageSnapshotItem"
+                                                                              ],
+                                                              "optionalFor":  [
+                                                                                  "CriterionElement",
+                                                                                  "AssessmentMeasure",
+                                                                                  "DecisionRecord",
+                                                                                  "AssessmentInstrument"
+                                                                              ],
+                                                              "forbiddenFor":  [
+                                                                                   "AccreditationCycle",
+                                                                                   "AcademicTerm",
+                                                                                   "Committee"
+                                                                               ]
+                                                          },
+                                      "extensionRule":  "Additive only: update docs, AI context, and target-owning contract together; consumers must tolerate newer unsupported target types."
+                                  },
+    "assessmentScopeGuidance":  {
+                                    "planTargets":  [
+                                                        "Program",
+                                                        "Course",
+                                                        "CourseSection",
+                                                        "LearningOutcome",
+                                                        "AccreditationScope",
+                                                        "AccreditationCycle",
+                                                        "AcademicTerm"
+                                                    ],
+                                    "measureTargets":  [
+                                                           "Program",
+                                                           "Course",
+                                                           "CourseSection",
+                                                           "LearningOutcome",
+                                                           "CriterionElement",
+                                                           "AcademicTerm"
+                                                       ],
+                                    "validResultsGranularity":  [
+                                                                    "program-level",
+                                                                    "course-level",
+                                                                    "section-level",
+                                                                    "term-windowed",
+                                                                    "outcome-level"
+                                                                ],
+                                    "invalidPatterns":  [
+                                                            "AcademicTerm alone as the only assessment subject in normal cases",
+                                                            "Program plus unrelated CourseSection without explicit curriculum mapping or scope rationale",
+                                                            "Measure/result scope introducing targets not present or implied in the plan"
+                                                        ]
+                                },
+    "implementationInvariants":  {
+                                     "accreditationFrameworksEpic1":  [
+                                                                          "FrameworkVersion publication requires at least one Standard and at least one CriterionElement under each Criterion.",
+                                                                          "FrameworkVersion structural children (Standard, Criterion, CriterionElement, EvidenceRequirement) are mutable only while status=draft.",
+                                                                          "EvidenceRequirement must target criterionId or criterionElementId in the same FrameworkVersion; if both are set, they must align.",
+                                                                          "AccreditationCycle must reference a published FrameworkVersion.",
+                                                                          "AccreditationScope must include at least one Program or OrganizationUnit reference.",
+                                                                          "CycleMilestone, ReviewEvent, and AccreditationScope dates must stay within AccreditationCycle start/end dates.",
+                                                                          "DecisionRecord is append-only after issuance; corrections are represented by successor records that supersede prior decisions."
+                                                                      ],
+                                     "evidenceManagementEpic2Phase1":  [
+                                                                           "EvidenceItem is a first-class aggregate root for governed accreditation evidence metadata.",
+                                                                           "EvidenceItem.evidenceType must be one of: document, metric, narrative, dataset, assessment-artifact.",
+                                                                           "EvidenceItem.sourceType must be one of: manual, upload, integration.",
+                                                                           "EvidenceItem.status must be one of: draft, active, superseded, incomplete, archived.",
+                                                                           "EvidenceItem lifecycle status is evidence-governance state and must not duplicate workflow approval state.",
+                                                                           "EvidenceItem.create starts with status=draft, isComplete=false, and no supersededByEvidenceItemId.",
+                                                                           "EvidenceItem.evidenceLineageId identifies evidence lineage and defaults to the initial EvidenceItem.id for version 1.",
+                                                                           "EvidenceItem.versionNumber starts at 1 and versionNumber\u003e1 requires supersedesEvidenceItemId.",
+                                                                           "EvidenceItem.evidenceSetIds is a normalized, evidence-owned set-membership list used for workflow collection sufficiency evaluation.",
+                                                                           "EvidenceItem must not embed artifact storage fields; storage metadata belongs to EvidenceArtifact child records.",
+                                                                           "EvidenceArtifact.evidenceItemId must match the owning EvidenceItem.id.",
+                                                                           "EvidenceItem lifecycle transitions are explicit: draft-\u003e(incomplete|active|archived), incomplete-\u003e(draft|archived), active-\u003e(incomplete|superseded|archived), superseded/archived terminal.",
+                                                                           "EvidenceItem.currentArtifact resolves to the most recent available artifact or null when none are available.",
+                                                                           "EvidenceItem.status=active requires non-empty description, at least one of reportingPeriodId/reviewCycleId, and isComplete=true.",
+                                                                           "EvidenceItem.status=active requires at least one available EvidenceArtifact when sourceType=upload or evidenceType=document/dataset/assessment-artifact.",
+                                                                           "EvidenceItem.status=active may omit artifacts for evidenceType=metric/narrative when sourceType=manual/integration.",
+                                                                           "EvidenceItem.status=incomplete requires isComplete=false.",
+                                                                           "EvidenceItem.status=superseded requires supersededByEvidenceItemId.",
+                                                                           "Artifact registration is allowed only while EvidenceItem.status is draft or incomplete.",
+                                                                           "EvidenceItem.status=superseded and EvidenceItem.status=archived are terminal for lifecycle transitions in this phase.",
+                                                                           "Superseding EvidenceItem requires successor existence and same institution.",
+                                                                           "Application-layer supersession requires lineage-consistent successor identity (same evidenceLineageId, successor.supersedesEvidenceItemId = predecessor.id, and successor.versionNumber = predecessor.versionNumber + 1).",
+                                                                           "EvidenceArtifact persistence is append-only in this phase; existing artifact metadata cannot be changed or removed in-place.",
+                                                                           "EvidenceReference target associations are append-only in this phase; existing reference metadata cannot be changed or removed in-place.",
+                                                                           "Repository save boundaries rehydrate/validate EvidenceItem aggregate snapshots before persistence to prevent in-memory invariant bypass.",
+                                                                           "EvidenceReference target admissibility is validated centrally in evidence-management and target existence/admissibility checks are delegated through target-owning application interfaces.",
+                                                                           "EvidenceReference linkage annotations are normalized and target-governed; narrative-section targets require anchorPath.",
+                                                                           "Evidence retrieval supports explicit target queries (criterion, criterion-element, learning-outcome, narrative-section), lineage version-state filters (current/historical/all), linkage-context projection, cycle/reporting anchor filtering, and within-cycle vs cross-cycle supersession-readiness summaries."
+                                                                       ],
+                                     "workflowApprovalsPhase3":  [
+                                                                     "ReviewCycle is a first-class aggregate root for workflow-governed review cycle orchestration.",
+                                                                     "ReviewCycle.status must be one of: not-started, active, completed, archived.",
+                                                                     "ReviewCycle.startDate must be strictly earlier than endDate.",
+                                                                     "ReviewCycle critical governance fields (startDate, endDate, programIds, organizationUnitIds, evidenceSetIds) are immutable after completed or archived.",
+                                                                     "Only one active ReviewCycle is allowed for the same institution+scope key (canonicalized programIds and organizationUnitIds).",
+                                                                     "ReviewWorkflow is a first-class aggregate root bound to a ReviewCycle and target context (for example report section or evidence grouping).",
+                                                                     "ReviewWorkflow.state must be one of: draft, in-review, revision-required, approved, submitted.",
+                                                                     "ReviewWorkflow state transitions are explicit and restricted to draft-\u003ein-review, in-review-\u003erevision-required|approved, revision-required-\u003edraft, approved-\u003esubmitted.",
+                                                                     "ReviewWorkflow transition behavior is exposed through explicit methods: submitForReview, requestRevision, returnToDraft, approve, submitFinal.",
+                                                                     "Workflow role policy is enforced for faculty, reviewer, and admin transitions.",
+                                                                     "Workflow transition history is append-only and cannot be mutated in-place.",
+                                                                     "Workflow transition records carry actorRole and optional actorId for minimal but reliable transition attribution.",
+                                                                     "Workflow transition history is sequence-backed and must remain contiguous with valid from/to state chaining.",
+                                                                     "Workflow transition-history persistence blocks in-place update/delete operations in addition to aggregate/repository append-only checks.",
+                                                                     "ReviewWorkflow is unique per (reviewCycleId, targetType, targetId) to preserve deterministic cycle-target state retrieval.",
+                                                                     "Workflow evidence integration is reference-based (evidenceItemIds/evidenceCollectionId) and does not embed workflow state in EvidenceItem.",
+                                                                     "ReviewWorkflow.evidenceCollectionId must resolve to a ReviewCycle.evidenceSetIds key for the owning cycle.",
+                                                                     "Approval/submission transitions evaluate referenced evidence readiness through an explicit workflow policy over the evidence-management readiness contract, including presence/completeness/activity/usability, current-vs-superseded checks, decision-level evidence presence requirements, and target-scoped collection sufficiency constrained by EvidenceItem.evidenceSetIds."
+                                                                 ],
+                                     "crossContextReferenceRules":  [
+                                                                        "accreditation-frameworks validates local shape and ownership invariants for framework and cycle aggregates.",
+                                                                        "organization-registry validates institution and organization-unit existence via application ports.",
+                                                                        "curriculum-mapping validates program existence via application ports.",
+                                                                        "evidence-management, workflow-approvals, and assessment-improvement may reference accreditation IDs but do not mutate accreditation-frameworks aggregates."
+                                                                    ],
+                                     "narrativesReportingPhase4InnerFoundation":  [
+                                                                                      "SubmissionPackage is a first-class aggregate root for governed submission/report assembly anchored to ReviewCycle.",
+                                                                                      "SubmissionPackage.status must be one of: draft, finalized.",
+                                                                                      "SubmissionPackage lifecycle is distinct from ReviewWorkflow.state; package finalization does not mutate workflow state.",
+                                                                                      "SubmissionPackage is unique per (reviewCycleId, scopeType, scopeId).",
+                                                                                      "SubmissionPackageItem is an explicit ordered child with targetType/targetId references and optional workflow/evidence linkage metadata.",
+                                                                                      "SubmissionPackage item ordering is contiguous and governed through add/remove/reorder methods while status=draft.",
+                                                                                      "SubmissionPackageSnapshot and SubmissionPackageSnapshotItem are append-only immutable records with contiguous snapshot versioning.",
+                                                                                      "Finalization requires a finalizing snapshot, sets status=finalized, and blocks future item mutation.",
+                                                                                      "SubmissionPackage item inclusion requires eligible cycle-target workflow state (approved or submitted) through workflow-approvals application contracts.",
+                                                                                      "SubmissionPackage evidence linkage validation uses WorkflowEvidenceReadinessContract and does not duplicate evidence lifecycle rules in package aggregates."
+                                                                                  ]
+                                 }
 }

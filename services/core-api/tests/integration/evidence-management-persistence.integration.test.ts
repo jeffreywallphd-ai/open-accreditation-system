@@ -109,6 +109,7 @@ export async function runTests(): Promise<void> {
       title: '2026 Program Learning Outcomes Narrative',
       description: 'Narrative evidence for outcomes alignment.',
       reportingPeriodId: 'period_2026',
+      evidenceSetIds: ['set_epu_main'],
       evidenceType: evidenceType.NARRATIVE,
       sourceType: evidenceSourceType.MANUAL,
     });
@@ -168,6 +169,7 @@ export async function runTests(): Promise<void> {
       title: '2026 Program Learning Outcomes Narrative - Revised',
       description: 'Revised narrative evidence for outcomes alignment.',
       reviewCycleId: 'cycle_2027',
+      evidenceSetIds: ['set_epu_main'],
     });
     successorId = successor.id;
 
@@ -237,6 +239,7 @@ export async function runTests(): Promise<void> {
     assert.equal(restored?.references.length, 3);
     assert.equal(restored?.versionNumber, 1);
     assert.equal(restored?.supersededByEvidenceItemId !== null, true);
+    assert.deepEqual(restored?.evidenceSetIds, ['set_epu_main']);
     assert.equal(restored?.artifacts[0].storageBucket, 'evidence');
     assert.equal(restored?.artifacts[1].storageKey, '2026/outcomes-narrative-v2.pdf');
     assert.equal(restored?.usability.isUsable, false);
@@ -286,6 +289,14 @@ export async function runTests(): Promise<void> {
     const currentOnly = await evidenceService.listCurrentEvidence({ institutionId });
     assert.equal(currentOnly.length, 1);
     assert.equal(currentOnly[0].id, successorId);
+    assert.deepEqual(currentOnly[0].evidenceSetIds, ['set_epu_main']);
+
+    const setScoped = await evidenceService.listEvidenceItems({
+      institutionId,
+      evidenceSetId: 'set_epu_main',
+      versionState: 'all',
+    });
+    assert.equal(setScoped.length, 2);
 
     const cycleReadiness = await evidenceService.getEvidenceLineageCycleReadiness(evidenceLineageId);
     assert.equal(cycleReadiness.versionCount, 2);

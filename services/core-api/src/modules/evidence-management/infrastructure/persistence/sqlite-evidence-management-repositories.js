@@ -18,6 +18,14 @@ function filterClause(filter = {}, keyMap = {}) {
   return { sql: where.length ? `WHERE ${where.join(' AND ')}` : '', params };
 }
 
+function parseJsonList(rawValue) {
+  if (!rawValue) {
+    return [];
+  }
+  const parsed = JSON.parse(rawValue);
+  return Array.isArray(parsed) ? parsed : [];
+}
+
 function toEvidenceItemSnapshot(evidenceItem) {
   return {
     id: evidenceItem.id,
@@ -32,6 +40,7 @@ function toEvidenceItemSnapshot(evidenceItem) {
     versionNumber: evidenceItem.versionNumber,
     supersedesEvidenceItemId: evidenceItem.supersedesEvidenceItemId,
     supersededByEvidenceItemId: evidenceItem.supersededByEvidenceItemId,
+    evidenceSetIds: [...(evidenceItem.evidenceSetIds ?? [])],
     reportingPeriodId: evidenceItem.reportingPeriodId,
     reviewCycleId: evidenceItem.reviewCycleId,
     artifacts: (evidenceItem.artifacts ?? []).map((artifact) => ({
@@ -97,11 +106,11 @@ export class SqliteEvidenceItemRepository extends EvidenceItemRepository {
       this.database.run(
         `INSERT INTO evidence_management_items
          (id, institution_id, title, description, evidence_type, source_type, status, is_complete,
-          evidence_lineage_id, version_number, supersedes_evidence_item_id,
-          superseded_by_evidence_item_id, reporting_period_id, review_cycle_id, created_at, updated_at)
+         evidence_lineage_id, version_number, supersedes_evidence_item_id,
+          superseded_by_evidence_item_id, evidence_set_ids_json, reporting_period_id, review_cycle_id, created_at, updated_at)
          VALUES (@id, @institutionId, @title, @description, @evidenceType, @sourceType, @status, @isComplete,
           @evidenceLineageId, @versionNumber, @supersedesEvidenceItemId,
-          @supersededByEvidenceItemId, @reportingPeriodId, @reviewCycleId, @createdAt, @updatedAt)
+          @supersededByEvidenceItemId, @evidenceSetIdsJson, @reportingPeriodId, @reviewCycleId, @createdAt, @updatedAt)
          ON CONFLICT(id) DO UPDATE SET
           institution_id=excluded.institution_id,
           title=excluded.title,
@@ -114,6 +123,7 @@ export class SqliteEvidenceItemRepository extends EvidenceItemRepository {
           version_number=excluded.version_number,
           supersedes_evidence_item_id=excluded.supersedes_evidence_item_id,
           superseded_by_evidence_item_id=excluded.superseded_by_evidence_item_id,
+          evidence_set_ids_json=excluded.evidence_set_ids_json,
           reporting_period_id=excluded.reporting_period_id,
           review_cycle_id=excluded.review_cycle_id,
           updated_at=excluded.updated_at`,
@@ -130,6 +140,7 @@ export class SqliteEvidenceItemRepository extends EvidenceItemRepository {
           versionNumber: validatedEvidenceItem.versionNumber,
           supersedesEvidenceItemId: validatedEvidenceItem.supersedesEvidenceItemId,
           supersededByEvidenceItemId: validatedEvidenceItem.supersededByEvidenceItemId,
+          evidenceSetIdsJson: JSON.stringify(validatedEvidenceItem.evidenceSetIds ?? []),
           reportingPeriodId: validatedEvidenceItem.reportingPeriodId,
           reviewCycleId: validatedEvidenceItem.reviewCycleId,
           createdAt: validatedEvidenceItem.createdAt,
@@ -230,6 +241,7 @@ export class SqliteEvidenceItemRepository extends EvidenceItemRepository {
       versionNumber: row.version_number,
       supersedesEvidenceItemId: row.supersedes_evidence_item_id,
       supersededByEvidenceItemId: row.superseded_by_evidence_item_id,
+      evidenceSetIds: parseJsonList(row.evidence_set_ids_json),
       reportingPeriodId: row.reporting_period_id,
       reviewCycleId: row.review_cycle_id,
       artifacts,
@@ -265,6 +277,7 @@ export class SqliteEvidenceItemRepository extends EvidenceItemRepository {
       versionNumber: row.version_number,
       supersedesEvidenceItemId: row.supersedes_evidence_item_id,
       supersededByEvidenceItemId: row.superseded_by_evidence_item_id,
+      evidenceSetIds: parseJsonList(row.evidence_set_ids_json),
       reportingPeriodId: row.reporting_period_id,
       reviewCycleId: row.review_cycle_id,
       artifacts: this.#listArtifactsByEvidenceItemId(row.id),
@@ -295,6 +308,7 @@ export class SqliteEvidenceItemRepository extends EvidenceItemRepository {
         versionNumber: row.version_number,
         supersedesEvidenceItemId: row.supersedes_evidence_item_id,
         supersededByEvidenceItemId: row.superseded_by_evidence_item_id,
+        evidenceSetIds: parseJsonList(row.evidence_set_ids_json),
         reportingPeriodId: row.reporting_period_id,
         reviewCycleId: row.review_cycle_id,
         artifacts: this.#listArtifactsByEvidenceItemId(row.id),
@@ -374,6 +388,7 @@ export class SqliteEvidenceItemRepository extends EvidenceItemRepository {
           versionNumber: row.version_number,
           supersedesEvidenceItemId: row.supersedes_evidence_item_id,
           supersededByEvidenceItemId: row.superseded_by_evidence_item_id,
+          evidenceSetIds: parseJsonList(row.evidence_set_ids_json),
           reportingPeriodId: row.reporting_period_id,
           reviewCycleId: row.review_cycle_id,
           artifacts: this.#listArtifactsByEvidenceItemId(row.id),

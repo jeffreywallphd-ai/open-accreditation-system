@@ -12,6 +12,7 @@ export function buildEvidenceReadinessPolicyForTransition(currentState, nextStat
 
   return {
     requiredReadinessLevel: requiresApprovalEvidence && hasReferencedEvidence ? 'usable' : 'present',
+    requireAnyEvidenceForDecision: requiresApprovalEvidence,
     requireCurrentReferencedEvidence: requiresApprovalEvidence && hasReferencedEvidence,
     minimumReferencedUsableEvidenceCount: requiresApprovalEvidence && hasReferencedEvidence
       ? workflow.evidenceItemIds.length

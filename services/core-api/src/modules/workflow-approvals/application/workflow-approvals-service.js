@@ -2,10 +2,15 @@ import { NotFoundError, ValidationError } from '../../shared/kernel/errors.js';
 import { ReviewCycle } from '../domain/entities/review-cycle.js';
 import { ReviewWorkflow } from '../domain/entities/review-workflow.js';
 import { buildEvidenceReadinessPolicyForTransition } from '../domain/policies/workflow-evidence-readiness-policy.js';
-import { reviewCycleStatus } from '../domain/value-objects/workflow-statuses.js';
+import { reviewCycleStatus, reviewWorkflowState } from '../domain/value-objects/workflow-statuses.js';
 
 export class WorkflowApprovalsService {
   constructor(deps) {
+    if (!deps?.evidenceReadiness || typeof deps.evidenceReadiness.evaluateWorkflowEvidenceReadiness !== 'function') {
+      throw new ValidationError(
+        'WorkflowApprovalsService requires evidenceReadiness with evaluateWorkflowEvidenceReadiness',
+      );
+    }
     this.cycles = deps.cycles;
     this.workflows = deps.workflows;
     this.institutions = deps.institutions;
@@ -68,7 +73,7 @@ export class WorkflowApprovalsService {
     }
 
     const evidenceSummary = await this.#evaluateWorkflowEvidence(workflow, nextState);
-    workflow.transitionTo(nextState, actorRole, {
+    this.#applyWorkflowTransition(workflow, nextState, actorRole, {
       reason: options.reason,
       evidenceSummary,
     });
@@ -102,6 +107,13 @@ export class WorkflowApprovalsService {
       throw new ValidationError('targetType and targetId are required');
     }
     return this.workflows.getByCycleAndTarget(reviewCycleId, targetType, targetId);
+  }
+
+  async getWorkflowState(reviewCycleId, targetType, targetId) {
+    if (targetType && targetId) {
+      return this.getWorkflowStateForCycleTarget(reviewCycleId, targetType, targetId);
+    }
+    return this.getWorkflowStateForCycle(reviewCycleId);
   }
 
   async #requireInstitution(institutionId) {
@@ -157,7 +169,7 @@ export class WorkflowApprovalsService {
   }
 
   async #assertEvidenceReferencesBelongToWorkflowInstitution(workflow, cycle) {
-    if (!this.evidenceReadiness || workflow.evidenceItemIds.length === 0) {
+    if (workflow.evidenceItemIds.length === 0) {
       return;
     }
     const summary = await this.evidenceReadiness.evaluateWorkflowEvidenceReadiness({
@@ -170,6 +182,7 @@ export class WorkflowApprovalsService {
       evidenceItemIds: workflow.evidenceItemIds,
       readinessPolicy: {
         requiredReadinessLevel: 'present',
+        requireAnyEvidenceForDecision: false,
         requireCurrentReferencedEvidence: false,
         minimumReferencedUsableEvidenceCount: 0,
         requireCollectionScopedUsableEvidence: false,
@@ -190,35 +203,6 @@ export class WorkflowApprovalsService {
   }
 
   async #evaluateWorkflowEvidence(workflow, nextState) {
-    if (!this.evidenceReadiness) {
-      return {
-        requiredCount: workflow.evidenceItemIds.length,
-        foundCount: workflow.evidenceItemIds.length,
-        requiredUsableEvidenceCount: 0,
-        usableEvidenceItemCount: workflow.evidenceItemIds.length,
-        missingEvidenceItemIds: [],
-        outOfInstitutionScopeEvidenceItemIds: [],
-        incompleteEvidenceItemIds: [],
-        inactiveEvidenceItemIds: [],
-        unusableEvidenceItemIds: [],
-        nonCurrentEvidenceItemIds: [],
-        supersededEvidenceItemIds: [],
-        evidenceCollectionId: workflow.evidenceCollectionId ?? null,
-        collectionContextStatus: workflow.evidenceCollectionId ? 'not-evaluated' : 'not-applicable',
-        collectionUsableEvidenceCount: 0,
-        collectionRequirementSatisfied: true,
-        referencedEvidenceRequirementSatisfied: true,
-        readinessPolicy: {
-          requiredReadinessLevel: 'usable',
-          requireCurrentReferencedEvidence: true,
-          minimumReferencedUsableEvidenceCount: workflow.evidenceItemIds.length,
-          requireCollectionScopedUsableEvidence: false,
-          minimumCollectionUsableEvidenceCount: 0,
-        },
-        isSufficient: true,
-      };
-    }
-
     const readinessPolicy = buildEvidenceReadinessPolicyForTransition(workflow.state, nextState, workflow);
     return this.evidenceReadiness.evaluateWorkflowEvidenceReadiness({
       institutionId: workflow.institutionId,
@@ -238,6 +222,23 @@ export class WorkflowApprovalsService {
       throw new ValidationError(
         `ReviewWorkflow already exists for cycle-target: cycle=${reviewCycleId} target=${targetType}:${targetId}`,
       );
+    }
+  }
+
+  #applyWorkflowTransition(workflow, nextState, actorRole, options = {}) {
+    switch (nextState) {
+      case reviewWorkflowState.IN_REVIEW:
+        return workflow.submitForReview(actorRole, options);
+      case reviewWorkflowState.REVISION_REQUIRED:
+        return workflow.requestRevision(actorRole, options);
+      case reviewWorkflowState.DRAFT:
+        return workflow.returnToDraft(actorRole, options);
+      case reviewWorkflowState.APPROVED:
+        return workflow.approve(actorRole, options);
+      case reviewWorkflowState.SUBMITTED:
+        return workflow.submitFinal(actorRole, options);
+      default:
+        return workflow.transitionTo(nextState, actorRole, options);
     }
   }
 }

@@ -65,12 +65,26 @@ Note: many schema files are placeholders now; future changes should fill them ra
 
 ### Internal bounded-context contract note
 
-Not all integrations are external-system integrations. For cross-context orchestration inside `services/core-api`, use published application contracts instead of direct repository coupling. Current Phase 3 implementation uses:
+Not all integrations are external-system integrations. For cross-context orchestration inside `services/core-api`, use published application contracts instead of direct repository coupling. Current implemented inner-layer contracts include:
 
 - `evidence-management` -> `WorkflowEvidenceReadinessContract.evaluateWorkflowEvidenceReadiness`
 - consumer: `workflow-approvals` application layer (`WorkflowApprovalsService`)
+- `workflow-approvals` -> cycle/workflow lookup contracts consumed by `narratives-reporting` (`NarrativesReportingService`) for governed package-item eligibility
+- `evidence-management` -> `WorkflowEvidenceReadinessContract.evaluateWorkflowEvidenceReadiness`
+- consumer: `narratives-reporting` application layer (`NarrativesReportingService`) for submission-package evidence linkage and finalization checks
 
 This contract keeps workflow decisions decoupled from evidence persistence internals while still enforcing evidence presence, usability, completeness, current-vs-superseded constraints, and cycle/target-scoped collection readiness constraints.
+
+Current Phase 3/Phase 4 inner-layer details:
+
+- workflow submits an explicit readiness policy (`requiredReadinessLevel`, `requireAnyEvidenceForDecision`, currentness and collection-sufficiency flags)
+- evidence-management evaluates readiness using evidence-owned semantics only (completeness, active status, usability, supersession/currentness)
+- collection/set sufficiency is evaluated through evidence-owned set membership (`EvidenceItem.evidenceSetIds`) and workflow-owned set keys (`ReviewCycle.evidenceSetIds`), without embedding workflow state in evidence records
+- workflow-approvals transitions do not use permissive fallbacks; governed workflow decisions require the readiness contract evaluation result
+- persisted workflow transition history stores the readiness summary used for the decision transition, enabling lightweight historical inspection without event-sourcing expansion
+- narratives-reporting package assembly does not read workflow/evidence tables directly; it calls workflow/evidence application contracts and persists only package-owned state (`SubmissionPackage`, items, snapshots)
+- package finalization uses stricter readiness policy (`usable` + current referenced evidence) while checkpoint snapshots may use presence-level validation
+- narratives-reporting now exposes a thin HTTP transport layer over these use cases without moving workflow/evidence rules into controllers
 
 ## Data Flow Pattern
 

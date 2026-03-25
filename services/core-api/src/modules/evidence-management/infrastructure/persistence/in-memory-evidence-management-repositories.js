@@ -18,6 +18,7 @@ function toEvidenceItemSnapshot(evidenceItem) {
     versionNumber: evidenceItem.versionNumber,
     supersedesEvidenceItemId: evidenceItem.supersedesEvidenceItemId,
     supersededByEvidenceItemId: evidenceItem.supersededByEvidenceItemId,
+    evidenceSetIds: [...(evidenceItem.evidenceSetIds ?? [])],
     reportingPeriodId: evidenceItem.reportingPeriodId,
     reviewCycleId: evidenceItem.reviewCycleId,
     artifacts: (evidenceItem.artifacts ?? []).map((artifact) => ({

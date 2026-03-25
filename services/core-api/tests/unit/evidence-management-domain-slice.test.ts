@@ -59,6 +59,13 @@ export async function runTests(): Promise<void> {
   assert.equal(evidenceItem.versionNumber, 1);
   assert.equal(evidenceItem.supersedesEvidenceItemId, null);
   assert.equal(evidenceItem.supersededByEvidenceItemId, null);
+  assert.deepEqual(evidenceItem.evidenceSetIds, []);
+
+  const evidenceWithSets = EvidenceItem.create({
+    ...createBaseEvidenceItemInput(),
+    evidenceSetIds: [' set_b ', 'set_a', 'set_b'],
+  });
+  assert.deepEqual(evidenceWithSets.evidenceSetIds, ['set_a', 'set_b']);
 
   assert.throws(
     () =>

@@ -1,6 +1,9 @@
 import { ValidationError } from '../../../shared/kernel/errors.js';
 import { ReviewCycleRepository, ReviewWorkflowRepository } from '../../domain/repositories/repositories.js';
-import { ReviewCycle } from '../../domain/entities/review-cycle.js';
+import {
+  buildReviewCycleCriticalFieldsFingerprint,
+  ReviewCycle,
+} from '../../domain/entities/review-cycle.js';
 import { ReviewWorkflow } from '../../domain/entities/review-workflow.js';
 import { reviewCycleStatus } from '../../domain/value-objects/workflow-statuses.js';
 
@@ -38,6 +41,7 @@ function toReviewWorkflowSnapshot(workflow) {
       fromState: item.fromState,
       toState: item.toState,
       actorRole: item.actorRole,
+      actorId: item.actorId ?? null,
       reason: item.reason,
       evidenceSummary: item.evidenceSummary,
       transitionedAt: item.transitionedAt,
@@ -142,6 +146,14 @@ export class InMemoryReviewCycleRepository extends ReviewCycleRepository {
     if (existing.institutionId !== next.institutionId || existing.createdAt !== next.createdAt) {
       throw new ValidationError('ReviewCycle identity fields cannot be changed in-place');
     }
+    if (
+      (existing.status === reviewCycleStatus.COMPLETED || existing.status === reviewCycleStatus.ARCHIVED) &&
+      buildReviewCycleCriticalFieldsFingerprint(existing) !== buildReviewCycleCriticalFieldsFingerprint(next)
+    ) {
+      throw new ValidationError(
+        'ReviewCycle critical fields cannot be modified after status is completed or archived',
+      );
+    }
   }
 
   #assertSingleActiveScope(next) {
@@ -231,9 +243,11 @@ export class InMemoryReviewWorkflowRepository extends ReviewWorkflowRepository {
         candidate.fromState !== persisted.fromState ||
         candidate.toState !== persisted.toState ||
         candidate.actorRole !== persisted.actorRole ||
+        candidate.actorId !== (persisted.actorId ?? null) ||
         candidate.reason !== persisted.reason ||
         JSON.stringify(candidate.evidenceSummary ?? null) !== JSON.stringify(persisted.evidenceSummary ?? null) ||
-        candidate.transitionedAt !== persisted.transitionedAt
+        candidate.transitionedAt !== persisted.transitionedAt ||
+        candidate.createdAt !== persisted.createdAt
       ) {
         throw new ValidationError(`Workflow transition history is append-only: ${persisted.id} cannot be modified`);
       }

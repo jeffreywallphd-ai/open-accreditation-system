@@ -9,6 +9,7 @@ function normalizeIdList(values = []) {
 function normalizeReadinessPolicy(input = {}, evidenceItemIds = []) {
   const defaults = {
     requiredReadinessLevel: 'usable',
+    requireAnyEvidenceForDecision: false,
     requireCurrentReferencedEvidence: true,
     requireCollectionScopedUsableEvidence: false,
     minimumReferencedUsableEvidenceCount: Number.isInteger(input.minimumUsableEvidenceCount)
@@ -24,6 +25,7 @@ function normalizeReadinessPolicy(input = {}, evidenceItemIds = []) {
     policy.requiredReadinessLevel === 'present' || policy.requiredReadinessLevel === 'usable'
       ? policy.requiredReadinessLevel
       : defaults.requiredReadinessLevel;
+  policy.requireAnyEvidenceForDecision = Boolean(policy.requireAnyEvidenceForDecision);
   policy.requireCurrentReferencedEvidence = policy.requireCurrentReferencedEvidence !== false;
   policy.requireCollectionScopedUsableEvidence = Boolean(policy.requireCollectionScopedUsableEvidence);
   policy.minimumReferencedUsableEvidenceCount = Math.max(
@@ -45,6 +47,7 @@ async function listTargetScopedUsableEvidence(evidenceManagement, input) {
   const commonFilter = {
     institutionId: input.institutionId,
     reviewCycleId: input.reviewCycleId,
+    evidenceSetId: input.evidenceCollectionId,
     versionState: 'current',
     status: 'active',
     isUsable: true,
@@ -148,6 +151,11 @@ export class WorkflowEvidenceReadinessService extends WorkflowEvidenceReadinessC
       }
     }
 
+    const hasAnyReferencedEvidence = evidenceItemIds.length > 0 && missingEvidenceItemIds.length < evidenceItemIds.length;
+    const hasAnyCollectionEvidence = collectionUsableEvidenceCount > 0;
+    const hasAnyEvidence = hasAnyReferencedEvidence || hasAnyCollectionEvidence;
+    const anyEvidenceRequirementSatisfied = readinessPolicy.requireAnyEvidenceForDecision ? hasAnyEvidence : true;
+
     return {
       requiredCount: evidenceItemIds.length,
       foundCount: evidenceItemIds.length - missingEvidenceItemIds.length,
@@ -163,10 +171,15 @@ export class WorkflowEvidenceReadinessService extends WorkflowEvidenceReadinessC
       evidenceCollectionId: input.evidenceCollectionId ?? null,
       collectionContextStatus,
       collectionUsableEvidenceCount,
+      hasAnyEvidence,
+      anyEvidenceRequirementSatisfied,
       collectionRequirementSatisfied,
       referencedEvidenceRequirementSatisfied,
       readinessPolicy,
-      isSufficient: referencedEvidenceRequirementSatisfied && collectionRequirementSatisfied,
+      isSufficient:
+        referencedEvidenceRequirementSatisfied &&
+        collectionRequirementSatisfied &&
+        anyEvidenceRequirementSatisfied,
     };
   }
 }

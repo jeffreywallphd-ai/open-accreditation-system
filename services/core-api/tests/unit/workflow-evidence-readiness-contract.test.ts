@@ -8,6 +8,7 @@ export async function runTests(): Promise<void> {
       {
         id: 'ev_complete_usable',
         institutionId: 'inst_1',
+        evidenceSetIds: ['collection_1'],
         isComplete: true,
         status: 'active',
         usability: { isUsable: true },
@@ -18,6 +19,7 @@ export async function runTests(): Promise<void> {
       {
         id: 'ev_incomplete',
         institutionId: 'inst_1',
+        evidenceSetIds: ['collection_1'],
         isComplete: false,
         status: 'incomplete',
         usability: { isUsable: false },
@@ -28,6 +30,7 @@ export async function runTests(): Promise<void> {
       {
         id: 'ev_present_unusable',
         institutionId: 'inst_1',
+        evidenceSetIds: ['collection_1'],
         isComplete: true,
         status: 'active',
         usability: { isUsable: false },
@@ -38,6 +41,7 @@ export async function runTests(): Promise<void> {
       {
         id: 'ev_superseded',
         institutionId: 'inst_1',
+        evidenceSetIds: ['collection_1'],
         isComplete: true,
         status: 'superseded',
         supersededByEvidenceItemId: 'ev_current_successor',
@@ -49,6 +53,7 @@ export async function runTests(): Promise<void> {
       {
         id: 'ev_current_successor',
         institutionId: 'inst_1',
+        evidenceSetIds: ['collection_2'],
         isComplete: true,
         status: 'active',
         supersededByEvidenceItemId: null,
@@ -69,12 +74,17 @@ export async function runTests(): Promise<void> {
       },
       async listEvidenceItems(filter: any) {
         if (filter.reviewCycleId === 'cycle_with_usable') {
-          return [evidenceById.get('ev_complete_usable')];
+          return [evidenceById.get('ev_complete_usable')].filter((item) =>
+            filter.evidenceSetId ? item.evidenceSetIds.includes(filter.evidenceSetId) : true,
+          );
         }
         return [];
       },
-      async listEvidenceByNarrativeSection(sectionId: string) {
-        return targetScopedEvidence.get(`narrative-section:${sectionId}`) ?? [];
+      async listEvidenceByNarrativeSection(sectionId: string, filter: any) {
+        const items = targetScopedEvidence.get(`narrative-section:${sectionId}`) ?? [];
+        return items.filter((item) =>
+          filter?.evidenceSetId ? item.evidenceSetIds.includes(filter.evidenceSetId) : true,
+        );
       },
       async listEvidenceByCriterion() {
         return [];
@@ -141,6 +151,7 @@ export async function runTests(): Promise<void> {
     evidenceItemIds: ['ev_complete_usable'],
     readinessPolicy: {
       requiredReadinessLevel: 'usable',
+      requireAnyEvidenceForDecision: true,
       requireCurrentReferencedEvidence: true,
       minimumReferencedUsableEvidenceCount: 1,
       requireCollectionScopedUsableEvidence: true,
@@ -149,6 +160,7 @@ export async function runTests(): Promise<void> {
   });
   assert.equal(sufficientSummary.collectionRequirementSatisfied, true);
   assert.equal(sufficientSummary.collectionUsableEvidenceCount, 1);
+  assert.equal(sufficientSummary.anyEvidenceRequirementSatisfied, true);
   assert.equal(sufficientSummary.isSufficient, true);
 
   const emptyTargetCollectionSummary = await service.evaluateWorkflowEvidenceReadiness({
@@ -161,6 +173,7 @@ export async function runTests(): Promise<void> {
     evidenceItemIds: ['ev_current_successor'],
     readinessPolicy: {
       requiredReadinessLevel: 'usable',
+      requireAnyEvidenceForDecision: true,
       requireCurrentReferencedEvidence: true,
       minimumReferencedUsableEvidenceCount: 1,
       requireCollectionScopedUsableEvidence: true,
@@ -170,5 +183,27 @@ export async function runTests(): Promise<void> {
   assert.equal(emptyTargetCollectionSummary.collectionRequirementSatisfied, false);
   assert.equal(emptyTargetCollectionSummary.collectionContextStatus, 'empty');
   assert.equal(emptyTargetCollectionSummary.isSufficient, false);
+
+  const wrongCollectionSummary = await service.evaluateWorkflowEvidenceReadiness({
+    institutionId: 'inst_1',
+    reviewCycleId: 'cycle_with_usable',
+    evidenceCollectionId: 'collection_2',
+    targetType: 'report-section',
+    targetId: 'section_1',
+    reportSectionId: 'section_1',
+    evidenceItemIds: [],
+    readinessPolicy: {
+      requiredReadinessLevel: 'present',
+      requireAnyEvidenceForDecision: true,
+      requireCurrentReferencedEvidence: false,
+      minimumReferencedUsableEvidenceCount: 0,
+      requireCollectionScopedUsableEvidence: true,
+      minimumCollectionUsableEvidenceCount: 1,
+    },
+  });
+  assert.equal(wrongCollectionSummary.collectionRequirementSatisfied, false);
+  assert.equal(wrongCollectionSummary.collectionUsableEvidenceCount, 0);
+  assert.equal(wrongCollectionSummary.anyEvidenceRequirementSatisfied, false);
+  assert.equal(wrongCollectionSummary.isSufficient, false);
 }
 

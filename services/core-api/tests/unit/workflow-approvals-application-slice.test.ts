@@ -3,17 +3,21 @@ import { EvidenceManagementService } from '../../src/modules/evidence-management
 import { WorkflowEvidenceReadinessService } from '../../src/modules/evidence-management/application/workflow-evidence-readiness-service.js';
 import { InMemoryEvidenceItemRepository } from '../../src/modules/evidence-management/infrastructure/persistence/in-memory-evidence-management-repositories.js';
 import {
+  evidenceReferenceRelationshipType,
+  evidenceReferenceTargetType,
   evidenceSourceType,
   evidenceType,
 } from '../../src/modules/evidence-management/domain/value-objects/evidence-classifications.js';
 import { WorkflowApprovalsService } from '../../src/modules/workflow-approvals/application/workflow-approvals-service.js';
 import {
+  CompleteReviewCycleCommand,
   CreateReviewCycleCommand,
   CreateReviewWorkflowCommand,
   StartReviewCycleCommand,
   TransitionReviewWorkflowStateCommand,
 } from '../../src/modules/workflow-approvals/application/commands/workflow-approvals-commands.js';
 import {
+  GetWorkflowStateQuery,
   GetWorkflowStateForCycleQuery,
   GetWorkflowStateForCycleTargetQuery,
 } from '../../src/modules/workflow-approvals/application/queries/workflow-approvals-queries.js';
@@ -52,6 +56,17 @@ export async function runTests(): Promise<void> {
     evidenceManagement,
   });
 
+  assert.throws(
+    () =>
+      new WorkflowApprovalsService({
+        cycles,
+        workflows,
+        institutions,
+      } as any),
+    ValidationError,
+    'workflow application service should require evidence readiness contract',
+  );
+
   const service = new WorkflowApprovalsService({
     cycles,
     workflows,
@@ -61,8 +76,10 @@ export async function runTests(): Promise<void> {
 
   const createReviewCycle = new CreateReviewCycleCommand(service);
   const startReviewCycle = new StartReviewCycleCommand(service);
+  const completeReviewCycle = new CompleteReviewCycleCommand(service);
   const createReviewWorkflow = new CreateReviewWorkflowCommand(service);
   const transitionReviewWorkflowState = new TransitionReviewWorkflowStateCommand(service);
+  const getWorkflowState = new GetWorkflowStateQuery(service);
   const getWorkflowStateForCycle = new GetWorkflowStateForCycleQuery(service);
   const getWorkflowStateForCycleTarget = new GetWorkflowStateForCycleTargetQuery(service);
 
@@ -83,6 +100,7 @@ export async function runTests(): Promise<void> {
     title: 'Cycle Evidence 1',
     description: 'Initial evidence package',
     reviewCycleId: cycle.id,
+    evidenceSetIds: ['collection_1'],
     evidenceType: evidenceType.NARRATIVE,
     sourceType: evidenceSourceType.MANUAL,
   });
@@ -153,6 +171,29 @@ export async function runTests(): Promise<void> {
     'workflow creation should reject evidenceCollectionId not declared by the ReviewCycle',
   );
 
+  const evidenceFreeWorkflow = await createReviewWorkflow.execute({
+    reviewCycleId: cycle.id,
+    targetType: 'report-section',
+    targetId: 'section_evidence_free',
+    reportSectionId: 'section_evidence_free',
+    evidenceItemIds: [],
+  });
+  await transitionReviewWorkflowState.execute(
+    evidenceFreeWorkflow.id,
+    reviewWorkflowState.IN_REVIEW,
+    workflowActorRole.FACULTY,
+  );
+  await assert.rejects(
+    () =>
+      transitionReviewWorkflowState.execute(
+        evidenceFreeWorkflow.id,
+        reviewWorkflowState.APPROVED,
+        workflowActorRole.REVIEWER,
+      ),
+    ValidationError,
+    'approval should fail when no evidence is provided for governed decision transitions',
+  );
+
   const workflow = await createReviewWorkflow.execute({
     reviewCycleId: cycle.id,
     targetType: 'report-section',
@@ -180,6 +221,7 @@ export async function runTests(): Promise<void> {
     workflowActorRole.FACULTY,
     {
       reason: 'Submitted for review',
+      actorId: 'person_faculty_1',
     },
   );
 
@@ -208,13 +250,27 @@ export async function runTests(): Promise<void> {
   await evidenceManagement.markEvidenceComplete(draftEvidence.id);
   await evidenceManagement.activateEvidenceItem(draftEvidence.id);
 
+  await assert.rejects(
+    () =>
+      transitionReviewWorkflowState.execute(
+        workflow.id,
+        reviewWorkflowState.APPROVED,
+        workflowActorRole.FACULTY,
+        { actorId: 'person_faculty_1' },
+      ),
+    ValidationError,
+    'role restrictions should still block approval when evidence is sufficient',
+  );
+
   const approved = await transitionReviewWorkflowState.execute(
     workflow.id,
     reviewWorkflowState.APPROVED,
     workflowActorRole.REVIEWER,
+    { actorId: 'person_reviewer_1' },
   );
   assert.equal(approved.state, reviewWorkflowState.APPROVED);
   assert.equal(approved.transitionHistory.length, 2);
+  assert.equal(approved.transitionHistory[1].actorId, 'person_reviewer_1');
   assert.equal(approved.transitionHistory[1].evidenceSummary.collectionRequirementSatisfied, true);
 
   await assert.rejects(
@@ -232,11 +288,22 @@ export async function runTests(): Promise<void> {
     workflow.id,
     reviewWorkflowState.SUBMITTED,
     workflowActorRole.ADMIN,
+    { actorId: 'person_admin_1' },
+  );
+
+  const persistedSubmittedWorkflow = await workflows.getById(workflow.id);
+  assert.ok(persistedSubmittedWorkflow);
+  persistedSubmittedWorkflow!.transitionHistory[0].reason = 'tampered reason';
+  await assert.rejects(
+    () => workflows.save(persistedSubmittedWorkflow!),
+    ValidationError,
+    'workflow transition history should be append-only at repository boundary',
   );
 
   const cycleWorkflows = await getWorkflowStateForCycle.execute(cycle.id);
   assert.equal(cycleWorkflows.length, 1);
   assert.equal(cycleWorkflows[0].state, reviewWorkflowState.SUBMITTED);
+  assert.equal(cycleWorkflows[0].transitionHistory[2].actorId, 'person_admin_1');
   assert.equal(cycleWorkflows[0].transitionHistory[2].evidenceSummary.requiredUsableEvidenceCount, 1);
   assert.equal(cycleWorkflows[0].transitionHistory[2].evidenceSummary.isSufficient, true);
 
@@ -249,12 +316,19 @@ export async function runTests(): Promise<void> {
   assert.equal(cycleTargetWorkflow?.id, workflow.id);
   assert.equal(cycleTargetWorkflow?.state, reviewWorkflowState.SUBMITTED);
 
+  const genericCycleWorkflows = await getWorkflowState.execute(cycle.id);
+  assert.equal(genericCycleWorkflows.length, 1);
+
+  const genericCycleTargetState = await getWorkflowState.execute(cycle.id, 'report-section', 'section_2_1');
+  assert.equal(genericCycleTargetState?.id, workflow.id);
+
   const supersededPredecessor = await evidenceManagement.createEvidenceItem({
     id: 'ev_superseded_predecessor',
     institutionId: institution.id,
     title: 'Superseded predecessor',
     description: 'Initial evidence version to be superseded',
     reviewCycleId: cycle.id,
+    evidenceSetIds: ['collection_1'],
     evidenceType: evidenceType.NARRATIVE,
     sourceType: evidenceSourceType.MANUAL,
   });
@@ -266,6 +340,7 @@ export async function runTests(): Promise<void> {
     title: 'Superseding evidence version',
     description: 'Current replacement version',
     reviewCycleId: cycle.id,
+    evidenceSetIds: ['collection_1'],
   });
   await evidenceManagement.markEvidenceComplete(successor.id);
   await evidenceManagement.activateEvidenceItem(successor.id);
@@ -292,6 +367,68 @@ export async function runTests(): Promise<void> {
       ),
     ValidationError,
     'approval should fail when referenced evidence is superseded/non-current',
+  );
+
+  const collectionScopedEvidence = await evidenceManagement.createEvidenceItem({
+    id: 'ev_collection_1',
+    institutionId: institution.id,
+    title: 'Collection-scoped section evidence',
+    description: 'Evidence linked to section and collection for collection-only readiness checks.',
+    reviewCycleId: cycle.id,
+    evidenceSetIds: ['collection_1'],
+    evidenceType: evidenceType.NARRATIVE,
+    sourceType: evidenceSourceType.MANUAL,
+  });
+  await evidenceManagement.addEvidenceReference(collectionScopedEvidence.id, {
+    targetType: evidenceReferenceTargetType.NARRATIVE_SECTION,
+    targetEntityId: 'section_collection_only_ready',
+    relationshipType: evidenceReferenceRelationshipType.INCLUDED_IN,
+    anchorPath: 'section://collection-only-ready',
+  });
+  await evidenceManagement.markEvidenceComplete(collectionScopedEvidence.id);
+  await evidenceManagement.activateEvidenceItem(collectionScopedEvidence.id);
+
+  const collectionScopedWorkflow = await createReviewWorkflow.execute({
+    reviewCycleId: cycle.id,
+    targetType: 'report-section',
+    targetId: 'section_collection_only_ready',
+    reportSectionId: 'section_collection_only_ready',
+    evidenceCollectionId: 'collection_1',
+    evidenceItemIds: [],
+  });
+  await transitionReviewWorkflowState.execute(
+    collectionScopedWorkflow.id,
+    reviewWorkflowState.IN_REVIEW,
+    workflowActorRole.FACULTY,
+  );
+  const collectionApproved = await transitionReviewWorkflowState.execute(
+    collectionScopedWorkflow.id,
+    reviewWorkflowState.APPROVED,
+    workflowActorRole.REVIEWER,
+  );
+  assert.equal(collectionApproved.transitionHistory[1].evidenceSummary.collectionRequirementSatisfied, true);
+  assert.equal(collectionApproved.transitionHistory[1].evidenceSummary.collectionUsableEvidenceCount, 1);
+  assert.equal(collectionApproved.transitionHistory[1].evidenceSummary.anyEvidenceRequirementSatisfied, true);
+
+  const immutableCycle = await createReviewCycle.execute({
+    institutionId: institution.id,
+    name: 'Immutable Completed Cycle',
+    startDate: '2029-01-01',
+    endDate: '2029-12-31',
+    programIds: ['program_immutable'],
+    organizationUnitIds: ['org_immutable'],
+    evidenceSetIds: ['set_immutable'],
+  });
+  await startReviewCycle.execute(immutableCycle.id);
+  await completeReviewCycle.execute(immutableCycle.id);
+
+  const mutatedCompletedCycle = await cycles.getById(immutableCycle.id);
+  assert.ok(mutatedCompletedCycle);
+  mutatedCompletedCycle!.startDate = '2029-02-01';
+  await assert.rejects(
+    () => cycles.save(mutatedCompletedCycle!),
+    ValidationError,
+    'completed review cycles should reject critical field updates at repository boundary',
   );
 }
 

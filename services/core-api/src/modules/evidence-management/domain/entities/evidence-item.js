@@ -25,6 +25,12 @@ const EVIDENCE_STATUS_TRANSITIONS = Object.freeze({
   [evidenceStatus.ARCHIVED]: new Set(),
 });
 
+function normalizeIdList(values = []) {
+  const normalized = [...new Set((values ?? []).filter(Boolean).map((value) => `${value}`.trim()).filter(Boolean))];
+  normalized.sort((left, right) => left.localeCompare(right));
+  return normalized;
+}
+
 export class EvidenceArtifact {
   constructor(props) {
     assertRequired(props.id, 'EvidenceArtifact.id');
@@ -149,6 +155,7 @@ export class EvidenceItem {
     this.versionNumber = props.versionNumber ?? 1;
     this.supersedesEvidenceItemId = props.supersedesEvidenceItemId ?? null;
     this.supersededByEvidenceItemId = props.supersededByEvidenceItemId ?? null;
+    this.evidenceSetIds = normalizeIdList(props.evidenceSetIds ?? []);
     this.reportingPeriodId = props.reportingPeriodId ?? null;
     this.reviewCycleId = props.reviewCycleId ?? null;
     this.artifacts = (props.artifacts ?? []).map((item) =>
@@ -193,6 +200,7 @@ export class EvidenceItem {
       versionNumber: input.versionNumber ?? 1,
       supersedesEvidenceItemId: input.supersedesEvidenceItemId ?? null,
       supersededByEvidenceItemId: null,
+      evidenceSetIds: input.evidenceSetIds ?? [],
       reportingPeriodId: input.reportingPeriodId,
       reviewCycleId: input.reviewCycleId,
       artifacts: input.artifacts ?? [],
@@ -248,6 +256,7 @@ export class EvidenceItem {
       sourceType: this.sourceType,
       reportingPeriodId: input.reportingPeriodId ?? this.reportingPeriodId ?? undefined,
       reviewCycleId: input.reviewCycleId ?? this.reviewCycleId ?? undefined,
+      evidenceSetIds: input.evidenceSetIds ?? this.evidenceSetIds,
       evidenceLineageId: this.evidenceLineageId,
       versionNumber: this.versionNumber + 1,
       supersedesEvidenceItemId: this.id,

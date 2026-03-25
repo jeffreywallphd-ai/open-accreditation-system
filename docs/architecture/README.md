@@ -317,14 +317,13 @@ The following bounded contexts define the target module map for the core platfor
 
 **Purpose**
 
-- governed workflow, submissions, review routing, approvals, exceptions, escalations, and signatures/attestations as applicable
+- governed review-cycle and target-workflow state orchestration, approvals, and transition auditability
 
 **Owns**
 
-- workflow state machines
-- approval assignments and decisions
-- escalation policies
-- deadline and routing orchestration
+- `ReviewCycle` lifecycle and scope invariants
+- `ReviewWorkflow` state machine, role-governed transitions, and transition history
+- evidence-readiness-gated decision transitions (`approved`, `submitted`)
 
 **Does not own**
 
@@ -335,14 +334,14 @@ The following bounded contexts define the target module map for the core platfor
 
 **Purpose**
 
-- narrative sections, report assembly, export preparation, report generation orchestration, and institutional reporting views
+- narrative/report assembly and governed submission-package composition for accreditation review
 
 **Owns**
 
-- narrative composition records
-- report section structures
-- report generation requests
-- export packages governed by workflow state
+- `SubmissionPackage` aggregate with governed item assembly and snapshot/finalization semantics (Phase 4 inner slice)
+- thin API transport for package assembly/retrieval operations aligned to the same use cases
+- narrative composition records and report section structures (planned outer slices)
+- report generation/export orchestration (later slice)
 
 **Does not own**
 
@@ -518,13 +517,13 @@ Disallowed examples:
 
 **Correct**
 
-- `workflow-approvals/application/ApproveSubmission` calls a port to persist an approval decision and emit an audit event.
+- `workflow-approvals/application/WorkflowApprovalsService.transitionWorkflowState` orchestrates readiness evaluation, role policy, and append-only transition persistence.
 - `evidence-management/infrastructure/PostgresEvidenceRepository` implements an `EvidenceRepository` port.
 - `api` maps HTTP payloads into application commands.
 
 **Incorrect**
 
-- `workflow-approvals/api/ApprovalController` directly updates database tables and publishes events.
+- `workflow-approvals/api/ApprovalController` directly updates workflow tables and bypasses evidence-readiness policy evaluation.
 - `evidence-management/domain/EvidenceItem` imports a storage SDK or ORM decorator.
 - `assessment-improvement/application` embeds raw LMS webhook parsing logic.
 

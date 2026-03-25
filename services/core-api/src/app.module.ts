@@ -11,6 +11,7 @@ import { AccreditationFrameworksModule } from './modules/accreditation-framework
 import { CurriculumMappingModule } from './modules/curriculum-mapping/curriculum-mapping.module.js';
 import { EvidenceManagementModule } from './modules/evidence-management/evidence-management.module.js';
 import { WorkflowApprovalsModule } from './modules/workflow-approvals/workflow-approvals.module.js';
+import { NarrativesReportingModule } from './modules/narratives-reporting/narratives-reporting.module.js';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { WorkflowApprovalsModule } from './modules/workflow-approvals/workflow-a
     AccreditationFrameworksModule,
     EvidenceManagementModule,
     WorkflowApprovalsModule,
+    NarrativesReportingModule,
   ],
   providers: [
     {

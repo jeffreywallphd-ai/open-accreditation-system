@@ -122,6 +122,7 @@ export async function runTests(): Promise<void> {
     title: 'Assessment Narrative 2026',
     description: 'Narrative evidence covering assessment outcomes.',
     reviewCycleId: 'cycle_2026',
+    evidenceSetIds: ['set_main'],
     evidenceType: evidenceType.NARRATIVE,
     sourceType: evidenceSourceType.MANUAL,
   });
@@ -191,6 +192,7 @@ export async function runTests(): Promise<void> {
     title: 'Integration Metric Upload',
     description: 'Metric evidence uploaded from assessment export.',
     reportingPeriodId: 'period_2026',
+    evidenceSetIds: ['set_main'],
     evidenceType: evidenceType.METRIC,
     sourceType: evidenceSourceType.UPLOAD,
   });
@@ -283,6 +285,7 @@ export async function runTests(): Promise<void> {
     title: 'Integration Metric Upload - Successor v2',
     description: 'Superseding metric evidence item.',
     reviewCycleId: 'cycle_2027',
+    evidenceSetIds: ['set_main'],
   });
   await attachEvidenceArtifact.execute(successor.id, {
     artifactName: 'metrics-v2.csv',
@@ -386,6 +389,15 @@ export async function runTests(): Promise<void> {
   const usableEvidence = await service.listEvidenceItems({ institutionId, isUsable: true, versionState: 'current' });
   assert.ok(usableEvidence.length >= 2);
   assert.ok(usableEvidence.every((item) => item.usability.isUsable === true));
+  assert.ok(usableEvidence.every((item) => item.evidenceSetIds.includes('set_main')));
+
+  const filteredBySet = await service.listEvidenceItems({
+    institutionId,
+    evidenceSetId: 'set_main',
+    versionState: 'all',
+  });
+  assert.ok(filteredBySet.length >= 3);
+  assert.ok(filteredBySet.every((item) => item.evidenceSetIds.includes('set_main')));
 
   await assert.rejects(
     () =>

@@ -33,6 +33,13 @@ export async function runTests(): Promise<void> {
     evidenceSetIds: ['set_1'],
   });
   assert.equal(cycle.status, reviewCycleStatus.NOT_STARTED);
+  assert.equal(cycle.scopeKey.includes('inst_1'), true);
+
+  assert.throws(
+    () => cycle.complete(),
+    ValidationError,
+    'ReviewCycle should reject invalid lifecycle transitions',
+  );
 
   cycle.start();
   assert.equal(cycle.status, reviewCycleStatus.ACTIVE);
@@ -53,41 +60,45 @@ export async function runTests(): Promise<void> {
   assert.equal(workflow.state, reviewWorkflowState.DRAFT);
   assert.equal(workflow.transitionHistory.length, 0);
 
-  workflow.transitionTo(reviewWorkflowState.IN_REVIEW, workflowActorRole.FACULTY, {
+  workflow.submitForReview(workflowActorRole.FACULTY, {
     reason: 'Ready for formal review',
   });
   assert.equal(workflow.state, reviewWorkflowState.IN_REVIEW);
   assert.equal(workflow.transitionHistory.length, 1);
   assert.equal(workflow.transitionHistory[0].sequence, 1);
 
-  workflow.transitionTo(reviewWorkflowState.REVISION_REQUIRED, workflowActorRole.REVIEWER, {
+  workflow.requestRevision(workflowActorRole.REVIEWER, {
     reason: 'Need stronger evidence alignment',
   });
   assert.equal(workflow.state, reviewWorkflowState.REVISION_REQUIRED);
-  workflow.transitionTo(reviewWorkflowState.DRAFT, workflowActorRole.FACULTY, {
+  workflow.returnToDraft(workflowActorRole.FACULTY, {
     reason: 'Preparing revision',
   });
-  workflow.transitionTo(reviewWorkflowState.IN_REVIEW, workflowActorRole.FACULTY);
+  workflow.submitForReview(workflowActorRole.FACULTY);
 
   assert.throws(
     () => workflow.transitionTo(reviewWorkflowState.SUBMITTED, workflowActorRole.ADMIN),
     ValidationError,
     'workflow should reject invalid state jumps',
   );
+  assert.equal(workflow.transitionHistory.length, 4);
 
   assert.throws(
-    () => workflow.transitionTo(reviewWorkflowState.APPROVED, workflowActorRole.FACULTY),
+    () => workflow.approve(workflowActorRole.FACULTY),
     ValidationError,
     'role policy should reject unauthorized transitions',
   );
+  assert.equal(workflow.transitionHistory.length, 4);
 
   assert.throws(
-    () => workflow.transitionTo(reviewWorkflowState.APPROVED, workflowActorRole.REVIEWER),
+    () => workflow.approve(workflowActorRole.REVIEWER),
     ValidationError,
     'approval should fail when required evidence is insufficient',
   );
+  assert.equal(workflow.transitionHistory.length, 4);
 
-  workflow.transitionTo(reviewWorkflowState.APPROVED, workflowActorRole.REVIEWER, {
+  workflow.approve(workflowActorRole.REVIEWER, {
+    actorId: 'person_reviewer_1',
     evidenceSummary: {
       requiredCount: 1,
       foundCount: 1,
@@ -99,14 +110,17 @@ export async function runTests(): Promise<void> {
     },
   });
   assert.equal(workflow.state, reviewWorkflowState.APPROVED);
+  assert.equal(workflow.transitionHistory[4].actorId, 'person_reviewer_1');
 
   assert.throws(
-    () => workflow.transitionTo(reviewWorkflowState.SUBMITTED, workflowActorRole.REVIEWER),
+    () => workflow.submitFinal(workflowActorRole.REVIEWER),
     ValidationError,
     'submitted transition is restricted to admin role',
   );
+  assert.equal(workflow.transitionHistory.length, 5);
 
-  workflow.transitionTo(reviewWorkflowState.SUBMITTED, workflowActorRole.ADMIN, {
+  workflow.submitFinal(workflowActorRole.ADMIN, {
+    actorId: 'person_admin_1',
     evidenceSummary: {
       requiredCount: 1,
       foundCount: 1,
@@ -119,6 +133,7 @@ export async function runTests(): Promise<void> {
   });
   assert.equal(workflow.state, reviewWorkflowState.SUBMITTED);
   assert.equal(workflow.transitionHistory[workflow.transitionHistory.length - 1].sequence, 5);
+  assert.equal(workflow.transitionHistory[workflow.transitionHistory.length - 1].actorId, 'person_admin_1');
 
   assert.throws(
     () =>
@@ -163,6 +178,7 @@ export async function runTests(): Promise<void> {
       evidenceItemIds: ['evidence_1'],
     },
   );
+  assert.equal(submissionPolicy.requireAnyEvidenceForDecision, true);
   assert.equal(submissionPolicy.requireCollectionScopedUsableEvidence, false);
 
   const collectionOnlySubmissionPolicy = buildEvidenceReadinessPolicyForTransition(
@@ -176,5 +192,22 @@ export async function runTests(): Promise<void> {
   );
   assert.equal(collectionOnlySubmissionPolicy.requireCollectionScopedUsableEvidence, true);
   assert.equal(collectionOnlySubmissionPolicy.minimumCollectionUsableEvidenceCount, 1);
+  assert.equal(collectionOnlySubmissionPolicy.requireAnyEvidenceForDecision, true);
+
+  const collectionOnlyWorkflow = ReviewWorkflow.create({
+    reviewCycleId: 'cycle_1',
+    institutionId: 'inst_1',
+    targetType: 'report-section',
+    targetId: 'section_collection_only',
+    reportSectionId: 'section_collection_only',
+    evidenceCollectionId: 'collection_1',
+    evidenceItemIds: [],
+  });
+  collectionOnlyWorkflow.submitForReview(workflowActorRole.FACULTY);
+  assert.throws(
+    () => collectionOnlyWorkflow.approve(workflowActorRole.REVIEWER),
+    ValidationError,
+    'collection-only workflow should still require evidence readiness summary for approval',
+  );
 }
 

@@ -115,6 +115,11 @@ export function evidenceItemMatchesFilter(item, filter = {}) {
   if (!matchesExact(item.reportingPeriodId, filter.reportingPeriodId)) {
     return false;
   }
+  if (filter.evidenceSetId !== undefined && filter.evidenceSetId !== null) {
+    if (!(item.evidenceSetIds ?? []).includes(filter.evidenceSetId)) {
+      return false;
+    }
+  }
   if (!matchesVersionState(item, filter)) {
     return false;
   }
