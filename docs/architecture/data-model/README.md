@@ -1082,6 +1082,9 @@ Implementation note (current `core-api` slice): `narratives-reporting` now inclu
 - `NarrativeSectionPackageLink` is first-class and governed:
   - links must target package-item IDs in the narrative's anchored `SubmissionPackage`
   - `linkType=governing-section` requires a governed-section package item with section-type compatibility.
+  - `linkType=governing-section` requires matching `sectionKey` alignment and is limited to one governing link per section.
+  - `linkType=included-item` cannot target governed-section package items.
+- Narrative package-link persistence hardens narrative-level uniqueness (`narrative_id + submission_package_item_id`) and enforces section-ownership alignment for each link row.
 - Finalized narratives are immutable in aggregate behavior and repository save boundaries.
 - Phase 5 foundation validation now includes domain, application, and persistence round-trip coverage for narrative lifecycle semantics, section ordering/hierarchy invariants, evidence/package linkage validation, and finalized-state immutability hardening.
 

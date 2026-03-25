@@ -139,6 +139,12 @@ export async function runTests(): Promise<void> {
     content: 'Draft narrative text',
   });
   const sectionId = withNarrativeSection.sections[0].id;
+  const withMismatchedSection = await service.addNarrativeSection(narrative.id, {
+    sectionType: narrativeSectionType.REPORT_SECTION,
+    sectionKey: 'report-sec-mismatch',
+    title: 'Mismatched section',
+  });
+  const mismatchSectionId = withMismatchedSection.sections[1].id;
 
   const withEvidence = await service.linkNarrativeSectionEvidence(narrative.id, sectionId, {
     evidenceItemId: evidence.id,
@@ -151,6 +157,26 @@ export async function runTests(): Promise<void> {
     linkType: narrativePackageLinkType.GOVERNING_SECTION,
   });
   assert.equal(withPackageLink.sections[0].packageLinks.length, 1);
+
+  await assert.rejects(
+    () =>
+      service.linkNarrativeSectionToPackageItem(narrative.id, mismatchSectionId, {
+        submissionPackageItemId: packageSectionItemId,
+        linkType: narrativePackageLinkType.GOVERNING_SECTION,
+      }),
+    ValidationError,
+    'governing-section links should enforce sectionKey alignment',
+  );
+
+  await assert.rejects(
+    () =>
+      service.linkNarrativeSectionToPackageItem(narrative.id, sectionId, {
+        submissionPackageItemId: packageSectionItemId,
+        linkType: narrativePackageLinkType.INCLUDED_ITEM,
+      }),
+    ValidationError,
+    'included-item links should reject governed-section package targets',
+  );
 
   await assert.rejects(
     () =>

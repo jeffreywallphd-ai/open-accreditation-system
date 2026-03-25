@@ -14,6 +14,7 @@ import {
   evidenceSourceType,
   evidenceType,
 } from '../../src/modules/evidence-management/domain/value-objects/evidence-classifications.js';
+import { narrativeEvidenceLinkType } from '../../src/modules/narratives-reporting/domain/value-objects/narrative-statuses.js';
 
 function createTempDbPath(): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'core-api-narratives-http-'));
@@ -195,6 +196,81 @@ export async function runTests(): Promise<void> {
     assert.equal(contextResponse.json().data.assembly.sectionTree.length, 1);
     assert.equal(contextResponse.json().data.assembly.assemblyRoleCounts.governedSection, 1);
     assert.equal(contextResponse.json().data.assembly.assemblyRoleCounts.evidenceInclusion, 1);
+
+    const createNarrative = await app.inject({
+      method: 'POST',
+      url: '/narratives-reporting/narratives',
+      payload: {
+        submissionPackageId: submissionPackage.id,
+        title: 'HTTP narrative',
+      },
+    });
+    assert.equal(createNarrative.statusCode, 201);
+    const narrative = createNarrative.json().data;
+
+    const addNarrativeSection = await app.inject({
+      method: 'POST',
+      url: `/narratives-reporting/narratives/${narrative.id}/sections`,
+      payload: {
+        sectionType: 'report-section',
+        sectionKey: 'http-sec-1',
+        title: 'Narrative section one',
+      },
+    });
+    assert.equal(addNarrativeSection.statusCode, 201);
+    const narrativeSectionId = addNarrativeSection.json().data.sections[0].id;
+
+    const linkNarrativeEvidence = await app.inject({
+      method: 'POST',
+      url: `/narratives-reporting/narratives/${narrative.id}/sections/${narrativeSectionId}/evidence-links`,
+      payload: {
+        evidenceItemId: evidenceItem.id,
+        relationshipType: narrativeEvidenceLinkType.PRIMARY_SUPPORT,
+      },
+    });
+    assert.equal(linkNarrativeEvidence.statusCode, 201);
+    assert.equal(linkNarrativeEvidence.json().data.sections[0].evidenceLinks.length, 1);
+
+    const linkNarrativeSectionToPackageItem = await app.inject({
+      method: 'POST',
+      url: `/narratives-reporting/narratives/${narrative.id}/sections/${narrativeSectionId}/package-links`,
+      payload: {
+        submissionPackageItemId: sectionItemId,
+        linkType: 'governing-section',
+      },
+    });
+    assert.equal(linkNarrativeSectionToPackageItem.statusCode, 201);
+
+    const mismatchGoverningLink = await app.inject({
+      method: 'POST',
+      url: `/narratives-reporting/narratives/${narrative.id}/sections/${narrativeSectionId}/package-links`,
+      payload: {
+        submissionPackageItemId: evidenceItemPackageId,
+        linkType: 'governing-section',
+      },
+    });
+    assert.equal(mismatchGoverningLink.statusCode, 400);
+
+    const submitNarrative = await app.inject({
+      method: 'POST',
+      url: `/narratives-reporting/narratives/${narrative.id}/submit-for-review`,
+    });
+    assert.equal(submitNarrative.statusCode, 201);
+    assert.equal(submitNarrative.json().data.status, 'in-review');
+
+    const finalizeNarrative = await app.inject({
+      method: 'POST',
+      url: `/narratives-reporting/narratives/${narrative.id}/finalize`,
+    });
+    assert.equal(finalizeNarrative.statusCode, 201);
+    assert.equal(finalizeNarrative.json().data.status, 'finalized');
+
+    const listNarratives = await app.inject({
+      method: 'GET',
+      url: '/narratives-reporting/narratives?status=finalized',
+    });
+    assert.equal(listNarratives.statusCode, 200);
+    assert.equal(listNarratives.json().data.length, 1);
 
     const finalizePackage = await app.inject({
       method: 'POST',

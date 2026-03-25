@@ -54,6 +54,16 @@ export async function runTests(): Promise<void> {
   });
   assert.equal(mission.packageLinks.length, 1);
 
+  assert.throws(
+    () =>
+      narrative.linkSectionToPackageItem(mission.id, {
+        submissionPackageItemId: 'pkg_item_2',
+        linkType: narrativePackageLinkType.GOVERNING_SECTION,
+      }),
+    ValidationError,
+    'section should allow only one governing-section link',
+  );
+
   narrative.reorderSection(assurance.id, 2);
   assert.equal(narrative.sections[1].id, assurance.id);
 

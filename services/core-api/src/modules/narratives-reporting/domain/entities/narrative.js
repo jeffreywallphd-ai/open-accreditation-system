@@ -2,6 +2,7 @@ import { assertRequired, assertString } from '../../../shared/kernel/assertions.
 import { ValidationError } from '../../../shared/kernel/errors.js';
 import { createId, nowIso } from '../../../shared/kernel/identity.js';
 import {
+  narrativePackageLinkType,
   narrativeStatus,
   parseNarrativeEvidenceLinkType,
   parseNarrativePackageLinkType,
@@ -221,6 +222,12 @@ export class NarrativeSection {
         `NarrativeSection package link already exists for submissionPackageItemId ${link.submissionPackageItemId}`,
       );
     }
+    if (
+      link.linkType === narrativePackageLinkType.GOVERNING_SECTION &&
+      this.packageLinks.some((entry) => entry.linkType === narrativePackageLinkType.GOVERNING_SECTION)
+    ) {
+      throw new ValidationError('NarrativeSection may have at most one governing-section package link');
+    }
     this.packageLinks.push(link);
     this.updatedAt = nowIso();
     this.#assertLinkIntegrity();
@@ -254,6 +261,7 @@ export class NarrativeSection {
     }
 
     const packageLinkIds = new Set();
+    let governingLinkCount = 0;
     for (const link of this.packageLinks) {
       if (link.sectionId !== this.id) {
         throw new ValidationError('NarrativeSectionPackageLink.sectionId must match owning section id');
@@ -261,7 +269,13 @@ export class NarrativeSection {
       if (packageLinkIds.has(link.id)) {
         throw new ValidationError(`NarrativeSectionPackageLink.id must be unique within section: ${link.id}`);
       }
+      if (link.linkType === narrativePackageLinkType.GOVERNING_SECTION) {
+        governingLinkCount += 1;
+      }
       packageLinkIds.add(link.id);
+    }
+    if (governingLinkCount > 1) {
+      throw new ValidationError('NarrativeSection may have at most one governing-section package link');
     }
   }
 }

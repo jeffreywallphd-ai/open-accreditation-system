@@ -361,6 +361,9 @@ Defined contexts:
   - Narrative application orchestration validates linkage semantics through existing contracts:
     - evidence links validate presence/scope through `evaluateWorkflowEvidenceReadiness`
     - package links validate target membership/role compatibility within the anchored `SubmissionPackage`
+    - governing-section package links additionally require explicit `sectionKey` alignment and are limited to one governing link per narrative section
+    - included-item package links cannot target governed-section package items (avoids ambiguous dual semantics)
+  - Narrative package-link persistence now hardens narrative-level uniqueness (`narrative_id + submission_package_item_id`) and trigger-enforced section ownership alignment at the storage boundary.
   - Persistence coverage now includes durable narrative + section + linkage round-trip reconstruction and finalized-state immutability checks.
 
 ### `faculty-intelligence`

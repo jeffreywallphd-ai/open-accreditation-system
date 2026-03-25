@@ -672,12 +672,13 @@ export class SqliteNarrativeRepository extends NarrativeRepository {
         for (const packageLink of section.packageLinks) {
           this.database.run(
             `INSERT INTO narratives_narrative_section_package_links
-              (id, section_id, submission_package_item_id, link_type, created_at)
+              (id, section_id, narrative_id, submission_package_item_id, link_type, created_at)
              VALUES
-              (@id, @sectionId, @submissionPackageItemId, @linkType, @createdAt)`,
+              (@id, @sectionId, @narrativeId, @submissionPackageItemId, @linkType, @createdAt)`,
             {
               id: packageLink.id,
               sectionId: packageLink.sectionId,
+              narrativeId: section.narrativeId,
               submissionPackageItemId: packageLink.submissionPackageItemId,
               linkType: packageLink.linkType,
               createdAt: packageLink.createdAt,
