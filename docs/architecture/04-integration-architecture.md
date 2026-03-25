@@ -69,9 +69,9 @@ Not all integrations are external-system integrations. For cross-context orchest
 
 - `evidence-management` -> `WorkflowEvidenceReadinessContract.evaluateWorkflowEvidenceReadiness`
 - consumer: `workflow-approvals` application layer (`WorkflowApprovalsService`)
-- `workflow-approvals` -> cycle/workflow lookup contracts consumed by `narratives-reporting` (`NarrativesReportingService`) for governed package-item eligibility
+- `workflow-approvals` -> cycle/workflow lookup contracts consumed by `narratives-reporting` (`SubmissionPackageApplicationService`) for governed package-item eligibility
 - `evidence-management` -> `WorkflowEvidenceReadinessContract.evaluateWorkflowEvidenceReadiness`
-- consumer: `narratives-reporting` application layer (`NarrativesReportingService`) for submission-package evidence linkage and finalization checks
+- consumer: `narratives-reporting` application layer (`SubmissionPackageApplicationService`, `NarrativeApplicationService`) for submission-package and narrative evidence linkage/readiness checks
 
 This contract keeps workflow decisions decoupled from evidence persistence internals while still enforcing evidence presence, usability, completeness, current-vs-superseded constraints, and cycle/target-scoped collection readiness constraints.
 
@@ -86,6 +86,7 @@ Current Phase 3/Phase 4 inner-layer details:
 - package finalization uses stricter readiness policy (`usable` + current referenced evidence) while checkpoint snapshots may use presence-level validation
 - narratives-reporting now exposes a thin HTTP transport layer over these use cases without moving workflow/evidence rules into controllers
 - package context retrieval now returns section-aware ordered assembly projections (including root section order and section tree) so downstream report assembly consumers can remain outer-layer/read-only
+- narrative context retrieval now returns section-level evidence/package linkage projections through application-layer orchestration (`getNarrativeWithSectionContext`)
 
 ## Data Flow Pattern
 

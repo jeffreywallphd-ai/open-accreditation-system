@@ -220,6 +220,29 @@ export async function runTests(): Promise<void> {
     assert.equal(addNarrativeSection.statusCode, 201);
     const narrativeSectionId = addNarrativeSection.json().data.sections[0].id;
 
+    const addSecondNarrativeSection = await app.inject({
+      method: 'POST',
+      url: `/narratives-reporting/narratives/${narrative.id}/sections`,
+      payload: {
+        sectionType: 'narrative-section',
+        sectionKey: 'http-sec-1-child',
+        parentSectionKey: 'http-sec-1',
+        title: 'Narrative section two',
+      },
+    });
+    assert.equal(addSecondNarrativeSection.statusCode, 201);
+    const secondNarrativeSectionId = addSecondNarrativeSection.json().data.sections[1].id;
+
+    const updateNarrativeSection = await app.inject({
+      method: 'POST',
+      url: `/narratives-reporting/narratives/${narrative.id}/sections/${narrativeSectionId}`,
+      payload: {
+        content: 'Updated narrative content',
+      },
+    });
+    assert.equal(updateNarrativeSection.statusCode, 201);
+    assert.equal(updateNarrativeSection.json().data.sections[0].content, 'Updated narrative content');
+
     const linkNarrativeEvidence = await app.inject({
       method: 'POST',
       url: `/narratives-reporting/narratives/${narrative.id}/sections/${narrativeSectionId}/evidence-links`,
@@ -241,6 +264,22 @@ export async function runTests(): Promise<void> {
     });
     assert.equal(linkNarrativeSectionToPackageItem.statusCode, 201);
 
+    const reorderNarrativeSection = await app.inject({
+      method: 'POST',
+      url: `/narratives-reporting/narratives/${narrative.id}/sections/${secondNarrativeSectionId}/reorder`,
+      payload: {
+        newPosition: 2,
+      },
+    });
+    assert.equal(reorderNarrativeSection.statusCode, 201);
+
+    const removeChildNarrativeSection = await app.inject({
+      method: 'DELETE',
+      url: `/narratives-reporting/narratives/${narrative.id}/sections/${secondNarrativeSectionId}`,
+    });
+    assert.equal(removeChildNarrativeSection.statusCode, 200);
+    assert.equal(removeChildNarrativeSection.json().data.sections.length, 1);
+
     const mismatchGoverningLink = await app.inject({
       method: 'POST',
       url: `/narratives-reporting/narratives/${narrative.id}/sections/${narrativeSectionId}/package-links`,
@@ -250,6 +289,15 @@ export async function runTests(): Promise<void> {
       },
     });
     assert.equal(mismatchGoverningLink.statusCode, 400);
+
+    const narrativeContext = await app.inject({
+      method: 'GET',
+      url: `/narratives-reporting/narratives/${narrative.id}/context`,
+    });
+    assert.equal(narrativeContext.statusCode, 200);
+    assert.equal(narrativeContext.json().data.sectionContext.length, 1);
+    assert.equal(narrativeContext.json().data.sectionContext[0].packageLinks.length, 1);
+    assert.equal(narrativeContext.json().data.sectionContext[0].evidenceSummary.missingEvidenceItemIds.length, 0);
 
     const submitNarrative = await app.inject({
       method: 'POST',

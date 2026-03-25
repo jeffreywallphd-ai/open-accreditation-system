@@ -38,6 +38,16 @@ export class GetNarrativeByIdQuery {
   }
 }
 
+export class GetNarrativeWithContextQuery {
+  constructor(service) {
+    this.service = service;
+  }
+
+  async execute(id) {
+    return this.service.getNarrativeWithSectionContext(id);
+  }
+}
+
 export class ListNarrativesQuery {
   constructor(service) {
     this.service = service;

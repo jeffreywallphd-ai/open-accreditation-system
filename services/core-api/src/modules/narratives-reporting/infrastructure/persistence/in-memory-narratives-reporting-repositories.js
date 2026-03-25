@@ -297,6 +297,24 @@ export class InMemoryNarrativeRepository extends NarrativeRepository {
     return stored ? Narrative.rehydrate(structuredClone(stored)) : null;
   }
 
+  async getSectionById(sectionId) {
+    for (const stored of this.narratives.values()) {
+      const narrative = Narrative.rehydrate(structuredClone(stored));
+      const section = narrative.sections.find((entry) => entry.id === sectionId);
+      if (!section) {
+        continue;
+      }
+      return {
+        ...structuredClone(section),
+        narrativeId: narrative.id,
+        institutionId: narrative.institutionId,
+        reviewCycleId: narrative.reviewCycleId,
+        submissionPackageId: narrative.submissionPackageId,
+      };
+    }
+    return null;
+  }
+
   #assertIdentityUnchanged(existing, next) {
     if (
       existing.institutionId !== next.institutionId ||
