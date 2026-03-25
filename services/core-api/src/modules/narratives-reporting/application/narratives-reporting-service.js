@@ -5,13 +5,12 @@ export class NarrativesReportingService {
     this.submissionPackageService = deps.submissionPackageService;
     this.narrativeService = deps.narrativeService;
 
-    if (!this.submissionPackageService || !this.narrativeService) {
-      throw new ValidationError('NarrativesReportingService requires submissionPackageService and narrativeService');
+    if (!this.submissionPackageService || typeof this.submissionPackageService.createSubmissionPackage !== 'function') {
+      throw new ValidationError('NarrativesReportingService requires submissionPackageService');
     }
-
-    // Compatibility facade for legacy consumers that still resolve NARR_SERVICE.
-    this.narratives = this.narrativeService.narratives;
-    this.submissionPackages = this.submissionPackageService.submissionPackages;
+    if (!this.narrativeService || typeof this.narrativeService.createNarrative !== 'function') {
+      throw new ValidationError('NarrativesReportingService requires narrativeService');
+    }
   }
 
   async createSubmissionPackage(input) {

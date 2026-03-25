@@ -6,7 +6,7 @@ import { createCoreApiApp } from '../../src/bootstrap/create-core-api-app.js';
 import { ORG_SERVICE } from '../../src/modules/organization-registry/organization-registry.module.js';
 import { WF_SERVICE } from '../../src/modules/workflow-approvals/workflow-approvals.module.js';
 import { EVID_SERVICE } from '../../src/modules/evidence-management/evidence-management.module.js';
-import { NARR_APPLICATION_TOKENS } from '../../src/modules/narratives-reporting/narratives-reporting.module.js';
+import { NARR_APPLICATION_SERVICE_TOKENS } from '../../src/modules/narratives-reporting/narratives-reporting.module.js';
 import {
   reviewWorkflowState,
   workflowActorRole,
@@ -33,7 +33,7 @@ export async function runTests(): Promise<void> {
     const org = app.get(ORG_SERVICE);
     const workflow = app.get(WF_SERVICE);
     const evidence = app.get(EVID_SERVICE);
-    const submissionPackages = app.get(NARR_APPLICATION_TOKENS.submissionPackages);
+    const submissionPackages = app.get(NARR_APPLICATION_SERVICE_TOKENS.submissionPackageService);
 
     const institution = await org.createInstitution({
       name: 'Narratives Persistence University',
@@ -136,7 +136,7 @@ export async function runTests(): Promise<void> {
 
   const secondApp = await createCoreApiApp({ port: 0, databasePath });
   try {
-    const submissionPackages = secondApp.get(NARR_APPLICATION_TOKENS.submissionPackages);
+    const submissionPackages = secondApp.get(NARR_APPLICATION_SERVICE_TOKENS.submissionPackageService);
 
     const restored = await submissionPackages.getSubmissionPackageById(packageId);
     assert.ok(restored);

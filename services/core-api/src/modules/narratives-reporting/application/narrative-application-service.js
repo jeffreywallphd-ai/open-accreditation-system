@@ -6,6 +6,7 @@ import {
   narrativeSectionType,
 } from '../domain/value-objects/narrative-statuses.js';
 import { submissionPackageItemAssemblyRole } from '../domain/value-objects/submission-package-statuses.js';
+import { buildPresenceOnlyReadinessPolicy } from './internal/evidence-readiness-policy.js';
 
 function normalizeSectionEvidenceItemIds(section) {
   return [...new Set((section.evidenceLinks ?? []).map((link) => link.evidenceItemId).filter(Boolean))];
@@ -200,14 +201,7 @@ export class NarrativeApplicationService {
           targetId: section.sectionKey,
           reportSectionId: section.sectionType === narrativeSectionType.REPORT_SECTION ? section.sectionKey : null,
           evidenceItemIds,
-          readinessPolicy: {
-            requiredReadinessLevel: 'present',
-            requireAnyEvidenceForDecision: false,
-            requireCurrentReferencedEvidence: false,
-            requireCollectionScopedUsableEvidence: false,
-            minimumReferencedUsableEvidenceCount: 0,
-            minimumCollectionUsableEvidenceCount: 0,
-          },
+          readinessPolicy: buildPresenceOnlyReadinessPolicy(),
         })
         : null;
 
@@ -275,14 +269,7 @@ export class NarrativeApplicationService {
       targetId: section.sectionKey,
       reportSectionId: section.sectionType === narrativeSectionType.REPORT_SECTION ? section.sectionKey : null,
       evidenceItemIds: [evidenceItemId],
-      readinessPolicy: {
-        requiredReadinessLevel: 'present',
-        requireAnyEvidenceForDecision: false,
-        requireCurrentReferencedEvidence: false,
-        requireCollectionScopedUsableEvidence: false,
-        minimumReferencedUsableEvidenceCount: 0,
-        minimumCollectionUsableEvidenceCount: 0,
-      },
+      readinessPolicy: buildPresenceOnlyReadinessPolicy(),
     });
 
     if (readiness.missingEvidenceItemIds.length > 0) {

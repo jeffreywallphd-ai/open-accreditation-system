@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/http/zod-validation.pipe.js';
-import { NARR_APPLICATION_TOKENS } from '../narratives-reporting.module.js';
+import { NARR_APPLICATION_SERVICE_TOKENS } from '../narratives-reporting.module.js';
 import {
   NARRATIVE_EVIDENCE_LINK_TYPE_VALUES,
   NARRATIVE_PACKAGE_LINK_TYPE_VALUES,
@@ -79,7 +79,7 @@ const linkNarrativeSectionPackageItemSchema = z.object({
 @Controller('narratives-reporting/narratives')
 export class NarrativesController {
   constructor(
-    @Inject(NARR_APPLICATION_TOKENS.narratives) private readonly narratives,
+    @Inject(NARR_APPLICATION_SERVICE_TOKENS.narrativeService) private readonly narratives,
   ) {}
 
   @Post()

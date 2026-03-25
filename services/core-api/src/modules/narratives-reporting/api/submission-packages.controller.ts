@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/http/zod-validation.pipe.js';
-import { NARR_APPLICATION_TOKENS } from '../narratives-reporting.module.js';
+import { NARR_APPLICATION_SERVICE_TOKENS } from '../narratives-reporting.module.js';
 import {
   SUBMISSION_PACKAGE_ITEM_ASSEMBLY_ROLE_VALUES,
   SUBMISSION_PACKAGE_ITEM_TYPE_VALUES,
@@ -68,7 +68,7 @@ const finalizePackageSchema = z.object({
 @Controller('narratives-reporting/submission-packages')
 export class SubmissionPackagesController {
   constructor(
-    @Inject(NARR_APPLICATION_TOKENS.submissionPackages) private readonly submissionPackages,
+    @Inject(NARR_APPLICATION_SERVICE_TOKENS.submissionPackageService) private readonly submissionPackages,
   ) {}
 
   @Post()

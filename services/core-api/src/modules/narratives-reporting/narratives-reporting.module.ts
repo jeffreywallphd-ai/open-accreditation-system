@@ -22,9 +22,15 @@ export const NARR_REPOSITORY_TOKENS = {
   workflowContracts: Symbol('NARR_WORKFLOW_CONTRACTS'),
 };
 
+export const NARR_APPLICATION_SERVICE_TOKENS = {
+  submissionPackageService: Symbol('NARR_SUBMISSION_PACKAGE_APPLICATION_SERVICE'),
+  narrativeService: Symbol('NARR_NARRATIVE_APPLICATION_SERVICE'),
+};
+
+// Backward-compatible aliases for existing imports.
 export const NARR_APPLICATION_TOKENS = {
-  submissionPackages: Symbol('NARR_SUBMISSION_PACKAGE_APPLICATION_SERVICE'),
-  narratives: Symbol('NARR_NARRATIVE_APPLICATION_SERVICE'),
+  submissionPackages: NARR_APPLICATION_SERVICE_TOKENS.submissionPackageService,
+  narratives: NARR_APPLICATION_SERVICE_TOKENS.narrativeService,
 };
 
 export const NARR_SERVICE = Symbol('NARR_SERVICE');
@@ -49,7 +55,7 @@ export const NARR_SERVICE = Symbol('NARR_SERVICE');
       useFactory: (database) => new SqliteNarrativeRepository(database),
     },
     {
-      provide: NARR_APPLICATION_TOKENS.submissionPackages,
+      provide: NARR_APPLICATION_SERVICE_TOKENS.submissionPackageService,
       inject: [
         NARR_REPOSITORY_TOKENS.submissionPackages,
         NARR_REPOSITORY_TOKENS.workflowContracts,
@@ -64,7 +70,7 @@ export const NARR_SERVICE = Symbol('NARR_SERVICE');
         }),
     },
     {
-      provide: NARR_APPLICATION_TOKENS.narratives,
+      provide: NARR_APPLICATION_SERVICE_TOKENS.narrativeService,
       inject: [NARR_REPOSITORY_TOKENS.narratives, NARR_REPOSITORY_TOKENS.submissionPackages, EVID_WORKFLOW_READINESS],
       useFactory: (narratives, submissionPackages, evidenceReadiness) =>
         new NarrativeApplicationService({
@@ -75,7 +81,10 @@ export const NARR_SERVICE = Symbol('NARR_SERVICE');
     },
     {
       provide: NARR_SERVICE,
-      inject: [NARR_APPLICATION_TOKENS.submissionPackages, NARR_APPLICATION_TOKENS.narratives],
+      inject: [
+        NARR_APPLICATION_SERVICE_TOKENS.submissionPackageService,
+        NARR_APPLICATION_SERVICE_TOKENS.narrativeService,
+      ],
       useFactory: (submissionPackageService, narrativeService) =>
         new NarrativesReportingService({
           submissionPackageService,
@@ -83,6 +92,10 @@ export const NARR_SERVICE = Symbol('NARR_SERVICE');
         }),
     },
   ],
-  exports: [NARR_SERVICE, NARR_APPLICATION_TOKENS.submissionPackages, NARR_APPLICATION_TOKENS.narratives],
+  exports: [
+    NARR_SERVICE,
+    NARR_APPLICATION_SERVICE_TOKENS.submissionPackageService,
+    NARR_APPLICATION_SERVICE_TOKENS.narrativeService,
+  ],
 })
 export class NarrativesReportingModule {}

@@ -356,6 +356,8 @@ Defined contexts:
     - `SubmissionPackageApplicationService` owns package-item/snapshot orchestration
     - `NarrativeApplicationService` owns narrative/section/linkage orchestration
   - Compatibility facade (`NarrativesReportingService`) remains available for legacy consumers, but it now composes the dedicated services only (no mixed fallback orchestration paths).
+  - Module/provider wiring now exposes explicit application-service tokens (`submissionPackageService`, `narrativeService`), with legacy aggregate token aliases preserved for compatibility.
+  - The compatibility facade is delegation-only and no longer exposes underlying repositories as pass-through properties.
   - `Narrative` aggregate is anchored to `submissionPackageId` (`1:1`) and inherits governance context (`institutionId`, `reviewCycleId`) from the owning package.
   - `Narrative` lifecycle is explicit and draft-oriented (`draft -> in-review -> finalized`, with `in-review -> draft` revision loop), and finalized narratives are immutable in both aggregate and repository boundaries.
   - `NarrativeSection` is an owned structured child with explicit identity (`id`, `sectionKey`), ordering (`sequence`), optional section hierarchy (`parentSectionKey`), and section typing aligned to report/package structure (`report-section`/`narrative-section`).
