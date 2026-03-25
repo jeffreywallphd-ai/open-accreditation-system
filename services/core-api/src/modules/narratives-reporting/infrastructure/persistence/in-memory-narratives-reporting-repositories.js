@@ -1,6 +1,8 @@
 import { ValidationError } from '../../../shared/kernel/errors.js';
-import { SubmissionPackageRepository } from '../../domain/repositories/repositories.js';
+import { Narrative } from '../../domain/entities/narrative.js';
+import { SubmissionPackageRepository, NarrativeRepository } from '../../domain/repositories/repositories.js';
 import { SubmissionPackage } from '../../domain/entities/submission-package.js';
+import { narrativeStatus } from '../../domain/value-objects/narrative-statuses.js';
 import { submissionPackageStatus } from '../../domain/value-objects/submission-package-statuses.js';
 
 function toSnapshot(submissionPackage) {
@@ -96,6 +98,68 @@ function matchesFilter(submissionPackage, filter = {}) {
   return true;
 }
 
+function toNarrativeSnapshot(narrative) {
+  return {
+    id: narrative.id,
+    institutionId: narrative.institutionId,
+    reviewCycleId: narrative.reviewCycleId,
+    submissionPackageId: narrative.submissionPackageId,
+    title: narrative.title,
+    status: narrative.status,
+    sections: (narrative.sections ?? []).map((section) => ({
+      id: section.id,
+      narrativeId: section.narrativeId,
+      sequence: section.sequence,
+      sectionType: section.sectionType,
+      sectionKey: section.sectionKey,
+      parentSectionKey: section.parentSectionKey,
+      title: section.title,
+      content: section.content,
+      ownerId: section.ownerId,
+      evidenceLinks: (section.evidenceLinks ?? []).map((link) => ({
+        id: link.id,
+        sectionId: link.sectionId,
+        evidenceItemId: link.evidenceItemId,
+        relationshipType: link.relationshipType,
+        rationale: link.rationale,
+        createdAt: link.createdAt,
+      })),
+      packageLinks: (section.packageLinks ?? []).map((link) => ({
+        id: link.id,
+        sectionId: link.sectionId,
+        submissionPackageItemId: link.submissionPackageItemId,
+        linkType: link.linkType,
+        createdAt: link.createdAt,
+      })),
+      createdAt: section.createdAt,
+      updatedAt: section.updatedAt,
+    })),
+    createdAt: narrative.createdAt,
+    updatedAt: narrative.updatedAt,
+    submittedForReviewAt: narrative.submittedForReviewAt,
+    finalizedAt: narrative.finalizedAt,
+  };
+}
+
+function matchesNarrativeFilter(narrative, filter = {}) {
+  if (filter.id && narrative.id !== filter.id) {
+    return false;
+  }
+  if (filter.institutionId && narrative.institutionId !== filter.institutionId) {
+    return false;
+  }
+  if (filter.reviewCycleId && narrative.reviewCycleId !== filter.reviewCycleId) {
+    return false;
+  }
+  if (filter.submissionPackageId && narrative.submissionPackageId !== filter.submissionPackageId) {
+    return false;
+  }
+  if (filter.status && narrative.status !== filter.status) {
+    return false;
+  }
+  return true;
+}
+
 export class InMemorySubmissionPackageRepository extends SubmissionPackageRepository {
   constructor() {
     super();
@@ -187,6 +251,79 @@ export class InMemorySubmissionPackageRepository extends SubmissionPackageReposi
   #assertItemsUnchanged(existing, next) {
     if (JSON.stringify(existing.items ?? []) !== JSON.stringify(next.items ?? [])) {
       throw new ValidationError('SubmissionPackage items cannot be modified after finalization');
+    }
+  }
+}
+
+export class InMemoryNarrativeRepository extends NarrativeRepository {
+  constructor() {
+    super();
+    this.narratives = new Map();
+  }
+
+  async save(narrative) {
+    if (!(narrative instanceof Narrative)) {
+      throw new ValidationError('NarrativeRepository.save expects a Narrative aggregate instance');
+    }
+
+    const validated = Narrative.rehydrate(toNarrativeSnapshot(narrative));
+    const existing = this.narratives.get(validated.id);
+    if (existing) {
+      this.#assertIdentityUnchanged(existing, validated);
+      if (existing.status === narrativeStatus.FINALIZED) {
+        this.#assertFinalizedRecordUnchanged(existing, validated);
+      }
+    }
+    this.#assertSubmissionPackageUniqueness(validated);
+
+    const persisted = structuredClone(toNarrativeSnapshot(validated));
+    this.narratives.set(validated.id, persisted);
+    return Narrative.rehydrate(structuredClone(persisted));
+  }
+
+  async getById(id) {
+    const stored = this.narratives.get(id);
+    return stored ? Narrative.rehydrate(structuredClone(stored)) : null;
+  }
+
+  async findByFilter(filter = {}) {
+    return [...this.narratives.values()]
+      .map((item) => Narrative.rehydrate(structuredClone(item)))
+      .filter((item) => matchesNarrativeFilter(item, filter));
+  }
+
+  async getBySubmissionPackageId(submissionPackageId) {
+    const stored = [...this.narratives.values()].find((item) => item.submissionPackageId === submissionPackageId);
+    return stored ? Narrative.rehydrate(structuredClone(stored)) : null;
+  }
+
+  #assertIdentityUnchanged(existing, next) {
+    if (
+      existing.institutionId !== next.institutionId ||
+      existing.reviewCycleId !== next.reviewCycleId ||
+      existing.submissionPackageId !== next.submissionPackageId ||
+      existing.createdAt !== next.createdAt
+    ) {
+      throw new ValidationError('Narrative identity fields cannot be changed in-place');
+    }
+  }
+
+  #assertSubmissionPackageUniqueness(next) {
+    const duplicate = [...this.narratives.values()].find(
+      (item) => item.id !== next.id && item.submissionPackageId === next.submissionPackageId,
+    );
+    if (duplicate) {
+      throw new ValidationError(
+        `Narrative submissionPackageId must be unique (existing: ${duplicate.id})`,
+      );
+    }
+  }
+
+  #assertFinalizedRecordUnchanged(existing, next) {
+    const expected = Narrative.rehydrate(existing);
+    const candidate = Narrative.rehydrate(toNarrativeSnapshot(next));
+    if (JSON.stringify(toNarrativeSnapshot(expected)) !== JSON.stringify(toNarrativeSnapshot(candidate))) {
+      throw new ValidationError('Narrative cannot be modified after finalization');
     }
   }
 }

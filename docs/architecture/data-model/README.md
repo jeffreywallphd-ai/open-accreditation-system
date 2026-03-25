@@ -66,6 +66,7 @@ This is a **logical data model**, not a finalized physical database schema. It i
 - [Implementation-ready evidence invariants (Epic 2 Phase 1 foundation)](#implementation-ready-evidence-invariants-epic-2-phase-1-foundation)
 - [Implementation-ready workflow invariants (Phase 3 foundation)](#implementation-ready-workflow-invariants-phase-3-foundation)
 - [Implementation-ready submission-package invariants (Phase 4 inner foundation)](#implementation-ready-submission-package-invariants-phase-4-inner-foundation)
+- [Implementation-ready narrative composition invariants (Phase 5 foundation)](#implementation-ready-narrative-composition-invariants-phase-5-foundation)
 - [Implementation-ready curriculum linkage invariants (Epic 2 Phase 0 groundwork)](#implementation-ready-curriculum-linkage-invariants-epic-2-phase-0-groundwork)
 - [Key cross-context relationships](#key-cross-context-relationships)
   - [Person, identity, and reviewer/faculty relationships](#person-identity-and-reviewerfaculty-relationships)
@@ -129,7 +130,7 @@ Current implementation note: the diagram artifacts still include deferred workfl
 | `curriculum-mapping` | `Program`, `Course`, `CourseSection`, `AcademicTerm`, `LearningOutcome`, `Competency` | `ProgramOutcomeMap`, `CourseOutcomeMap`, `StandardsAlignment` | Canonical academic structure is mutable current state; mappings are supersedable for traceability. |
 | `assessment-improvement` | `AssessmentPlan`, `AssessmentInstrument`, `AssessmentResult`, `Finding`, `ActionPlan` | `AssessmentMeasure`, `BenchmarkTarget`, `ActionPlanTask`, `ImprovementClosureReview` | Plans/measures/targets are supersedable; results/findings/closure reviews preserve historical execution facts. |
 | `workflow-approvals` | `ReviewCycle`, `ReviewWorkflow` | `WorkflowTransitionRecord` | Review cycle lifecycle and role-governed workflow transitions are explicit; transition history is append-only and sequence-validated. |
-| `narratives-reporting` | `SubmissionPackage`, `Narrative`, `ReportPackage`, `ExportJob` | `SubmissionPackageItem`, `SubmissionPackageSnapshot`, `SubmissionPackageSnapshotItem`, `NarrativeSection` | Submission packages are governed aggregates with mutable draft assembly and immutable snapshot history; narrative/export concerns remain compatible extensions. |
+| `narratives-reporting` | `SubmissionPackage`, `Narrative`, `ReportPackage`, `ExportJob` | `SubmissionPackageItem`, `SubmissionPackageSnapshot`, `SubmissionPackageSnapshotItem`, `NarrativeSection`, `NarrativeSectionEvidenceLink`, `NarrativeSectionPackageLink` | Submission packages are governed aggregates with mutable draft assembly and immutable snapshot history; Phase 5 now adds governed narrative/section composition with explicit evidence/package linkages. |
 | `faculty-intelligence` | `FacultyProfile`, `FacultyQualification` | `FacultyAppointment`, `FacultyDeployment`, `FacultyActivity`, `QualificationBasis`, `QualificationReview` | Faculty projections are mutable current state; appointments/deployments/qualification evidence are effective-dated or append-only. |
 | `compliance-audit` | `AuditEvent`, `ControlAttestation`, `PolicyException` | none in this phase | Audit events are append-only; attestations/exceptions supersede by new records. |
 | supporting boundary | `SourceSystem`, `IntegrationMapping`, `SyncJob`, `Notification`, `AIArtifact` | none in this phase | Supporting service and integration records; not substitutes for core domain aggregates. |
@@ -639,8 +640,10 @@ Own governed submission-package assembly and snapshot history, plus narrative/re
 - `SubmissionPackageItem`: ordered package child representing a governed inclusion (`itemType`, `assemblyRole`, `targetType`, `targetId`) with section-assembly metadata (`sectionKey`, `sectionTitle`, `parentSectionKey`) and optional workflow/evidence linkage metadata.
 - `SubmissionPackageSnapshot`: immutable package capture (`versionNumber`, `milestoneLabel`, `actorId`, `finalized`) for checkpoint/final submission milestones.
 - `SubmissionPackageSnapshotItem`: immutable snapshot copy of package-item structure and evidence/workflow linkage state at capture time.
-- `Narrative`: report narrative for a cycle, self-study, interim report, or focused response.
-- `NarrativeSection`: structured section with required status, owner, alignment target, and drafted/final content metadata.
+- `Narrative`: governed narrative root anchored to one `SubmissionPackage` (`submissionPackageId`) and inherited package context (`institutionId`, `reviewCycleId`), with draft-oriented lifecycle (`draft`, `in-review`, `finalized`).
+- `NarrativeSection`: structured owned section with explicit identity and ordering (`id`, `sectionKey`, `sequence`), optional hierarchy (`parentSectionKey`), alignment type (`sectionType` = `report-section` | `narrative-section`), and draft content metadata.
+- `NarrativeSectionEvidenceLink`: first-class section child for explicit evidence relationship semantics (`evidenceItemId`, `relationshipType`, optional rationale).
+- `NarrativeSectionPackageLink`: first-class section child that binds a narrative section to a concrete `SubmissionPackageItem` with explicit link semantics (`governing-section` | `included-item`).
 - `ReportPackage`: governed package of sections and supporting artifacts for export or reviewer delivery.
 - `ExportJob`: asynchronous export/rendering job for a report package.
 
@@ -1054,6 +1057,33 @@ Implementation note (current `core-api` slice): `narratives-reporting` now inclu
 - Persistence enforces snapshot append-only behavior and rejects in-place mutation/deletion of persisted snapshot records.
 - Outer assembly retrieval exposes section-aware ordered projections (`orderedItems`, flat sections, root section keys, section tree, and assembly-role counts) for report/submission consumers.
 - Phase 4 behavioral validation now includes domain, application, persistence, and HTTP transport coverage for package lifecycle invariants, section-aware assembly semantics, governed item assembly/reordering, snapshot/finalization semantics, workflow/evidence contract constraints, and repository round-trip reconstruction.
+
+## Implementation-ready narrative composition invariants (Phase 5 foundation)
+
+Implementation note (current `core-api` slice): `narratives-reporting` now includes an implemented `Narrative` aggregate with explicit `NarrativeSection` composition and first-class evidence/package linkages, anchored to the Phase 4 `SubmissionPackage` foundation.
+
+### Narrative and NarrativeSection invariants
+
+- `Narrative.status` is constrained to `draft`, `in-review`, `finalized`.
+- `Narrative` is anchored to one `SubmissionPackage` (`submissionPackageId`); one narrative is allowed per submission package.
+- `Narrative` governance context (`institutionId`, `reviewCycleId`) is inherited from the owning submission package and immutable after creation.
+- Narrative lifecycle is draft-oriented and explicit:
+  - `draft -> in-review -> finalized`
+  - `in-review -> draft` (revision loop)
+  - `finalized` is terminal.
+- `NarrativeSection` is an explicit owned child with constrained section typing (`report-section` | `narrative-section`), unique `sectionKey`, and contiguous ordering (`sequence=1..n`).
+- Section hierarchy is governed:
+  - `parentSectionKey` must reference an existing section within the same narrative
+  - parent sections must appear earlier in sequence than child sections.
+- Section mutation (`add/update/remove/reorder`) is allowed only while narrative `status=draft`.
+- `NarrativeSectionEvidenceLink` is first-class and governed:
+  - duplicate links (`evidenceItemId` + `relationshipType`) within a section are rejected
+  - evidence linkage presence/scope is validated through `evaluateWorkflowEvidenceReadiness`.
+- `NarrativeSectionPackageLink` is first-class and governed:
+  - links must target package-item IDs in the narrative's anchored `SubmissionPackage`
+  - `linkType=governing-section` requires a governed-section package item with section-type compatibility.
+- Finalized narratives are immutable in aggregate behavior and repository save boundaries.
+- Phase 5 foundation validation now includes domain, application, and persistence round-trip coverage for narrative lifecycle semantics, section ordering/hierarchy invariants, evidence/package linkage validation, and finalized-state immutability hardening.
 
 ## Implementation-ready curriculum linkage invariants (Epic 2 Phase 0 groundwork)
 

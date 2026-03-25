@@ -331,7 +331,7 @@ Defined contexts:
   - `ReportPackage` is mutable until finalized
   - `ExportJob` is append-only per execution attempt
 
-**Current implementation note (Phase 4 foundation + transport slice)**
+**Current implementation note (Phase 4 completion + Phase 5 inner foundation)**
 
 - `SubmissionPackage` is now implemented as a governed aggregate in `narratives-reporting`, anchored to `reviewCycleId` and scope (`scopeType`, `scopeId`) with uniqueness enforced per cycle+scope.
 - Package lifecycle is explicit (`draft`, `finalized`) and intentionally separate from `ReviewWorkflow` lifecycle.
@@ -351,6 +351,17 @@ Defined contexts:
   - `reorderSubmissionPackageItem`
   - `snapshotSubmissionPackage` (checkpoint and finalization modes)
   - `getSubmissionPackageWithItemContext`
+- Phase 5 inner-layer narrative foundations are now implemented in the same bounded context without introducing a competing architecture:
+  - `Narrative` aggregate is anchored to `submissionPackageId` (`1:1`) and inherits governance context (`institutionId`, `reviewCycleId`) from the owning package.
+  - `Narrative` lifecycle is explicit and draft-oriented (`draft -> in-review -> finalized`, with `in-review -> draft` revision loop), and finalized narratives are immutable in both aggregate and repository boundaries.
+  - `NarrativeSection` is an owned structured child with explicit identity (`id`, `sectionKey`), ordering (`sequence`), optional section hierarchy (`parentSectionKey`), and section typing aligned to report/package structure (`report-section`/`narrative-section`).
+  - Narrative-section linkages are first-class children, not ad hoc persistence joins:
+    - `NarrativeSectionEvidenceLink` for evidence-backed claims
+    - `NarrativeSectionPackageLink` for explicit package-item alignment
+  - Narrative application orchestration validates linkage semantics through existing contracts:
+    - evidence links validate presence/scope through `evaluateWorkflowEvidenceReadiness`
+    - package links validate target membership/role compatibility within the anchored `SubmissionPackage`
+  - Persistence coverage now includes durable narrative + section + linkage round-trip reconstruction and finalized-state immutability checks.
 
 ### `faculty-intelligence`
 
