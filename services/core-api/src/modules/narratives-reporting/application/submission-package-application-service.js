@@ -7,6 +7,7 @@ import {
   submissionPackageItemType,
   submissionPackageStatus,
 } from '../domain/value-objects/submission-package-statuses.js';
+import { buildPresenceOnlyReadinessPolicy } from './internal/evidence-readiness-policy.js';
 
 const WORKFLOW_ELIGIBLE_STATES = new Set(['approved', 'submitted']);
 
@@ -285,14 +286,7 @@ export class SubmissionPackageApplicationService {
           targetId: item.targetId,
           reportSectionId: this.#resolveReportSectionId(item.targetType, item.targetId),
           evidenceItemIds: item.evidenceItemIds,
-          readinessPolicy: {
-            requiredReadinessLevel: 'present',
-            requireAnyEvidenceForDecision: false,
-            requireCurrentReferencedEvidence: false,
-            requireCollectionScopedUsableEvidence: false,
-            minimumReferencedUsableEvidenceCount: 0,
-            minimumCollectionUsableEvidenceCount: 0,
-          },
+          readinessPolicy: buildPresenceOnlyReadinessPolicy(),
         });
       }
       itemContext.push({
@@ -367,11 +361,7 @@ export class SubmissionPackageApplicationService {
       targetId: input.targetId,
       reportSectionId: this.#resolveReportSectionId(input.targetType, input.targetId),
       evidenceItemIds: input.evidenceItemIds ?? [],
-      readinessPolicy: {
-        requireCollectionScopedUsableEvidence: false,
-        minimumCollectionUsableEvidenceCount: 0,
-        ...readinessPolicy,
-      },
+      readinessPolicy: buildPresenceOnlyReadinessPolicy(readinessPolicy),
     });
 
     if (readiness.missingEvidenceItemIds.length > 0) {

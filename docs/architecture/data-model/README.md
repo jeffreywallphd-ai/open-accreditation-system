@@ -1060,7 +1060,7 @@ Implementation note (current `core-api` slice): `narratives-reporting` now inclu
 
 ## Implementation-ready narrative composition invariants (Phase 5 stories 5.5-5.8)
 
-Implementation note (current `core-api` slice): `narratives-reporting` now includes an implemented `Narrative` aggregate with explicit `NarrativeSection` composition and first-class evidence/package linkages, anchored to the Phase 4 `SubmissionPackage` foundation, plus separated application orchestration for package vs narrative use cases. Transport wiring follows the same split (`SubmissionPackagesController` vs `NarrativesController`), with `NarrativesReportingService` retained as a legacy compatibility facade that delegates to the dedicated application services.
+Implementation note (current `core-api` slice): `narratives-reporting` now includes an implemented `Narrative` aggregate with explicit `NarrativeSection` composition and first-class evidence/package linkages, anchored to the Phase 4 `SubmissionPackage` foundation, plus separated application orchestration for package vs narrative use cases. Transport wiring follows the same split (`SubmissionPackagesController` vs `NarrativesController`) with explicit application-service tokens (`submissionPackageService`, `narrativeService`), while `NarrativesReportingService` remains a legacy compatibility facade that is delegation-only (no repository pass-through behavior).
 
 ### Narrative and NarrativeSection invariants
 

@@ -3,21 +3,12 @@ import { NarrativesReportingService } from '../../src/modules/narratives-reporti
 import { ValidationError } from '../../src/modules/shared/kernel/errors.js';
 
 export async function runTests(): Promise<void> {
-  const submissionPackages = {
-    save: async () => null,
-  };
-  const narratives = {
-    save: async () => null,
-  };
-
   const submissionPackageService = {
-    submissionPackages,
     createSubmissionPackage: async (input) => ({ ...input, from: 'submissionPackageService' }),
     getSubmissionPackageById: async (id) => ({ id, from: 'submissionPackageService' }),
   };
 
   const narrativeService = {
-    narratives,
     createNarrative: async (input) => ({ ...input, from: 'narrativeService' }),
     getNarrativeById: async (id) => ({ id, from: 'narrativeService' }),
     getNarrativeSectionById: async (id) => ({ id, from: 'narrativeService' }),
@@ -42,9 +33,6 @@ export async function runTests(): Promise<void> {
 
   const loadedSection = await service.getNarrativeSectionById('section_1');
   assert.equal(loadedSection.from, 'narrativeService');
-
-  assert.equal(service.submissionPackages, submissionPackages);
-  assert.equal(service.narratives, narratives);
 
   assert.throws(
     () => new NarrativesReportingService({ narrativeService }),
