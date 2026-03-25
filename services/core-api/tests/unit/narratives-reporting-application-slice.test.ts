@@ -192,4 +192,9 @@ export async function runTests(): Promise<void> {
   assert.equal(context.itemContext[0].evidenceSummary?.missingEvidenceItemIds.length, 0);
   assert.equal(context.assembly.sections.length, 1);
   assert.equal(context.assembly.sections[0].includedItemIds.length, 1);
+  assert.equal(context.assembly.rootSectionKeys.length, 1);
+  assert.equal(context.assembly.sectionTree.length, 1);
+  assert.equal(context.assembly.sectionTree[0].includedItemIds.length, 1);
+  assert.equal(context.assembly.assemblyRoleCounts.governedSection, 1);
+  assert.equal(context.assembly.assemblyRoleCounts.evidenceInclusion, 1);
 }

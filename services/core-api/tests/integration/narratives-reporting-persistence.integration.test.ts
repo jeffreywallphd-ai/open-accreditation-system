@@ -152,6 +152,9 @@ export async function runTests(): Promise<void> {
     assert.equal(context.itemContext.length, 2);
     assert.equal(context.itemContext[0].workflowState, 'submitted');
     assert.equal(context.assembly.sections.length, 1);
+    assert.equal(context.assembly.sectionTree.length, 1);
+    assert.equal(context.assembly.assemblyRoleCounts.governedSection, 1);
+    assert.equal(context.assembly.assemblyRoleCounts.evidenceInclusion, 1);
 
     const tampered = await narratives.getSubmissionPackageById(packageId);
     assert.ok(tampered);

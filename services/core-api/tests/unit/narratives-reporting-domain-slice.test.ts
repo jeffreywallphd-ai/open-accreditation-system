@@ -52,6 +52,18 @@ export async function runTests(): Promise<void> {
   assert.throws(
     () =>
       submissionPackage.addItem({
+        itemType: submissionPackageItemType.WORKFLOW_TARGET,
+        assemblyRole: submissionPackageItemAssemblyRole.EVIDENCE_INCLUSION,
+        targetType: 'report-section',
+        targetId: 'section_role_invalid',
+      }),
+    ValidationError,
+    'workflow target items must preserve canonical assemblyRole',
+  );
+
+  assert.throws(
+    () =>
+      submissionPackage.addItem({
         itemType: submissionPackageItemType.REPORT_SECTION,
         targetType: 'report-section',
         targetId: 'section_1_1',
@@ -85,11 +97,17 @@ export async function runTests(): Promise<void> {
     'non-section items cannot reference unknown section keys',
   );
 
-  submissionPackage.reorderItem(workflowItem.id, 1);
-  assert.equal(submissionPackage.items[0].id, workflowItem.id);
+  submissionPackage.reorderItem(evidenceInclusion.id, 2);
+  assert.equal(submissionPackage.items[0].id, sectionItem.id);
   assert.equal(submissionPackage.items[0].sequence, 1);
-  assert.equal(submissionPackage.items[1].id, sectionItem.id);
+  assert.equal(submissionPackage.items[1].id, evidenceInclusion.id);
   assert.equal(submissionPackage.items[1].sequence, 2);
+
+  assert.throws(
+    () => submissionPackage.reorderItem(sectionItem.id, 3),
+    ValidationError,
+    'section-bearing items must not be ordered ahead of their governed section',
+  );
 
   assert.throws(
     () => submissionPackage.removeItem(sectionItem.id),

@@ -191,6 +191,10 @@ export async function runTests(): Promise<void> {
     assert.equal(contextResponse.json().data.itemContext.length, 2);
     assert.equal(contextResponse.json().data.assembly.sections.length, 1);
     assert.equal(contextResponse.json().data.assembly.sections[0].itemId, sectionItemId);
+    assert.equal(contextResponse.json().data.assembly.rootSectionKeys[0], 'http-sec-1');
+    assert.equal(contextResponse.json().data.assembly.sectionTree.length, 1);
+    assert.equal(contextResponse.json().data.assembly.assemblyRoleCounts.governedSection, 1);
+    assert.equal(contextResponse.json().data.assembly.assemblyRoleCounts.evidenceInclusion, 1);
 
     const finalizePackage = await app.inject({
       method: 'POST',

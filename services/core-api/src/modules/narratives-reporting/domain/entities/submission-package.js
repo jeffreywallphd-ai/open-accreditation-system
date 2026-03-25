@@ -70,9 +70,9 @@ function assertCanonicalRoleCompatibility(itemType, assemblyRole) {
 
   if (
     itemType === submissionPackageItemType.WORKFLOW_TARGET &&
-    assemblyRole === submissionPackageItemAssemblyRole.GOVERNED_SECTION
+    assemblyRole !== submissionPackageItemAssemblyRole.WORKFLOW_TARGET
   ) {
-    throw new ValidationError('itemType=workflow-target cannot use assemblyRole=governed-section');
+    throw new ValidationError('itemType=workflow-target must use assemblyRole=workflow-target');
   }
 }
 
@@ -197,10 +197,9 @@ export class SubmissionPackageItem {
     if (this.sectionType) {
       throw new ValidationError('SubmissionPackageItem.sectionType is only allowed for governed-section items');
     }
-    if (this.sectionTitle && !this.sectionKey) {
-      throw new ValidationError('SubmissionPackageItem.sectionTitle requires sectionKey');
+    if (this.sectionTitle) {
+      throw new ValidationError('SubmissionPackageItem.sectionTitle is only allowed for governed-section items');
     }
-
     if (this.assemblyRole === submissionPackageItemAssemblyRole.EVIDENCE_INCLUSION) {
       if (this.targetType !== 'evidence-item' && this.evidenceItemIds.length === 0) {
         throw new ValidationError(
@@ -263,6 +262,21 @@ export class SubmissionPackageSnapshotItem {
       if (this.parentSectionKey && this.parentSectionKey === this.sectionKey) {
         throw new ValidationError('SubmissionPackageSnapshotItem.parentSectionKey must differ from sectionKey');
       }
+      return;
+    }
+
+    if (this.parentSectionKey) {
+      throw new ValidationError(
+        'SubmissionPackageSnapshotItem.parentSectionKey is only allowed for governed-section items',
+      );
+    }
+    if (this.sectionType) {
+      throw new ValidationError('SubmissionPackageSnapshotItem.sectionType is only allowed for governed-section items');
+    }
+    if (this.sectionTitle) {
+      throw new ValidationError(
+        'SubmissionPackageSnapshotItem.sectionTitle is only allowed for governed-section items',
+      );
     }
   }
 
@@ -522,6 +536,7 @@ export class SubmissionPackage {
     const itemIds = new Set();
     const targetKeys = new Set();
     const governedSectionKeys = new Set();
+    const governedSectionsByKey = new Map();
     let previousSequence = 0;
 
     for (const item of this.items) {
@@ -549,6 +564,7 @@ export class SubmissionPackage {
           throw new ValidationError(`SubmissionPackage sectionKey must be unique: ${item.sectionKey}`);
         }
         governedSectionKeys.add(item.sectionKey);
+        governedSectionsByKey.set(item.sectionKey, item);
       }
     }
 
@@ -571,6 +587,24 @@ export class SubmissionPackage {
         throw new ValidationError(
           `SubmissionPackage item sectionKey must reference an existing governed section: ${item.sectionKey}`,
         );
+      }
+
+      if (item.assemblyRole === submissionPackageItemAssemblyRole.GOVERNED_SECTION && item.parentSectionKey) {
+        const parent = governedSectionsByKey.get(item.parentSectionKey);
+        if (parent && parent.sequence >= item.sequence) {
+          throw new ValidationError(
+            `SubmissionPackage governed-section parentSectionKey must appear before child section: ${item.parentSectionKey}`,
+          );
+        }
+      }
+
+      if (item.assemblyRole !== submissionPackageItemAssemblyRole.GOVERNED_SECTION && item.sectionKey) {
+        const governingSection = governedSectionsByKey.get(item.sectionKey);
+        if (governingSection && governingSection.sequence >= item.sequence) {
+          throw new ValidationError(
+            `SubmissionPackage item sectionKey must reference a governed section that appears earlier in sequence: ${item.sectionKey}`,
+          );
+        }
       }
     }
 
