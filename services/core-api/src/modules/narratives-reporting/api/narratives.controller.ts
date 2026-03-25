@@ -18,57 +18,6 @@ import {
   NARRATIVE_PACKAGE_LINK_TYPE_VALUES,
   NARRATIVE_SECTION_TYPE_VALUES,
 } from '../domain/value-objects/narrative-statuses.js';
-import {
-  SUBMISSION_PACKAGE_ITEM_ASSEMBLY_ROLE_VALUES,
-  SUBMISSION_PACKAGE_ITEM_TYPE_VALUES,
-} from '../domain/value-objects/submission-package-statuses.js';
-
-const createSubmissionPackageSchema = z.object({
-  id: z.string().optional(),
-  reviewCycleId: z.string().min(1),
-  scopeType: z.string().min(1),
-  scopeId: z.string().min(1),
-  name: z.string().optional(),
-});
-
-const addSubmissionPackageItemSchema = z.object({
-  id: z.string().optional(),
-  itemType: z
-    .string()
-    .refine((value) => SUBMISSION_PACKAGE_ITEM_TYPE_VALUES.includes(value), 'Invalid itemType')
-    .optional(),
-  assemblyRole: z
-    .string()
-    .refine((value) => SUBMISSION_PACKAGE_ITEM_ASSEMBLY_ROLE_VALUES.includes(value), 'Invalid assemblyRole')
-    .optional(),
-  targetType: z.string().min(1),
-  targetId: z.string().min(1),
-  workflowId: z.string().optional(),
-  sectionKey: z.string().optional(),
-  sectionTitle: z.string().optional(),
-  parentSectionKey: z.string().optional(),
-  sectionType: z.string().optional(),
-  evidenceItemIds: z.array(z.string()).optional(),
-  label: z.string().optional(),
-  rationale: z.string().optional(),
-  metadata: z.record(z.unknown()).optional(),
-});
-
-const reorderItemSchema = z.object({
-  newPosition: z.number().int().min(1),
-});
-
-const captureSnapshotSchema = z.object({
-  milestoneLabel: z.string().optional(),
-  actorId: z.string().optional(),
-  notes: z.string().optional(),
-});
-
-const finalizePackageSchema = z.object({
-  milestoneLabel: z.string().optional(),
-  actorId: z.string().optional(),
-  notes: z.string().optional(),
-});
 
 const createNarrativeSchema = z.object({
   id: z.string().optional(),
@@ -108,6 +57,10 @@ const updateNarrativeSectionSchema = z.object({
   'At least one update field is required',
 );
 
+const reorderItemSchema = z.object({
+  newPosition: z.number().int().min(1),
+});
+
 const linkNarrativeSectionEvidenceSchema = z.object({
   evidenceItemId: z.string().min(1),
   relationshipType: z
@@ -123,115 +76,29 @@ const linkNarrativeSectionPackageItemSchema = z.object({
     .refine((value) => NARRATIVE_PACKAGE_LINK_TYPE_VALUES.includes(value), 'Invalid linkType'),
 });
 
-@Controller('narratives-reporting')
-export class NarrativesReportingController {
+@Controller('narratives-reporting/narratives')
+export class NarrativesController {
   constructor(
-    @Inject(NARR_APPLICATION_TOKENS.submissionPackages) private readonly submissionPackages,
     @Inject(NARR_APPLICATION_TOKENS.narratives) private readonly narratives,
   ) {}
 
-  @Post('submission-packages')
-  @HttpCode(HttpStatus.CREATED)
-  async createSubmissionPackage(@Body(new ZodValidationPipe(createSubmissionPackageSchema)) body) {
-    return { data: await this.submissionPackages.createSubmissionPackage(body) };
-  }
-
-  @Get('submission-packages/:submissionPackageId')
-  async getSubmissionPackageById(@Param('submissionPackageId') submissionPackageId: string) {
-    return { data: await this.submissionPackages.getSubmissionPackageById(submissionPackageId) };
-  }
-
-  @Get('submission-packages')
-  async listSubmissionPackages(
-    @Query('id') id?: string,
-    @Query('institutionId') institutionId?: string,
-    @Query('reviewCycleId') reviewCycleId?: string,
-    @Query('scopeType') scopeType?: string,
-    @Query('scopeId') scopeId?: string,
-    @Query('status') status?: string,
-    @Query('assemblyRole') assemblyRole?: string,
-  ) {
-    return {
-      data: await this.submissionPackages.listSubmissionPackages({
-        id,
-        institutionId,
-        reviewCycleId,
-        scopeType,
-        scopeId,
-        status,
-        assemblyRole,
-      }),
-    };
-  }
-
-  @Post('submission-packages/:submissionPackageId/items')
-  async addSubmissionPackageItem(
-    @Param('submissionPackageId') submissionPackageId: string,
-    @Body(new ZodValidationPipe(addSubmissionPackageItemSchema)) body,
-  ) {
-    return { data: await this.submissionPackages.addSubmissionPackageItem(submissionPackageId, body) };
-  }
-
-  @Delete('submission-packages/:submissionPackageId/items/:itemId')
-  async removeSubmissionPackageItem(
-    @Param('submissionPackageId') submissionPackageId: string,
-    @Param('itemId') itemId: string,
-  ) {
-    return { data: await this.submissionPackages.removeSubmissionPackageItem(submissionPackageId, itemId) };
-  }
-
-  @Post('submission-packages/:submissionPackageId/items/:itemId/reorder')
-  async reorderSubmissionPackageItem(
-    @Param('submissionPackageId') submissionPackageId: string,
-    @Param('itemId') itemId: string,
-    @Body(new ZodValidationPipe(reorderItemSchema)) body,
-  ) {
-    return { data: await this.submissionPackages.reorderSubmissionPackageItem(submissionPackageId, itemId, body.newPosition) };
-  }
-
-  @Post('submission-packages/:submissionPackageId/snapshots')
-  async captureSubmissionPackageSnapshot(
-    @Param('submissionPackageId') submissionPackageId: string,
-    @Body(new ZodValidationPipe(captureSnapshotSchema)) body,
-  ) {
-    return { data: await this.submissionPackages.snapshotSubmissionPackage(submissionPackageId, body) };
-  }
-
-  @Post('submission-packages/:submissionPackageId/finalize')
-  async finalizeSubmissionPackage(
-    @Param('submissionPackageId') submissionPackageId: string,
-    @Body(new ZodValidationPipe(finalizePackageSchema)) body,
-  ) {
-    return {
-      data: await this.submissionPackages.snapshotSubmissionPackage(submissionPackageId, {
-        ...body,
-        finalize: true,
-      }),
-    };
-  }
-
-  @Get('submission-packages/:submissionPackageId/context')
-  async getSubmissionPackageWithContext(@Param('submissionPackageId') submissionPackageId: string) {
-    return { data: await this.submissionPackages.getSubmissionPackageWithItemContext(submissionPackageId) };
-  }
-
-  @Post('narratives')
+  @Post()
   @HttpCode(HttpStatus.CREATED)
   async createNarrative(@Body(new ZodValidationPipe(createNarrativeSchema)) body) {
     return { data: await this.narratives.createNarrative(body) };
   }
 
-  @Get('narratives/:narrativeId')
+  @Get(':narrativeId')
   async getNarrativeById(@Param('narrativeId') narrativeId: string) {
     return { data: await this.narratives.getNarrativeById(narrativeId) };
   }
 
-  @Get('narratives/:narrativeId/context')
+  @Get(':narrativeId/context')
   async getNarrativeWithContext(@Param('narrativeId') narrativeId: string) {
     return { data: await this.narratives.getNarrativeWithSectionContext(narrativeId) };
   }
 
-  @Get('narratives')
+  @Get()
   async listNarratives(
     @Query('id') id?: string,
     @Query('institutionId') institutionId?: string,
@@ -250,7 +117,7 @@ export class NarrativesReportingController {
     };
   }
 
-  @Post('narratives/:narrativeId/sections')
+  @Post(':narrativeId/sections')
   async addNarrativeSection(
     @Param('narrativeId') narrativeId: string,
     @Body(new ZodValidationPipe(addNarrativeSectionSchema)) body,
@@ -258,7 +125,7 @@ export class NarrativesReportingController {
     return { data: await this.narratives.addNarrativeSection(narrativeId, body) };
   }
 
-  @Post('narratives/:narrativeId/sections/:sectionId')
+  @Post(':narrativeId/sections/:sectionId')
   async updateNarrativeSection(
     @Param('narrativeId') narrativeId: string,
     @Param('sectionId') sectionId: string,
@@ -267,7 +134,7 @@ export class NarrativesReportingController {
     return { data: await this.narratives.updateNarrativeSection(narrativeId, sectionId, body) };
   }
 
-  @Delete('narratives/:narrativeId/sections/:sectionId')
+  @Delete(':narrativeId/sections/:sectionId')
   async removeNarrativeSection(
     @Param('narrativeId') narrativeId: string,
     @Param('sectionId') sectionId: string,
@@ -275,7 +142,7 @@ export class NarrativesReportingController {
     return { data: await this.narratives.removeNarrativeSection(narrativeId, sectionId) };
   }
 
-  @Post('narratives/:narrativeId/sections/:sectionId/reorder')
+  @Post(':narrativeId/sections/:sectionId/reorder')
   async reorderNarrativeSection(
     @Param('narrativeId') narrativeId: string,
     @Param('sectionId') sectionId: string,
@@ -284,7 +151,7 @@ export class NarrativesReportingController {
     return { data: await this.narratives.reorderNarrativeSection(narrativeId, sectionId, body.newPosition) };
   }
 
-  @Post('narratives/:narrativeId/sections/:sectionId/evidence-links')
+  @Post(':narrativeId/sections/:sectionId/evidence-links')
   async linkNarrativeSectionEvidence(
     @Param('narrativeId') narrativeId: string,
     @Param('sectionId') sectionId: string,
@@ -293,7 +160,7 @@ export class NarrativesReportingController {
     return { data: await this.narratives.linkNarrativeSectionEvidence(narrativeId, sectionId, body) };
   }
 
-  @Delete('narratives/:narrativeId/sections/:sectionId/evidence-links/:linkId')
+  @Delete(':narrativeId/sections/:sectionId/evidence-links/:linkId')
   async unlinkNarrativeSectionEvidence(
     @Param('narrativeId') narrativeId: string,
     @Param('sectionId') sectionId: string,
@@ -302,7 +169,7 @@ export class NarrativesReportingController {
     return { data: await this.narratives.unlinkNarrativeSectionEvidence(narrativeId, sectionId, linkId) };
   }
 
-  @Post('narratives/:narrativeId/sections/:sectionId/package-links')
+  @Post(':narrativeId/sections/:sectionId/package-links')
   async linkNarrativeSectionToPackageItem(
     @Param('narrativeId') narrativeId: string,
     @Param('sectionId') sectionId: string,
@@ -311,7 +178,7 @@ export class NarrativesReportingController {
     return { data: await this.narratives.linkNarrativeSectionToPackageItem(narrativeId, sectionId, body) };
   }
 
-  @Delete('narratives/:narrativeId/sections/:sectionId/package-links/:submissionPackageItemId')
+  @Delete(':narrativeId/sections/:sectionId/package-links/:submissionPackageItemId')
   async unlinkNarrativeSectionFromPackageItem(
     @Param('narrativeId') narrativeId: string,
     @Param('sectionId') sectionId: string,
@@ -320,17 +187,17 @@ export class NarrativesReportingController {
     return { data: await this.narratives.unlinkNarrativeSectionFromPackageItem(narrativeId, sectionId, submissionPackageItemId) };
   }
 
-  @Post('narratives/:narrativeId/submit-for-review')
+  @Post(':narrativeId/submit-for-review')
   async submitNarrativeForReview(@Param('narrativeId') narrativeId: string) {
     return { data: await this.narratives.submitNarrativeForReview(narrativeId) };
   }
 
-  @Post('narratives/:narrativeId/return-to-draft')
+  @Post(':narrativeId/return-to-draft')
   async returnNarrativeToDraft(@Param('narrativeId') narrativeId: string) {
     return { data: await this.narratives.returnNarrativeToDraft(narrativeId) };
   }
 
-  @Post('narratives/:narrativeId/finalize')
+  @Post(':narrativeId/finalize')
   async finalizeNarrative(@Param('narrativeId') narrativeId: string) {
     return { data: await this.narratives.finalizeNarrative(narrativeId) };
   }

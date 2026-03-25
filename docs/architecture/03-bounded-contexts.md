@@ -355,7 +355,7 @@ Defined contexts:
   - Narrative orchestration is now explicit and separated from package orchestration:
     - `SubmissionPackageApplicationService` owns package-item/snapshot orchestration
     - `NarrativeApplicationService` owns narrative/section/linkage orchestration
-  - Compatibility facade (`NarrativesReportingService`) composes both application services for legacy consumers while preserving the split use-case boundaries.
+  - Compatibility facade (`NarrativesReportingService`) remains available for legacy consumers, but it now composes the dedicated services only (no mixed fallback orchestration paths).
   - `Narrative` aggregate is anchored to `submissionPackageId` (`1:1`) and inherits governance context (`institutionId`, `reviewCycleId`) from the owning package.
   - `Narrative` lifecycle is explicit and draft-oriented (`draft -> in-review -> finalized`, with `in-review -> draft` revision loop), and finalized narratives are immutable in both aggregate and repository boundaries.
   - `NarrativeSection` is an owned structured child with explicit identity (`id`, `sectionKey`), ordering (`sequence`), optional section hierarchy (`parentSectionKey`), and section typing aligned to report/package structure (`report-section`/`narrative-section`).
@@ -368,8 +368,8 @@ Defined contexts:
     - governing-section package links additionally require explicit `sectionKey` alignment and are limited to one governing link per narrative section
     - included-item package links cannot target governed-section package items (avoids ambiguous dual semantics)
   - Narrative package-link persistence now hardens narrative-level uniqueness (`narrative_id + submission_package_item_id`) and trigger-enforced section ownership alignment at the storage boundary.
-  - API transport now includes dedicated narrative endpoints for create/read/list, section add/update/reorder/remove, linkage operations, lifecycle operations, and narrative context retrieval (`GET /narratives-reporting/narratives/:narrativeId/context`).
-  - Test coverage now includes narrative domain/application/persistence/http paths in the standard `services/core-api/tests/run-tests.ts` runner, including section ordering/ownership, round-trip reconstruction, and invalid-state rejection checks.
+  - API transport is split by use-case boundary (`SubmissionPackagesController` and `NarrativesController`) while preserving route compatibility under `/narratives-reporting/*`.
+  - Test coverage includes narrative and package domain/application/persistence/http paths plus explicit compatibility-facade delegation checks in the standard `services/core-api/tests/run-tests.ts` runner.
 
 ### `faculty-intelligence`
 
