@@ -18,9 +18,14 @@ function toSnapshot(submissionPackage) {
       packageId: item.packageId,
       sequence: item.sequence,
       itemType: item.itemType,
+      assemblyRole: item.assemblyRole,
       targetType: item.targetType,
       targetId: item.targetId,
       workflowId: item.workflowId,
+      sectionKey: item.sectionKey,
+      sectionTitle: item.sectionTitle,
+      parentSectionKey: item.parentSectionKey,
+      sectionType: item.sectionType,
       evidenceItemIds: [...(item.evidenceItemIds ?? [])],
       label: item.label,
       rationale: item.rationale,
@@ -43,9 +48,14 @@ function toSnapshot(submissionPackage) {
         packageItemId: item.packageItemId,
         sequence: item.sequence,
         itemType: item.itemType,
+        assemblyRole: item.assemblyRole,
         targetType: item.targetType,
         targetId: item.targetId,
         workflowId: item.workflowId,
+        sectionKey: item.sectionKey,
+        sectionTitle: item.sectionTitle,
+        parentSectionKey: item.parentSectionKey,
+        sectionType: item.sectionType,
         evidenceItemIds: [...(item.evidenceItemIds ?? [])],
         label: item.label,
         rationale: item.rationale,
@@ -76,6 +86,12 @@ function matchesFilter(submissionPackage, filter = {}) {
   }
   if (filter.status && submissionPackage.status !== filter.status) {
     return false;
+  }
+  if (filter.assemblyRole) {
+    const hasRole = (submissionPackage.items ?? []).some((item) => item.assemblyRole === filter.assemblyRole);
+    if (!hasRole) {
+      return false;
+    }
   }
   return true;
 }

@@ -14,6 +14,7 @@ import { runTests as runWorkflowApprovalsPersistenceTests } from './integration/
 import { runTests as runNarrativesReportingDomainTests } from './unit/narratives-reporting-domain-slice.test.js';
 import { runTests as runNarrativesReportingApplicationTests } from './unit/narratives-reporting-application-slice.test.js';
 import { runTests as runNarrativesReportingPersistenceTests } from './integration/narratives-reporting-persistence.integration.test.js';
+import { runTests as runNarrativesReportingHttpTests } from './integration/narratives-reporting-http.integration.test.js';
 
 const suites: Array<[string, () => Promise<void>]> = [
   ['domain invariants', runDomainTests],
@@ -32,6 +33,7 @@ const suites: Array<[string, () => Promise<void>]> = [
   ['evidence management persistence integration', runEvidenceManagementPersistenceTests],
   ['workflow approvals persistence integration', runWorkflowApprovalsPersistenceTests],
   ['narratives reporting persistence integration', runNarrativesReportingPersistenceTests],
+  ['narratives reporting http integration', runNarrativesReportingHttpTests],
 ];
 
 let failed = 0;

@@ -339,6 +339,7 @@ The following bounded contexts define the target module map for the core platfor
 **Owns**
 
 - `SubmissionPackage` aggregate with governed item assembly and snapshot/finalization semantics (Phase 4 inner slice)
+- thin API transport for package assembly/retrieval operations aligned to the same use cases
 - narrative composition records and report section structures (planned outer slices)
 - report generation/export orchestration (later slice)
 

@@ -636,7 +636,7 @@ Own governed submission-package assembly and snapshot history, plus narrative/re
 **Entity baseline**
 
 - `SubmissionPackage`: governed package root with `reviewCycleId`, scope anchors, lifecycle status, mutable draft items, and immutable snapshots.
-- `SubmissionPackageItem`: ordered package child representing a governed target inclusion (`itemType`, `targetType`, `targetId`) with optional workflow/evidence linkage metadata.
+- `SubmissionPackageItem`: ordered package child representing a governed inclusion (`itemType`, `assemblyRole`, `targetType`, `targetId`) with section-assembly metadata (`sectionKey`, `sectionTitle`, `parentSectionKey`) and optional workflow/evidence linkage metadata.
 - `SubmissionPackageSnapshot`: immutable package capture (`versionNumber`, `milestoneLabel`, `actorId`, `finalized`) for checkpoint/final submission milestones.
 - `SubmissionPackageSnapshotItem`: immutable snapshot copy of package-item structure and evidence/workflow linkage state at capture time.
 - `Narrative`: report narrative for a cycle, self-study, interim report, or focused response.
@@ -1037,18 +1037,20 @@ Implementation note (current `core-api` slice): `narratives-reporting` now inclu
 - `SubmissionPackage.status` is constrained to `draft`, `finalized`.
 - `SubmissionPackage` is anchored to one `ReviewCycle` and one scope tuple (`scopeType`, `scopeId`); only one package is allowed per (`reviewCycleId`, `scopeType`, `scopeId`).
 - `SubmissionPackage` lifecycle is distinct from `ReviewWorkflow.state`; package finalization does not mutate workflow state.
-- `SubmissionPackageItem` is an explicit child model with ordered sequence, target references (`targetType`, `targetId`), and optional workflow/evidence linkage metadata.
+- `SubmissionPackageItem` is an explicit child model with ordered sequence, target references (`targetType`, `targetId`), explicit assembly role (`governed-section` | `workflow-target` | `evidence-inclusion`), and optional workflow/evidence linkage metadata.
+- Governed-section items require explicit section metadata (`sectionKey`, `sectionTitle`, optional `parentSectionKey`) and a section target (`report-section` or `narrative-section`).
+- Section metadata is governed: section keys are unique within a package, parent references must resolve to existing governed sections, and non-section items may only reference existing section keys.
 - `SubmissionPackageItem.sequence` is contiguous (`1..n`) and maintained through governed reorder/removal operations.
 - Duplicate package targets (`itemType` + `targetType` + `targetId`) are rejected.
 - Item mutation (`add/remove/reorder`) is allowed only while package `status=draft`.
-- Item inclusion requires an eligible workflow target through contract lookup (`approved` or `submitted` in the owning `ReviewCycle`).
+- Workflow-backed item inclusion requires an eligible workflow target through contract lookup (`approved` or `submitted` in the owning `ReviewCycle`); evidence-inclusion items targeted directly to `evidence-item` remain evidence-governed through readiness validation.
 - Referenced evidence for item inclusion is validated through `evaluateWorkflowEvidenceReadiness` using presence-level policy.
 - `SubmissionPackageSnapshot` and `SubmissionPackageSnapshotItem` are immutable append-only records.
 - Snapshot versions are contiguous (`versionNumber=1..n`) and snapshot items preserve contiguous ordering.
 - Finalization requires creating a finalizing snapshot (`finalized=true`), sets `SubmissionPackage.status=finalized`, and blocks future item mutation.
 - Finalization evaluates stricter referenced-evidence readiness (`usable` + current where required).
 - Persistence enforces snapshot append-only behavior and rejects in-place mutation/deletion of persisted snapshot records.
-- Phase 4 behavioral validation now includes domain, application, and persistence/integration coverage for package lifecycle invariants, governed item assembly/reordering, snapshot/finalization semantics, workflow/evidence contract constraints, and repository round-trip reconstruction.
+- Phase 4 behavioral validation now includes domain, application, persistence, and HTTP transport coverage for package lifecycle invariants, section-aware assembly semantics, governed item assembly/reordering, snapshot/finalization semantics, workflow/evidence contract constraints, and repository round-trip reconstruction.
 
 ## Implementation-ready curriculum linkage invariants (Epic 2 Phase 0 groundwork)
 

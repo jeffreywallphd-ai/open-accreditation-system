@@ -331,14 +331,16 @@ Defined contexts:
   - `ReportPackage` is mutable until finalized
   - `ExportJob` is append-only per execution attempt
 
-**Current implementation note (Phase 4 inner-layer submission assembly foundation)**
+**Current implementation note (Phase 4 foundation + transport slice)**
 
 - `SubmissionPackage` is now implemented as a governed aggregate in `narratives-reporting`, anchored to `reviewCycleId` and scope (`scopeType`, `scopeId`) with uniqueness enforced per cycle+scope.
 - Package lifecycle is explicit (`draft`, `finalized`) and intentionally separate from `ReviewWorkflow` lifecycle.
-- Package items are explicit domain children with stable sequence ordering and typed target references (`targetType`, `targetId`) plus optional workflow/evidence linkage metadata.
-- Item assembly is governed by application orchestration that requires an eligible workflow target (`approved`/`submitted`) through the `workflow-approvals` contract.
+- Package items now carry explicit assembly semantics (`assemblyRole`) to distinguish governed sections, workflow-backed targets, and evidence inclusions in a single package aggregate.
+- Section-oriented package items are explicitly modeled (`sectionKey`, `sectionTitle`, optional `parentSectionKey`) and validated for governed ordering/hierarchy integrity while preserving contiguous item sequencing.
+- Item assembly remains governed by application orchestration: workflow-backed targets require eligible workflow state (`approved`/`submitted`) through the `workflow-approvals` contract, while direct evidence inclusions remain evidence-governed through readiness validation.
 - Evidence integration remains contract-based through `evaluateWorkflowEvidenceReadiness` and validates referenced evidence presence/scope on assembly, with stricter usable/current checks on finalization snapshots.
 - Snapshot/version semantics are implemented via append-only `SubmissionPackageSnapshot` + `SubmissionPackageSnapshotItem`, with immutable persistence guards and repository append-only validation.
+- A thin NestJS transport layer is now implemented for `narratives-reporting` with package creation, retrieval/listing, item add/remove/reorder, snapshot capture/finalization, and package-context assembly endpoints.
 - Phase 4 application use cases now include:
   - `createSubmissionPackage`
   - `addSubmissionPackageItem`

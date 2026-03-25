@@ -33,9 +33,14 @@ function toSnapshot(submissionPackage) {
       packageId: item.packageId,
       sequence: item.sequence,
       itemType: item.itemType,
+      assemblyRole: item.assemblyRole,
       targetType: item.targetType,
       targetId: item.targetId,
       workflowId: item.workflowId,
+      sectionKey: item.sectionKey,
+      sectionTitle: item.sectionTitle,
+      parentSectionKey: item.parentSectionKey,
+      sectionType: item.sectionType,
       evidenceItemIds: [...(item.evidenceItemIds ?? [])],
       label: item.label,
       rationale: item.rationale,
@@ -58,9 +63,14 @@ function toSnapshot(submissionPackage) {
         packageItemId: item.packageItemId,
         sequence: item.sequence,
         itemType: item.itemType,
+        assemblyRole: item.assemblyRole,
         targetType: item.targetType,
         targetId: item.targetId,
         workflowId: item.workflowId,
+        sectionKey: item.sectionKey,
+        sectionTitle: item.sectionTitle,
+        parentSectionKey: item.parentSectionKey,
+        sectionType: item.sectionType,
         evidenceItemIds: [...(item.evidenceItemIds ?? [])],
         label: item.label,
         rationale: item.rationale,
@@ -149,17 +159,22 @@ export class SqliteSubmissionPackageRepository extends SubmissionPackageReposito
       for (const item of validated.items) {
         this.database.run(
           `INSERT INTO narratives_submission_package_items
-            (id, package_id, item_sequence, item_type, target_type, target_id, workflow_id, evidence_item_ids_json, label, rationale, metadata_json, created_at, updated_at)
+            (id, package_id, item_sequence, item_type, assembly_role, target_type, target_id, workflow_id, section_key, section_title, parent_section_key, section_type, evidence_item_ids_json, label, rationale, metadata_json, created_at, updated_at)
            VALUES
-            (@id, @packageId, @sequence, @itemType, @targetType, @targetId, @workflowId, @evidenceItemIdsJson, @label, @rationale, @metadataJson, @createdAt, @updatedAt)`,
+            (@id, @packageId, @sequence, @itemType, @assemblyRole, @targetType, @targetId, @workflowId, @sectionKey, @sectionTitle, @parentSectionKey, @sectionType, @evidenceItemIdsJson, @label, @rationale, @metadataJson, @createdAt, @updatedAt)`,
           {
             id: item.id,
             packageId: item.packageId,
             sequence: item.sequence,
             itemType: item.itemType,
+            assemblyRole: item.assemblyRole,
             targetType: item.targetType,
             targetId: item.targetId,
             workflowId: item.workflowId,
+            sectionKey: item.sectionKey,
+            sectionTitle: item.sectionTitle,
+            parentSectionKey: item.parentSectionKey,
+            sectionType: item.sectionType,
             evidenceItemIdsJson: JSON.stringify(item.evidenceItemIds ?? []),
             label: item.label,
             rationale: item.rationale,
@@ -203,18 +218,23 @@ export class SqliteSubmissionPackageRepository extends SubmissionPackageReposito
         for (const item of snapshot.items) {
           this.database.run(
             `INSERT INTO narratives_submission_snapshot_items
-              (id, snapshot_id, package_item_id, item_sequence, item_type, target_type, target_id, workflow_id, evidence_item_ids_json, label, rationale, metadata_json, created_at)
+              (id, snapshot_id, package_item_id, item_sequence, item_type, assembly_role, target_type, target_id, workflow_id, section_key, section_title, parent_section_key, section_type, evidence_item_ids_json, label, rationale, metadata_json, created_at)
              VALUES
-              (@id, @snapshotId, @packageItemId, @sequence, @itemType, @targetType, @targetId, @workflowId, @evidenceItemIdsJson, @label, @rationale, @metadataJson, @createdAt)`,
+              (@id, @snapshotId, @packageItemId, @sequence, @itemType, @assemblyRole, @targetType, @targetId, @workflowId, @sectionKey, @sectionTitle, @parentSectionKey, @sectionType, @evidenceItemIdsJson, @label, @rationale, @metadataJson, @createdAt)`,
             {
               id: item.id,
               snapshotId: item.snapshotId,
               packageItemId: item.packageItemId,
               sequence: item.sequence,
               itemType: item.itemType,
+              assemblyRole: item.assemblyRole,
               targetType: item.targetType,
               targetId: item.targetId,
               workflowId: item.workflowId,
+              sectionKey: item.sectionKey,
+              sectionTitle: item.sectionTitle,
+              parentSectionKey: item.parentSectionKey,
+              sectionType: item.sectionType,
               evidenceItemIdsJson: JSON.stringify(item.evidenceItemIds ?? []),
               label: item.label,
               rationale: item.rationale,
@@ -238,19 +258,41 @@ export class SqliteSubmissionPackageRepository extends SubmissionPackageReposito
   }
 
   async findByFilter(filter = {}) {
-    const { sql, params } = filterClause(filter, {
-      id: 'id',
-      institutionId: 'institution_id',
-      reviewCycleId: 'review_cycle_id',
-      scopeType: 'scope_type',
-      scopeId: 'scope_id',
-      status: 'status',
-    });
+    let sql = `SELECT p.* FROM narratives_submission_packages p`;
+    const params = {};
+    const where = [];
 
-    const rows = this.database.all(
-      `SELECT * FROM narratives_submission_packages ${sql} ORDER BY created_at ASC`,
-      params,
-    );
+    const rootFilters = filterClause(filter, {
+      id: 'p.id',
+      institutionId: 'p.institution_id',
+      reviewCycleId: 'p.review_cycle_id',
+      scopeType: 'p.scope_type',
+      scopeId: 'p.scope_id',
+      status: 'p.status',
+    });
+    if (rootFilters.sql) {
+      where.push(rootFilters.sql.replace(/^WHERE\s+/i, ''));
+      Object.assign(params, rootFilters.params);
+    }
+
+    if (filter.assemblyRole) {
+      where.push(
+        `EXISTS (
+          SELECT 1
+          FROM narratives_submission_package_items i
+          WHERE i.package_id = p.id
+            AND i.assembly_role = @assemblyRole
+        )`,
+      );
+      params.assemblyRole = filter.assemblyRole;
+    }
+
+    if (where.length > 0) {
+      sql += ` WHERE ${where.join(' AND ')}`;
+    }
+    sql += ' ORDER BY p.created_at ASC';
+
+    const rows = this.database.all(sql, params);
     return rows.map((row) => this.#rehydrate(row));
   }
 
@@ -294,9 +336,14 @@ export class SqliteSubmissionPackageRepository extends SubmissionPackageReposito
         packageId: item.package_id,
         sequence: item.item_sequence,
         itemType: item.item_type,
+        assemblyRole: item.assembly_role,
         targetType: item.target_type,
         targetId: item.target_id,
         workflowId: item.workflow_id,
+        sectionKey: item.section_key,
+        sectionTitle: item.section_title,
+        parentSectionKey: item.parent_section_key,
+        sectionType: item.section_type,
         evidenceItemIds: parseJsonList(item.evidence_item_ids_json),
         label: item.label,
         rationale: item.rationale,
@@ -324,9 +371,14 @@ export class SqliteSubmissionPackageRepository extends SubmissionPackageReposito
           packageItemId: item.package_item_id,
           sequence: item.item_sequence,
           itemType: item.item_type,
+          assemblyRole: item.assembly_role,
           targetType: item.target_type,
           targetId: item.target_id,
           workflowId: item.workflow_id,
+          sectionKey: item.section_key,
+          sectionTitle: item.section_title,
+          parentSectionKey: item.parent_section_key,
+          sectionType: item.section_type,
           evidenceItemIds: parseJsonList(item.evidence_item_ids_json),
           label: item.label,
           rationale: item.rationale,
@@ -421,9 +473,14 @@ export class SqliteSubmissionPackageRepository extends SubmissionPackageReposito
         persistedItem.package_item_id !== currentItem.packageItemId ||
         persistedItem.item_sequence !== currentItem.sequence ||
         persistedItem.item_type !== currentItem.itemType ||
+        persistedItem.assembly_role !== currentItem.assemblyRole ||
         persistedItem.target_type !== currentItem.targetType ||
         persistedItem.target_id !== currentItem.targetId ||
         (persistedItem.workflow_id ?? null) !== (currentItem.workflowId ?? null) ||
+        (persistedItem.section_key ?? null) !== (currentItem.sectionKey ?? null) ||
+        (persistedItem.section_title ?? null) !== (currentItem.sectionTitle ?? null) ||
+        (persistedItem.parent_section_key ?? null) !== (currentItem.parentSectionKey ?? null) ||
+        (persistedItem.section_type ?? null) !== (currentItem.sectionType ?? null) ||
         JSON.stringify(parseJsonList(persistedItem.evidence_item_ids_json)) !==
           JSON.stringify(currentItem.evidenceItemIds ?? []) ||
         persistedItem.label !== currentItem.label ||
@@ -449,9 +506,14 @@ export class SqliteSubmissionPackageRepository extends SubmissionPackageReposito
       packageId: item.package_id,
       sequence: item.item_sequence,
       itemType: item.item_type,
+      assemblyRole: item.assembly_role,
       targetType: item.target_type,
       targetId: item.target_id,
       workflowId: item.workflow_id,
+      sectionKey: item.section_key,
+      sectionTitle: item.section_title,
+      parentSectionKey: item.parent_section_key,
+      sectionType: item.section_type,
       evidenceItemIds: parseJsonList(item.evidence_item_ids_json),
       label: item.label,
       rationale: item.rationale,

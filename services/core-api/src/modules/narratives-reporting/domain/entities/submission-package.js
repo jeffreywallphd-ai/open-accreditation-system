@@ -2,9 +2,13 @@ import { assertRequired, assertString } from '../../../shared/kernel/assertions.
 import { ValidationError } from '../../../shared/kernel/errors.js';
 import { createId, nowIso } from '../../../shared/kernel/identity.js';
 import {
+  normalizeSubmissionPackageItemAssemblyRole,
   parseSubmissionPackageItemType,
+  parseSubmissionPackageSectionTargetType,
   parseSubmissionPackageStatus,
+  submissionPackageItemAssemblyRole,
   submissionPackageItemType,
+  submissionPackageSectionTargetType,
   submissionPackageStatus,
 } from '../value-objects/submission-package-statuses.js';
 
@@ -24,11 +28,52 @@ function normalizeObject(value, field) {
   return value;
 }
 
+function normalizeOptionalString(value) {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  const normalized = `${value}`.trim();
+  return normalized.length > 0 ? normalized : null;
+}
+
 function resequence(items = []) {
   return items.map((item, index) => {
     item.sequence = index + 1;
     return item;
   });
+}
+
+function assertSectionKey(value, fieldName) {
+  if (!value) {
+    throw new ValidationError(`${fieldName} is required`);
+  }
+  if (!/^[A-Za-z0-9._:-]+$/.test(value)) {
+    throw new ValidationError(`${fieldName} must contain only letters, numbers, dot, underscore, colon, or dash`);
+  }
+}
+
+function assertCanonicalRoleCompatibility(itemType, assemblyRole) {
+  if (
+    (itemType === submissionPackageItemType.REPORT_SECTION ||
+      itemType === submissionPackageItemType.NARRATIVE_SECTION) &&
+    assemblyRole !== submissionPackageItemAssemblyRole.GOVERNED_SECTION
+  ) {
+    throw new ValidationError('report-section and narrative-section items must use assemblyRole=governed-section');
+  }
+
+  if (
+    itemType === submissionPackageItemType.EVIDENCE_ITEM &&
+    assemblyRole !== submissionPackageItemAssemblyRole.EVIDENCE_INCLUSION
+  ) {
+    throw new ValidationError('evidence-item items must use assemblyRole=evidence-inclusion');
+  }
+
+  if (
+    itemType === submissionPackageItemType.WORKFLOW_TARGET &&
+    assemblyRole === submissionPackageItemAssemblyRole.GOVERNED_SECTION
+  ) {
+    throw new ValidationError('itemType=workflow-target cannot use assemblyRole=governed-section');
+  }
 }
 
 export class SubmissionPackageItem {
@@ -46,25 +91,36 @@ export class SubmissionPackageItem {
     this.packageId = props.packageId;
     this.sequence = props.sequence;
     this.itemType = props.itemType;
+    this.assemblyRole = normalizeSubmissionPackageItemAssemblyRole(props);
+    assertCanonicalRoleCompatibility(this.itemType, this.assemblyRole);
+
     this.targetType = props.targetType;
     this.targetId = props.targetId;
-    this.workflowId = props.workflowId ? `${props.workflowId}`.trim() || null : null;
-    this.evidenceItemIds = normalizeIdList(props.evidenceItemIds ?? []);
-    this.label = props.label ? `${props.label}`.trim() || null : null;
-    this.rationale = props.rationale ? `${props.rationale}`.trim() || null : null;
+    this.workflowId = normalizeOptionalString(props.workflowId);
+
+    this.sectionKey = normalizeOptionalString(props.sectionKey);
+    this.sectionTitle = normalizeOptionalString(props.sectionTitle);
+    this.parentSectionKey = normalizeOptionalString(props.parentSectionKey);
+    this.sectionType = normalizeOptionalString(props.sectionType);
+
+    this.label = normalizeOptionalString(props.label);
+    this.rationale = normalizeOptionalString(props.rationale);
     this.metadata = normalizeObject(props.metadata, 'SubmissionPackageItem.metadata');
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
 
+    const incomingEvidenceIds = normalizeIdList(props.evidenceItemIds ?? []);
     if (
-      this.itemType === submissionPackageItemType.EVIDENCE_ITEM &&
-      this.evidenceItemIds.length === 0 &&
-      this.targetType !== 'evidence-item'
+      this.assemblyRole === submissionPackageItemAssemblyRole.EVIDENCE_INCLUSION &&
+      incomingEvidenceIds.length === 0 &&
+      this.targetType === 'evidence-item'
     ) {
-      throw new ValidationError(
-        'SubmissionPackageItem itemType=evidence-item requires targetType=evidence-item or explicit evidenceItemIds',
-      );
+      this.evidenceItemIds = [this.targetId];
+    } else {
+      this.evidenceItemIds = incomingEvidenceIds;
     }
+
+    this.#assertAssemblySemantics();
   }
 
   static create(input) {
@@ -74,9 +130,14 @@ export class SubmissionPackageItem {
       packageId: input.packageId,
       sequence: input.sequence,
       itemType: input.itemType ?? submissionPackageItemType.WORKFLOW_TARGET,
+      assemblyRole: input.assemblyRole,
       targetType: input.targetType,
       targetId: input.targetId,
       workflowId: input.workflowId,
+      sectionKey: input.sectionKey,
+      sectionTitle: input.sectionTitle,
+      parentSectionKey: input.parentSectionKey,
+      sectionType: input.sectionType,
       evidenceItemIds: input.evidenceItemIds ?? [],
       label: input.label,
       rationale: input.rationale,
@@ -88,6 +149,76 @@ export class SubmissionPackageItem {
 
   static rehydrate(input) {
     return new SubmissionPackageItem(input);
+  }
+
+  #assertAssemblySemantics() {
+    if (this.assemblyRole === submissionPackageItemAssemblyRole.GOVERNED_SECTION) {
+      parseSubmissionPackageSectionTargetType(this.targetType);
+      if (this.itemType === submissionPackageItemType.REPORT_SECTION) {
+        parseSubmissionPackageSectionTargetType(
+          this.targetType,
+          'SubmissionPackageItem.targetType for itemType=report-section',
+        );
+        if (this.targetType !== submissionPackageSectionTargetType.REPORT_SECTION) {
+          throw new ValidationError('itemType=report-section requires targetType=report-section');
+        }
+      }
+      if (this.itemType === submissionPackageItemType.NARRATIVE_SECTION) {
+        if (this.targetType !== submissionPackageSectionTargetType.NARRATIVE_SECTION) {
+          throw new ValidationError('itemType=narrative-section requires targetType=narrative-section');
+        }
+      }
+
+      assertSectionKey(this.sectionKey, 'SubmissionPackageItem.sectionKey');
+      if (!this.sectionTitle) {
+        throw new ValidationError('SubmissionPackageItem.sectionTitle is required for governed-section items');
+      }
+      if (this.sectionType) {
+        parseSubmissionPackageSectionTargetType(
+          this.sectionType,
+          'SubmissionPackageItem.sectionType for governed-section items',
+        );
+        if (this.sectionType !== this.targetType) {
+          throw new ValidationError(
+            'SubmissionPackageItem.sectionType must match targetType for governed-section items',
+          );
+        }
+      }
+      this.sectionType = this.sectionType ?? this.targetType;
+      if (this.parentSectionKey && this.parentSectionKey === this.sectionKey) {
+        throw new ValidationError('SubmissionPackageItem.parentSectionKey must differ from sectionKey');
+      }
+      return;
+    }
+
+    if (this.parentSectionKey) {
+      throw new ValidationError('SubmissionPackageItem.parentSectionKey is only allowed for governed-section items');
+    }
+    if (this.sectionType) {
+      throw new ValidationError('SubmissionPackageItem.sectionType is only allowed for governed-section items');
+    }
+    if (this.sectionTitle && !this.sectionKey) {
+      throw new ValidationError('SubmissionPackageItem.sectionTitle requires sectionKey');
+    }
+
+    if (this.assemblyRole === submissionPackageItemAssemblyRole.EVIDENCE_INCLUSION) {
+      if (this.targetType !== 'evidence-item' && this.evidenceItemIds.length === 0) {
+        throw new ValidationError(
+          'SubmissionPackageItem assemblyRole=evidence-inclusion requires targetType=evidence-item or explicit evidenceItemIds',
+        );
+      }
+      return;
+    }
+
+    if (
+      this.itemType === submissionPackageItemType.EVIDENCE_ITEM &&
+      this.evidenceItemIds.length === 0 &&
+      this.targetType !== 'evidence-item'
+    ) {
+      throw new ValidationError(
+        'SubmissionPackageItem itemType=evidence-item requires targetType=evidence-item or explicit evidenceItemIds',
+      );
+    }
   }
 }
 
@@ -108,14 +239,31 @@ export class SubmissionPackageSnapshotItem {
     this.packageItemId = props.packageItemId;
     this.sequence = props.sequence;
     this.itemType = props.itemType;
+    this.assemblyRole = normalizeSubmissionPackageItemAssemblyRole(props);
+    assertCanonicalRoleCompatibility(this.itemType, this.assemblyRole);
     this.targetType = props.targetType;
     this.targetId = props.targetId;
-    this.workflowId = props.workflowId ? `${props.workflowId}`.trim() || null : null;
+    this.workflowId = normalizeOptionalString(props.workflowId);
+    this.sectionKey = normalizeOptionalString(props.sectionKey);
+    this.sectionTitle = normalizeOptionalString(props.sectionTitle);
+    this.parentSectionKey = normalizeOptionalString(props.parentSectionKey);
+    this.sectionType = normalizeOptionalString(props.sectionType);
     this.evidenceItemIds = normalizeIdList(props.evidenceItemIds ?? []);
-    this.label = props.label ? `${props.label}`.trim() || null : null;
-    this.rationale = props.rationale ? `${props.rationale}`.trim() || null : null;
+    this.label = normalizeOptionalString(props.label);
+    this.rationale = normalizeOptionalString(props.rationale);
     this.metadata = normalizeObject(props.metadata, 'SubmissionPackageSnapshotItem.metadata');
     this.createdAt = props.createdAt;
+
+    if (this.assemblyRole === submissionPackageItemAssemblyRole.GOVERNED_SECTION) {
+      parseSubmissionPackageSectionTargetType(this.targetType);
+      assertSectionKey(this.sectionKey, 'SubmissionPackageSnapshotItem.sectionKey');
+      if (!this.sectionTitle) {
+        throw new ValidationError('SubmissionPackageSnapshotItem.sectionTitle is required for governed-section items');
+      }
+      if (this.parentSectionKey && this.parentSectionKey === this.sectionKey) {
+        throw new ValidationError('SubmissionPackageSnapshotItem.parentSectionKey must differ from sectionKey');
+      }
+    }
   }
 
   static create(input) {
@@ -125,9 +273,14 @@ export class SubmissionPackageSnapshotItem {
       packageItemId: input.packageItemId,
       sequence: input.sequence,
       itemType: input.itemType,
+      assemblyRole: input.assemblyRole,
       targetType: input.targetType,
       targetId: input.targetId,
       workflowId: input.workflowId,
+      sectionKey: input.sectionKey,
+      sectionTitle: input.sectionTitle,
+      parentSectionKey: input.parentSectionKey,
+      sectionType: input.sectionType,
       evidenceItemIds: input.evidenceItemIds,
       label: input.label,
       rationale: input.rationale,
@@ -148,9 +301,9 @@ export class SubmissionPackageSnapshot {
     this.id = props.id;
     this.packageId = props.packageId;
     this.versionNumber = props.versionNumber;
-    this.milestoneLabel = props.milestoneLabel ? `${props.milestoneLabel}`.trim() || null : null;
-    this.actorId = props.actorId ? `${props.actorId}`.trim() || null : null;
-    this.notes = props.notes ? `${props.notes}`.trim() || null : null;
+    this.milestoneLabel = normalizeOptionalString(props.milestoneLabel);
+    this.actorId = normalizeOptionalString(props.actorId);
+    this.notes = normalizeOptionalString(props.notes);
     this.finalized = props.finalized === true;
     this.items = (props.items ?? []).map((item) =>
       item instanceof SubmissionPackageSnapshotItem ? item : SubmissionPackageSnapshotItem.create(item),
@@ -211,7 +364,7 @@ export class SubmissionPackage {
     this.reviewCycleId = props.reviewCycleId;
     this.scopeType = props.scopeType;
     this.scopeId = props.scopeId;
-    this.name = props.name ? `${props.name}`.trim() || null : null;
+    this.name = normalizeOptionalString(props.name);
     this.status = props.status;
     this.items = resequence(
       (props.items ?? []).map((item) => (item instanceof SubmissionPackageItem ? item : SubmissionPackageItem.rehydrate(item))),
@@ -259,6 +412,7 @@ export class SubmissionPackage {
     });
     this.#assertNoDuplicateTarget(item);
     this.items.push(item);
+    this.#assertIntegrity();
     this.updatedAt = nowIso();
     return item;
   }
@@ -271,6 +425,7 @@ export class SubmissionPackage {
     }
     this.items.splice(index, 1);
     resequence(this.items);
+    this.#assertIntegrity();
     this.updatedAt = nowIso();
     return this;
   }
@@ -287,6 +442,7 @@ export class SubmissionPackage {
     const [item] = this.items.splice(currentIndex, 1);
     this.items.splice(newPosition - 1, 0, item);
     resequence(this.items);
+    this.#assertIntegrity();
     this.updatedAt = nowIso();
     return this;
   }
@@ -301,9 +457,14 @@ export class SubmissionPackage {
         packageItemId: item.id,
         sequence: item.sequence,
         itemType: item.itemType,
+        assemblyRole: item.assemblyRole,
         targetType: item.targetType,
         targetId: item.targetId,
         workflowId: item.workflowId,
+        sectionKey: item.sectionKey,
+        sectionTitle: item.sectionTitle,
+        parentSectionKey: item.parentSectionKey,
+        sectionType: item.sectionType,
         evidenceItemIds: [...item.evidenceItemIds],
         label: item.label,
         rationale: item.rationale,
@@ -360,7 +521,9 @@ export class SubmissionPackage {
   #assertIntegrity() {
     const itemIds = new Set();
     const targetKeys = new Set();
+    const governedSectionKeys = new Set();
     let previousSequence = 0;
+
     for (const item of this.items) {
       if (item.packageId !== this.id) {
         throw new ValidationError('SubmissionPackageItem.packageId must match owning package id');
@@ -380,6 +543,35 @@ export class SubmissionPackage {
       targetKeys.add(targetKey);
       itemIds.add(item.id);
       previousSequence = item.sequence;
+
+      if (item.assemblyRole === submissionPackageItemAssemblyRole.GOVERNED_SECTION) {
+        if (governedSectionKeys.has(item.sectionKey)) {
+          throw new ValidationError(`SubmissionPackage sectionKey must be unique: ${item.sectionKey}`);
+        }
+        governedSectionKeys.add(item.sectionKey);
+      }
+    }
+
+    for (const item of this.items) {
+      if (
+        item.assemblyRole === submissionPackageItemAssemblyRole.GOVERNED_SECTION &&
+        item.parentSectionKey &&
+        !governedSectionKeys.has(item.parentSectionKey)
+      ) {
+        throw new ValidationError(
+          `SubmissionPackage governed-section parentSectionKey does not exist: ${item.parentSectionKey}`,
+        );
+      }
+
+      if (
+        item.assemblyRole !== submissionPackageItemAssemblyRole.GOVERNED_SECTION &&
+        item.sectionKey &&
+        !governedSectionKeys.has(item.sectionKey)
+      ) {
+        throw new ValidationError(
+          `SubmissionPackage item sectionKey must reference an existing governed section: ${item.sectionKey}`,
+        );
+      }
     }
 
     let previousSnapshotVersion = 0;

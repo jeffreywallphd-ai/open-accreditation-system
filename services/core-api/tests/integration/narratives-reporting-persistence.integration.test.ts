@@ -87,14 +87,24 @@ export async function runTests(): Promise<void> {
     });
     packageId = submissionPackage.id;
 
-    const withItem = await narratives.addSubmissionPackageItem(packageId, {
+    const withSection = await narratives.addSubmissionPackageItem(packageId, {
       itemType: 'report-section',
       targetType: 'report-section',
       targetId: 'section_5_1',
+      sectionKey: 'sec-5-1',
+      sectionTitle: 'Faculty qualifications narrative',
       evidenceItemIds: [evidenceItem.id],
       label: 'Faculty qualifications narrative',
     });
-    itemId = withItem.items[0].id;
+    itemId = withSection.items[0].id;
+
+    const withEvidence = await narratives.addSubmissionPackageItem(packageId, {
+      itemType: 'evidence-item',
+      targetType: 'evidence-item',
+      targetId: evidenceItem.id,
+      sectionKey: 'sec-5-1',
+    });
+    assert.equal(withEvidence.items.length, 2);
 
     const snapshot = await narratives.snapshotSubmissionPackage(packageId, {
       milestoneLabel: 'checkpoint-1',
@@ -130,15 +140,18 @@ export async function runTests(): Promise<void> {
 
     const restored = await narratives.getSubmissionPackageById(packageId);
     assert.ok(restored);
-    assert.equal(restored?.items.length, 1);
+    assert.equal(restored?.items.length, 2);
     assert.equal(restored?.items[0].id, itemId);
+    assert.equal(restored?.items[0].sectionKey, 'sec-5-1');
+    assert.equal(restored?.items[0].assemblyRole, 'governed-section');
     assert.equal(restored?.snapshots.length, 2);
     assert.equal(restored?.snapshots[1].finalized, true);
     assert.equal(restored?.status, 'finalized');
 
     const context = await narratives.getSubmissionPackageWithItemContext(packageId);
-    assert.equal(context.itemContext.length, 1);
+    assert.equal(context.itemContext.length, 2);
     assert.equal(context.itemContext[0].workflowState, 'submitted');
+    assert.equal(context.assembly.sections.length, 1);
 
     const tampered = await narratives.getSubmissionPackageById(packageId);
     assert.ok(tampered);

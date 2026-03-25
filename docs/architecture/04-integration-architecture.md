@@ -84,6 +84,7 @@ Current Phase 3/Phase 4 inner-layer details:
 - persisted workflow transition history stores the readiness summary used for the decision transition, enabling lightweight historical inspection without event-sourcing expansion
 - narratives-reporting package assembly does not read workflow/evidence tables directly; it calls workflow/evidence application contracts and persists only package-owned state (`SubmissionPackage`, items, snapshots)
 - package finalization uses stricter readiness policy (`usable` + current referenced evidence) while checkpoint snapshots may use presence-level validation
+- narratives-reporting now exposes a thin HTTP transport layer over these use cases without moving workflow/evidence rules into controllers
 
 ## Data Flow Pattern
 

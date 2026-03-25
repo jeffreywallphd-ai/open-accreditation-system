@@ -19,6 +19,10 @@ import {
 } from '../../src/modules/workflow-approvals/infrastructure/persistence/in-memory-workflow-approvals-repositories.js';
 import { NarrativesReportingService } from '../../src/modules/narratives-reporting/application/narratives-reporting-service.js';
 import { InMemorySubmissionPackageRepository } from '../../src/modules/narratives-reporting/infrastructure/persistence/in-memory-narratives-reporting-repositories.js';
+import {
+  submissionPackageItemAssemblyRole,
+  submissionPackageItemType,
+} from '../../src/modules/narratives-reporting/domain/value-objects/submission-package-statuses.js';
 import { ValidationError } from '../../src/modules/shared/kernel/errors.js';
 
 export async function runTests(): Promise<void> {
@@ -72,7 +76,7 @@ export async function runTests(): Promise<void> {
   await evidenceManagement.markEvidenceComplete(evidence.id);
   await evidenceManagement.activateEvidenceItem(evidence.id);
 
-  const reviewWorkflow = await workflowApprovals.createWorkflowInstance({
+  const sectionWorkflow = await workflowApprovals.createWorkflowInstance({
     reviewCycleId: reviewCycle.id,
     targetType: 'report-section',
     targetId: 'section_2_1',
@@ -81,12 +85,12 @@ export async function runTests(): Promise<void> {
   });
 
   await workflowApprovals.transitionWorkflowState(
-    reviewWorkflow.id,
+    sectionWorkflow.id,
     reviewWorkflowState.IN_REVIEW,
     workflowActorRole.FACULTY,
   );
   await workflowApprovals.transitionWorkflowState(
-    reviewWorkflow.id,
+    sectionWorkflow.id,
     reviewWorkflowState.APPROVED,
     workflowActorRole.REVIEWER,
   );
@@ -117,14 +121,28 @@ export async function runTests(): Promise<void> {
     'reviewCycle+scope should be unique',
   );
 
-  const withItem = await service.addSubmissionPackageItem(submissionPackage.id, {
+  const withSection = await service.addSubmissionPackageItem(submissionPackage.id, {
     targetType: 'report-section',
     targetId: 'section_2_1',
-    itemType: 'report-section',
+    itemType: submissionPackageItemType.REPORT_SECTION,
+    assemblyRole: submissionPackageItemAssemblyRole.GOVERNED_SECTION,
+    sectionKey: 'sec-2-1',
+    sectionTitle: 'Strategic alignment',
     evidenceItemIds: [evidence.id],
   });
-  assert.equal(withItem.items.length, 1);
-  assert.equal(withItem.items[0].workflowId, reviewWorkflow.id);
+  assert.equal(withSection.items.length, 1);
+  assert.equal(withSection.items[0].workflowId, sectionWorkflow.id);
+
+  const withEvidenceInclusion = await service.addSubmissionPackageItem(submissionPackage.id, {
+    targetType: 'evidence-item',
+    targetId: evidence.id,
+    itemType: submissionPackageItemType.EVIDENCE_ITEM,
+    assemblyRole: submissionPackageItemAssemblyRole.EVIDENCE_INCLUSION,
+    sectionKey: 'sec-2-1',
+  });
+  assert.equal(withEvidenceInclusion.items.length, 2);
+  assert.equal(withEvidenceInclusion.items[1].workflowId, null);
+  assert.deepEqual(withEvidenceInclusion.items[1].evidenceItemIds, [evidence.id]);
 
   await assert.rejects(
     () =>
@@ -132,9 +150,11 @@ export async function runTests(): Promise<void> {
         targetType: 'report-section',
         targetId: 'section_9_9',
         itemType: 'report-section',
+        sectionKey: 'sec-9-9',
+        sectionTitle: 'Missing workflow',
       }),
     ValidationError,
-    'package items should require eligible workflow target',
+    'section items should require eligible workflow target',
   );
 
   const snapshot = await service.snapshotSubmissionPackage(submissionPackage.id, {
@@ -142,10 +162,10 @@ export async function runTests(): Promise<void> {
     actorId: 'person_reviewer_1',
   });
   assert.equal(snapshot.versionNumber, 1);
-  assert.equal(snapshot.items.length, 1);
+  assert.equal(snapshot.items.length, 2);
 
   await workflowApprovals.transitionWorkflowState(
-    reviewWorkflow.id,
+    sectionWorkflow.id,
     reviewWorkflowState.SUBMITTED,
     workflowActorRole.ADMIN,
   );
@@ -161,14 +181,15 @@ export async function runTests(): Promise<void> {
   assert.equal(finalizedPackage?.status, 'finalized');
 
   await assert.rejects(
-    () =>
-      service.removeSubmissionPackageItem(submissionPackage.id, finalizedPackage!.items[0].id),
+    () => service.removeSubmissionPackageItem(submissionPackage.id, finalizedPackage!.items[0].id),
     ValidationError,
     'finalized package should reject item mutation use cases',
   );
 
   const context = await service.getSubmissionPackageWithItemContext(submissionPackage.id);
-  assert.equal(context.itemContext.length, 1);
+  assert.equal(context.itemContext.length, 2);
   assert.equal(context.itemContext[0].workflowState, 'submitted');
   assert.equal(context.itemContext[0].evidenceSummary?.missingEvidenceItemIds.length, 0);
+  assert.equal(context.assembly.sections.length, 1);
+  assert.equal(context.assembly.sections[0].includedItemIds.length, 1);
 }

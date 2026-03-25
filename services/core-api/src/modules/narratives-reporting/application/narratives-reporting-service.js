@@ -1,9 +1,80 @@
 import { NotFoundError, ValidationError } from '../../shared/kernel/errors.js';
 import { WorkflowEvidenceReadinessContract } from '../../evidence-management/application/contracts/workflow-evidence-readiness-contract.js';
 import { SubmissionPackage } from '../domain/entities/submission-package.js';
-import { submissionPackageItemType, submissionPackageStatus } from '../domain/value-objects/submission-package-statuses.js';
+import {
+  normalizeSubmissionPackageItemAssemblyRole,
+  submissionPackageItemAssemblyRole,
+  submissionPackageItemType,
+  submissionPackageStatus,
+} from '../domain/value-objects/submission-package-statuses.js';
 
 const WORKFLOW_ELIGIBLE_STATES = new Set(['approved', 'submitted']);
+
+function normalizeEvidenceIdsForInput(input = {}) {
+  const normalized = [...new Set((input.evidenceItemIds ?? []).filter(Boolean).map((value) => `${value}`.trim()))].filter(
+    Boolean,
+  );
+  normalized.sort((left, right) => left.localeCompare(right));
+
+  if (normalized.length === 0 && input.targetType === 'evidence-item' && input.targetId) {
+    return [input.targetId];
+  }
+  return normalized;
+}
+
+function buildAssemblyProjection(submissionPackage, contextByItemId) {
+  const orderedItems = submissionPackage.items.map((item) => {
+    const context = contextByItemId.get(item.id) ?? { workflowState: null, evidenceSummary: null };
+    return {
+      itemId: item.id,
+      sequence: item.sequence,
+      assemblyRole: item.assemblyRole,
+      itemType: item.itemType,
+      targetType: item.targetType,
+      targetId: item.targetId,
+      workflowId: item.workflowId,
+      workflowState: context.workflowState,
+      sectionKey: item.sectionKey,
+      sectionTitle: item.sectionTitle,
+      parentSectionKey: item.parentSectionKey,
+      sectionType: item.sectionType,
+      evidenceItemIds: [...item.evidenceItemIds],
+      evidenceSummary: context.evidenceSummary,
+      label: item.label,
+      rationale: item.rationale,
+      metadata: item.metadata,
+    };
+  });
+
+  const sections = orderedItems
+    .filter((item) => item.assemblyRole === submissionPackageItemAssemblyRole.GOVERNED_SECTION)
+    .map((section) => ({
+      ...section,
+      includedItemIds: orderedItems
+        .filter(
+          (candidate) =>
+            candidate.itemId !== section.itemId &&
+            candidate.sectionKey &&
+            candidate.sectionKey === section.sectionKey,
+        )
+        .map((candidate) => candidate.itemId),
+      childSectionKeys: orderedItems
+        .filter(
+          (candidate) =>
+            candidate.assemblyRole === submissionPackageItemAssemblyRole.GOVERNED_SECTION &&
+            candidate.parentSectionKey === section.sectionKey,
+        )
+        .map((candidate) => candidate.sectionKey),
+    }));
+
+  return {
+    orderedItems,
+    sections,
+    unsectionedItemIds: orderedItems
+      .filter((item) => item.assemblyRole !== submissionPackageItemAssemblyRole.GOVERNED_SECTION && !item.sectionKey)
+      .map((item) => item.itemId),
+  };
+}
 
 export class NarrativesReportingService {
   constructor(deps) {
@@ -51,20 +122,38 @@ export class NarrativesReportingService {
 
   async addSubmissionPackageItem(submissionPackageId, input) {
     const submissionPackage = await this.#requireSubmissionPackage(submissionPackageId);
-    const workflow = await this.#requireEligibleWorkflowTarget(submissionPackage, input);
+    const assemblyRole = normalizeSubmissionPackageItemAssemblyRole(input);
+    const evidenceItemIds = normalizeEvidenceIdsForInput(input);
 
-    if ((input.evidenceItemIds ?? []).length > 0) {
-      await this.#assertEvidenceReferencesValid(submissionPackage, input, {
-        requiredReadinessLevel: 'present',
-        requireCurrentReferencedEvidence: false,
-        requireAnyEvidenceForDecision: false,
-      });
+    if (this.#requiresWorkflowEligibility(assemblyRole, input.targetType)) {
+      const workflow = await this.#requireEligibleWorkflowTarget(submissionPackage, input);
+      input = {
+        ...input,
+        workflowId: input.workflowId ?? workflow.id,
+      };
+    }
+
+    if (evidenceItemIds.length > 0) {
+      await this.#assertEvidenceReferencesValid(
+        submissionPackage,
+        {
+          targetType: input.targetType,
+          targetId: input.targetId,
+          evidenceItemIds,
+        },
+        {
+          requiredReadinessLevel: 'present',
+          requireCurrentReferencedEvidence: false,
+          requireAnyEvidenceForDecision: false,
+        },
+      );
     }
 
     submissionPackage.addItem({
       ...input,
+      evidenceItemIds,
+      assemblyRole,
       itemType: input.itemType ?? submissionPackageItemType.WORKFLOW_TARGET,
-      workflowId: input.workflowId ?? workflow.id,
     });
 
     return this.submissionPackages.save(submissionPackage);
@@ -86,10 +175,12 @@ export class NarrativesReportingService {
     const submissionPackage = await this.#requireSubmissionPackage(submissionPackageId);
 
     for (const item of submissionPackage.items) {
-      await this.#requireEligibleWorkflowTarget(submissionPackage, {
-        targetType: item.targetType,
-        targetId: item.targetId,
-      });
+      if (this.#requiresWorkflowEligibility(item.assemblyRole, item.targetType)) {
+        await this.#requireEligibleWorkflowTarget(submissionPackage, {
+          targetType: item.targetType,
+          targetId: item.targetId,
+        });
+      }
 
       if (item.evidenceItemIds.length > 0) {
         await this.#assertEvidenceReferencesValid(
@@ -134,11 +225,14 @@ export class NarrativesReportingService {
     const itemContext = [];
 
     for (const item of submissionPackage.items) {
-      const workflow = await this.workflowTargets.getWorkflowStateForCycleTarget(
-        submissionPackage.reviewCycleId,
-        item.targetType,
-        item.targetId,
-      );
+      let workflow = null;
+      if (this.#requiresWorkflowEligibility(item.assemblyRole, item.targetType) || item.workflowId) {
+        workflow = await this.workflowTargets.getWorkflowStateForCycleTarget(
+          submissionPackage.reviewCycleId,
+          item.targetType,
+          item.targetId,
+        );
+      }
       let evidenceSummary = null;
       if (item.evidenceItemIds.length > 0) {
         evidenceSummary = await this.evidenceReadiness.evaluateWorkflowEvidenceReadiness({
@@ -162,14 +256,19 @@ export class NarrativesReportingService {
         itemId: item.id,
         targetType: item.targetType,
         targetId: item.targetId,
+        assemblyRole: item.assemblyRole,
+        sectionKey: item.sectionKey,
         workflowState: workflow?.state ?? null,
         evidenceSummary,
       });
     }
 
+    const contextByItemId = new Map(itemContext.map((entry) => [entry.itemId, entry]));
+
     return {
       submissionPackage,
       itemContext,
+      assembly: buildAssemblyProjection(submissionPackage, contextByItemId),
     };
   }
 
@@ -245,6 +344,13 @@ export class NarrativesReportingService {
     if (readinessPolicy.requiredReadinessLevel === 'usable' && readiness.isSufficient !== true) {
       throw new ValidationError('SubmissionPackage snapshot/finalization requires sufficient referenced evidence readiness');
     }
+  }
+
+  #requiresWorkflowEligibility(assemblyRole, targetType) {
+    if (assemblyRole === submissionPackageItemAssemblyRole.EVIDENCE_INCLUSION && targetType === 'evidence-item') {
+      return false;
+    }
+    return true;
   }
 
   #resolveReportSectionId(targetType, targetId) {

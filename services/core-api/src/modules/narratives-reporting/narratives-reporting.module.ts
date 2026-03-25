@@ -5,6 +5,7 @@ import {
   EvidenceManagementModule,
 } from '../evidence-management/evidence-management.module.js';
 import { WF_SERVICE, WorkflowApprovalsModule } from '../workflow-approvals/workflow-approvals.module.js';
+import { NarrativesReportingController } from './api/narratives-reporting.controller.js';
 import { NarrativesReportingService } from './application/narratives-reporting-service.js';
 import { WorkflowApprovalsSubmissionContractsAdapter } from './infrastructure/adapters/workflow-approvals-submission-contracts-adapter.js';
 import { SqliteSubmissionPackageRepository } from './infrastructure/persistence/sqlite-narratives-reporting-repositories.js';
@@ -18,6 +19,7 @@ export const NARR_SERVICE = Symbol('NARR_SERVICE');
 
 @Module({
   imports: [WorkflowApprovalsModule, EvidenceManagementModule],
+  controllers: [NarrativesReportingController],
   providers: [
     {
       provide: NARR_REPOSITORY_TOKENS.submissionPackages,
