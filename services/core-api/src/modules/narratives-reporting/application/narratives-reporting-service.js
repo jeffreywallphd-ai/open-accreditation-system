@@ -1,6 +1,11 @@
 import { NotFoundError, ValidationError } from '../../shared/kernel/errors.js';
 import { WorkflowEvidenceReadinessContract } from '../../evidence-management/application/contracts/workflow-evidence-readiness-contract.js';
+import { Narrative } from '../domain/entities/narrative.js';
 import { SubmissionPackage } from '../domain/entities/submission-package.js';
+import {
+  narrativePackageLinkType,
+  narrativeSectionType,
+} from '../domain/value-objects/narrative-statuses.js';
 import {
   normalizeSubmissionPackageItemAssemblyRole,
   submissionPackageItemAssemblyRole,
@@ -122,12 +127,16 @@ function buildAssemblyProjection(submissionPackage, contextByItemId) {
 export class NarrativesReportingService {
   constructor(deps) {
     this.submissionPackages = deps.submissionPackages;
+    this.narratives = deps.narratives;
     this.reviewCycles = deps.reviewCycles;
     this.workflowTargets = deps.workflowTargets;
     this.evidenceReadiness = deps.evidenceReadiness;
 
     if (!this.submissionPackages || typeof this.submissionPackages.save !== 'function') {
       throw new ValidationError('NarrativesReportingService requires submissionPackages repository');
+    }
+    if (!this.narratives || typeof this.narratives.save !== 'function') {
+      throw new ValidationError('NarrativesReportingService requires narratives repository');
     }
     if (!this.reviewCycles || typeof this.reviewCycles.getReviewCycleById !== 'function') {
       throw new ValidationError('NarrativesReportingService requires reviewCycles contract');
@@ -315,6 +324,122 @@ export class NarrativesReportingService {
     };
   }
 
+  async createNarrative(input) {
+    if (!input?.submissionPackageId) {
+      throw new ValidationError('submissionPackageId is required');
+    }
+    const submissionPackage = await this.#requireSubmissionPackage(input.submissionPackageId);
+    const existing = await this.narratives.getBySubmissionPackageId(submissionPackage.id);
+    if (existing) {
+      throw new ValidationError(
+        `Narrative already exists for submissionPackageId ${submissionPackage.id}`,
+      );
+    }
+
+    const narrative = Narrative.create({
+      id: input.id,
+      institutionId: submissionPackage.institutionId,
+      reviewCycleId: submissionPackage.reviewCycleId,
+      submissionPackageId: submissionPackage.id,
+      title: input.title,
+    });
+    return this.narratives.save(narrative);
+  }
+
+  async addNarrativeSection(narrativeId, input) {
+    const narrative = await this.#requireNarrative(narrativeId);
+    narrative.addSection(input);
+    return this.narratives.save(narrative);
+  }
+
+  async updateNarrativeSection(narrativeId, sectionId, input) {
+    const narrative = await this.#requireNarrative(narrativeId);
+    narrative.updateSection(sectionId, input);
+    return this.narratives.save(narrative);
+  }
+
+  async removeNarrativeSection(narrativeId, sectionId) {
+    const narrative = await this.#requireNarrative(narrativeId);
+    narrative.removeSection(sectionId);
+    return this.narratives.save(narrative);
+  }
+
+  async reorderNarrativeSection(narrativeId, sectionId, newPosition) {
+    const narrative = await this.#requireNarrative(narrativeId);
+    narrative.reorderSection(sectionId, newPosition);
+    return this.narratives.save(narrative);
+  }
+
+  async linkNarrativeSectionEvidence(narrativeId, sectionId, input) {
+    const narrative = await this.#requireNarrative(narrativeId);
+    const section = narrative.getSectionById(sectionId);
+    if (!section) {
+      throw new ValidationError(`Narrative section not found: ${sectionId}`);
+    }
+
+    await this.#assertNarrativeSectionEvidenceLinkValid(narrative, section, input.evidenceItemId);
+    narrative.linkSectionEvidence(sectionId, input);
+    return this.narratives.save(narrative);
+  }
+
+  async unlinkNarrativeSectionEvidence(narrativeId, sectionId, linkId) {
+    const narrative = await this.#requireNarrative(narrativeId);
+    narrative.unlinkSectionEvidence(sectionId, linkId);
+    return this.narratives.save(narrative);
+  }
+
+  async linkNarrativeSectionToPackageItem(narrativeId, sectionId, input) {
+    const narrative = await this.#requireNarrative(narrativeId);
+    const section = narrative.getSectionById(sectionId);
+    if (!section) {
+      throw new ValidationError(`Narrative section not found: ${sectionId}`);
+    }
+
+    const submissionPackage = await this.#requireSubmissionPackage(narrative.submissionPackageId);
+    const packageItem = submissionPackage.items.find((item) => item.id === input.submissionPackageItemId);
+    if (!packageItem) {
+      throw new ValidationError(
+        `Narrative section package link target not found in submission package: ${input.submissionPackageItemId}`,
+      );
+    }
+    this.#assertSectionPackageLinkSemantics(section, packageItem, input.linkType);
+
+    narrative.linkSectionToPackageItem(sectionId, input);
+    return this.narratives.save(narrative);
+  }
+
+  async unlinkNarrativeSectionFromPackageItem(narrativeId, sectionId, submissionPackageItemId) {
+    const narrative = await this.#requireNarrative(narrativeId);
+    narrative.unlinkSectionFromPackageItem(sectionId, submissionPackageItemId);
+    return this.narratives.save(narrative);
+  }
+
+  async submitNarrativeForReview(narrativeId) {
+    const narrative = await this.#requireNarrative(narrativeId);
+    narrative.submitForReview();
+    return this.narratives.save(narrative);
+  }
+
+  async returnNarrativeToDraft(narrativeId) {
+    const narrative = await this.#requireNarrative(narrativeId);
+    narrative.returnToDraft();
+    return this.narratives.save(narrative);
+  }
+
+  async finalizeNarrative(narrativeId) {
+    const narrative = await this.#requireNarrative(narrativeId);
+    narrative.finalize();
+    return this.narratives.save(narrative);
+  }
+
+  async getNarrativeById(id) {
+    return this.narratives.getById(id);
+  }
+
+  async listNarratives(filter = {}) {
+    return this.narratives.findByFilter(filter);
+  }
+
   async #requireReviewCycle(reviewCycleId) {
     if (!reviewCycleId) {
       throw new ValidationError('reviewCycleId is required');
@@ -335,6 +460,17 @@ export class NarrativesReportingService {
       throw new NotFoundError('SubmissionPackage', submissionPackageId);
     }
     return submissionPackage;
+  }
+
+  async #requireNarrative(narrativeId) {
+    if (!narrativeId) {
+      throw new ValidationError('narrativeId is required');
+    }
+    const narrative = await this.narratives.getById(narrativeId);
+    if (!narrative) {
+      throw new NotFoundError('Narrative', narrativeId);
+    }
+    return narrative;
   }
 
   async #requireEligibleWorkflowTarget(submissionPackage, input) {
@@ -386,6 +522,52 @@ export class NarrativesReportingService {
     }
     if (readinessPolicy.requiredReadinessLevel === 'usable' && readiness.isSufficient !== true) {
       throw new ValidationError('SubmissionPackage snapshot/finalization requires sufficient referenced evidence readiness');
+    }
+  }
+
+  async #assertNarrativeSectionEvidenceLinkValid(narrative, section, evidenceItemId) {
+    const readiness = await this.evidenceReadiness.evaluateWorkflowEvidenceReadiness({
+      institutionId: narrative.institutionId,
+      reviewCycleId: narrative.reviewCycleId,
+      targetType: section.sectionType,
+      targetId: section.sectionKey,
+      reportSectionId: section.sectionType === narrativeSectionType.REPORT_SECTION ? section.sectionKey : null,
+      evidenceItemIds: [evidenceItemId],
+      readinessPolicy: {
+        requiredReadinessLevel: 'present',
+        requireAnyEvidenceForDecision: false,
+        requireCurrentReferencedEvidence: false,
+        requireCollectionScopedUsableEvidence: false,
+        minimumReferencedUsableEvidenceCount: 0,
+        minimumCollectionUsableEvidenceCount: 0,
+      },
+    });
+
+    if (readiness.missingEvidenceItemIds.length > 0) {
+      throw new ValidationError(
+        `NarrativeSection evidence link references missing evidence: ${readiness.missingEvidenceItemIds.join(', ')}`,
+      );
+    }
+    if (readiness.outOfInstitutionScopeEvidenceItemIds.length > 0) {
+      throw new ValidationError(
+        `NarrativeSection evidence link references out-of-scope evidence: ${readiness.outOfInstitutionScopeEvidenceItemIds.join(', ')}`,
+      );
+    }
+  }
+
+  #assertSectionPackageLinkSemantics(section, packageItem, linkType) {
+    if (
+      linkType === narrativePackageLinkType.GOVERNING_SECTION &&
+      packageItem.assemblyRole !== submissionPackageItemAssemblyRole.GOVERNED_SECTION
+    ) {
+      throw new ValidationError('NarrativeSection governing-section links require a governed-section package item');
+    }
+
+    if (
+      linkType === narrativePackageLinkType.GOVERNING_SECTION &&
+      section.sectionType !== packageItem.targetType
+    ) {
+      throw new ValidationError('NarrativeSection governing-section links require matching section and package target types');
     }
   }
 

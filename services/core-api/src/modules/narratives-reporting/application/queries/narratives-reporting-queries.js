@@ -27,3 +27,23 @@ export class GetSubmissionPackageWithContextQuery {
     return this.service.getSubmissionPackageWithItemContext(id);
   }
 }
+
+export class GetNarrativeByIdQuery {
+  constructor(service) {
+    this.service = service;
+  }
+
+  async execute(id) {
+    return this.service.getNarrativeById(id);
+  }
+}
+
+export class ListNarrativesQuery {
+  constructor(service) {
+    this.service = service;
+  }
+
+  async execute(filter = {}) {
+    return this.service.listNarratives(filter);
+  }
+}

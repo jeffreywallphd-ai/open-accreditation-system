@@ -1,6 +1,8 @@
 import { ValidationError } from '../../../shared/kernel/errors.js';
-import { SubmissionPackageRepository } from '../../domain/repositories/repositories.js';
+import { Narrative } from '../../domain/entities/narrative.js';
+import { SubmissionPackageRepository, NarrativeRepository } from '../../domain/repositories/repositories.js';
 import { SubmissionPackage } from '../../domain/entities/submission-package.js';
+import { narrativeStatus } from '../../domain/value-objects/narrative-statuses.js';
 import { submissionPackageStatus } from '../../domain/value-objects/submission-package-statuses.js';
 
 function parseJsonList(raw) {
@@ -80,6 +82,49 @@ function toSnapshot(submissionPackage) {
     })),
     createdAt: submissionPackage.createdAt,
     updatedAt: submissionPackage.updatedAt,
+  };
+}
+
+function toNarrativeSnapshot(narrative) {
+  return {
+    id: narrative.id,
+    institutionId: narrative.institutionId,
+    reviewCycleId: narrative.reviewCycleId,
+    submissionPackageId: narrative.submissionPackageId,
+    title: narrative.title,
+    status: narrative.status,
+    sections: (narrative.sections ?? []).map((section) => ({
+      id: section.id,
+      narrativeId: section.narrativeId,
+      sequence: section.sequence,
+      sectionType: section.sectionType,
+      sectionKey: section.sectionKey,
+      parentSectionKey: section.parentSectionKey,
+      title: section.title,
+      content: section.content,
+      ownerId: section.ownerId,
+      evidenceLinks: (section.evidenceLinks ?? []).map((link) => ({
+        id: link.id,
+        sectionId: link.sectionId,
+        evidenceItemId: link.evidenceItemId,
+        relationshipType: link.relationshipType,
+        rationale: link.rationale,
+        createdAt: link.createdAt,
+      })),
+      packageLinks: (section.packageLinks ?? []).map((link) => ({
+        id: link.id,
+        sectionId: link.sectionId,
+        submissionPackageItemId: link.submissionPackageItemId,
+        linkType: link.linkType,
+        createdAt: link.createdAt,
+      })),
+      createdAt: section.createdAt,
+      updatedAt: section.updatedAt,
+    })),
+    createdAt: narrative.createdAt,
+    updatedAt: narrative.updatedAt,
+    submittedForReviewAt: narrative.submittedForReviewAt,
+    finalizedAt: narrative.finalizedAt,
   };
 }
 
@@ -524,6 +569,252 @@ export class SqliteSubmissionPackageRepository extends SubmissionPackageReposito
 
     if (JSON.stringify(persistedItems) !== JSON.stringify(next.items ?? [])) {
       throw new ValidationError('SubmissionPackage items cannot be modified after finalization');
+    }
+  }
+}
+
+export class SqliteNarrativeRepository extends NarrativeRepository {
+  constructor(database) {
+    super();
+    this.database = database;
+  }
+
+  async save(narrative) {
+    if (!(narrative instanceof Narrative)) {
+      throw new ValidationError('NarrativeRepository.save expects a Narrative aggregate instance');
+    }
+
+    const validated = Narrative.rehydrate(toNarrativeSnapshot(narrative));
+
+    this.database.transaction(() => {
+      const existing = this.database.get(
+        'SELECT * FROM narratives_narratives WHERE id = @id',
+        { id: validated.id },
+      );
+      if (existing) {
+        this.#assertIdentityUnchanged(existing, validated);
+        if (existing.status === narrativeStatus.FINALIZED) {
+          this.#assertFinalizedNarrativeUnchanged(existing, validated);
+        }
+      }
+      this.#assertSubmissionPackageUniqueness(validated);
+
+      this.database.run(
+        `INSERT INTO narratives_narratives
+          (id, institution_id, review_cycle_id, submission_package_id, title, status, submitted_for_review_at, finalized_at, created_at, updated_at)
+         VALUES
+          (@id, @institutionId, @reviewCycleId, @submissionPackageId, @title, @status, @submittedForReviewAt, @finalizedAt, @createdAt, @updatedAt)
+         ON CONFLICT(id) DO UPDATE SET
+           institution_id=excluded.institution_id,
+           review_cycle_id=excluded.review_cycle_id,
+           submission_package_id=excluded.submission_package_id,
+           title=excluded.title,
+           status=excluded.status,
+           submitted_for_review_at=excluded.submitted_for_review_at,
+           finalized_at=excluded.finalized_at,
+           updated_at=excluded.updated_at`,
+        {
+          id: validated.id,
+          institutionId: validated.institutionId,
+          reviewCycleId: validated.reviewCycleId,
+          submissionPackageId: validated.submissionPackageId,
+          title: validated.title,
+          status: validated.status,
+          submittedForReviewAt: validated.submittedForReviewAt,
+          finalizedAt: validated.finalizedAt,
+          createdAt: validated.createdAt,
+          updatedAt: validated.updatedAt,
+        },
+      );
+
+      this.database.run('DELETE FROM narratives_narrative_sections WHERE narrative_id = @narrativeId', {
+        narrativeId: validated.id,
+      });
+
+      for (const section of validated.sections) {
+        this.database.run(
+          `INSERT INTO narratives_narrative_sections
+            (id, narrative_id, section_sequence, section_type, section_key, parent_section_key, title, content, owner_id, created_at, updated_at)
+           VALUES
+            (@id, @narrativeId, @sequence, @sectionType, @sectionKey, @parentSectionKey, @title, @content, @ownerId, @createdAt, @updatedAt)`,
+          {
+            id: section.id,
+            narrativeId: section.narrativeId,
+            sequence: section.sequence,
+            sectionType: section.sectionType,
+            sectionKey: section.sectionKey,
+            parentSectionKey: section.parentSectionKey,
+            title: section.title,
+            content: section.content,
+            ownerId: section.ownerId,
+            createdAt: section.createdAt,
+            updatedAt: section.updatedAt,
+          },
+        );
+
+        for (const evidenceLink of section.evidenceLinks) {
+          this.database.run(
+            `INSERT INTO narratives_narrative_section_evidence_links
+              (id, section_id, evidence_item_id, relationship_type, rationale, created_at)
+             VALUES
+              (@id, @sectionId, @evidenceItemId, @relationshipType, @rationale, @createdAt)`,
+            {
+              id: evidenceLink.id,
+              sectionId: evidenceLink.sectionId,
+              evidenceItemId: evidenceLink.evidenceItemId,
+              relationshipType: evidenceLink.relationshipType,
+              rationale: evidenceLink.rationale,
+              createdAt: evidenceLink.createdAt,
+            },
+          );
+        }
+
+        for (const packageLink of section.packageLinks) {
+          this.database.run(
+            `INSERT INTO narratives_narrative_section_package_links
+              (id, section_id, submission_package_item_id, link_type, created_at)
+             VALUES
+              (@id, @sectionId, @submissionPackageItemId, @linkType, @createdAt)`,
+            {
+              id: packageLink.id,
+              sectionId: packageLink.sectionId,
+              submissionPackageItemId: packageLink.submissionPackageItemId,
+              linkType: packageLink.linkType,
+              createdAt: packageLink.createdAt,
+            },
+          );
+        }
+      }
+    });
+
+    return validated;
+  }
+
+  async getById(id) {
+    const row = this.database.get('SELECT * FROM narratives_narratives WHERE id = @id', { id });
+    if (!row) {
+      return null;
+    }
+    return this.#rehydrate(row);
+  }
+
+  async findByFilter(filter = {}) {
+    const rootFilters = filterClause(filter, {
+      id: 'n.id',
+      institutionId: 'n.institution_id',
+      reviewCycleId: 'n.review_cycle_id',
+      submissionPackageId: 'n.submission_package_id',
+      status: 'n.status',
+    });
+
+    const sql = `
+      SELECT n.*
+      FROM narratives_narratives n
+      ${rootFilters.sql}
+      ORDER BY n.created_at ASC
+    `;
+    const rows = this.database.all(sql, rootFilters.params);
+    return rows.map((row) => this.#rehydrate(row));
+  }
+
+  async getBySubmissionPackageId(submissionPackageId) {
+    const row = this.database.get(
+      `SELECT * FROM narratives_narratives
+       WHERE submission_package_id = @submissionPackageId
+       LIMIT 1`,
+      { submissionPackageId },
+    );
+    return row ? this.#rehydrate(row) : null;
+  }
+
+  #rehydrate(row) {
+    const sections = this.database.all(
+      `SELECT * FROM narratives_narrative_sections
+       WHERE narrative_id = @narrativeId
+       ORDER BY section_sequence ASC`,
+      { narrativeId: row.id },
+    );
+
+    return Narrative.rehydrate({
+      id: row.id,
+      institutionId: row.institution_id,
+      reviewCycleId: row.review_cycle_id,
+      submissionPackageId: row.submission_package_id,
+      title: row.title,
+      status: row.status,
+      sections: sections.map((section) => ({
+        id: section.id,
+        narrativeId: section.narrative_id,
+        sequence: section.section_sequence,
+        sectionType: section.section_type,
+        sectionKey: section.section_key,
+        parentSectionKey: section.parent_section_key,
+        title: section.title,
+        content: section.content,
+        ownerId: section.owner_id,
+        evidenceLinks: this.database.all(
+          `SELECT * FROM narratives_narrative_section_evidence_links
+           WHERE section_id = @sectionId
+           ORDER BY created_at ASC`,
+          { sectionId: section.id },
+        ).map((link) => ({
+          id: link.id,
+          sectionId: link.section_id,
+          evidenceItemId: link.evidence_item_id,
+          relationshipType: link.relationship_type,
+          rationale: link.rationale,
+          createdAt: link.created_at,
+        })),
+        packageLinks: this.database.all(
+          `SELECT * FROM narratives_narrative_section_package_links
+           WHERE section_id = @sectionId
+           ORDER BY created_at ASC`,
+          { sectionId: section.id },
+        ).map((link) => ({
+          id: link.id,
+          sectionId: link.section_id,
+          submissionPackageItemId: link.submission_package_item_id,
+          linkType: link.link_type,
+          createdAt: link.created_at,
+        })),
+        createdAt: section.created_at,
+        updatedAt: section.updated_at,
+      })),
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      submittedForReviewAt: row.submitted_for_review_at,
+      finalizedAt: row.finalized_at,
+    });
+  }
+
+  #assertIdentityUnchanged(existing, next) {
+    if (
+      existing.institution_id !== next.institutionId ||
+      existing.review_cycle_id !== next.reviewCycleId ||
+      existing.submission_package_id !== next.submissionPackageId ||
+      existing.created_at !== next.createdAt
+    ) {
+      throw new ValidationError('Narrative identity fields cannot be changed in-place');
+    }
+  }
+
+  #assertSubmissionPackageUniqueness(next) {
+    const duplicate = this.database.get(
+      `SELECT id FROM narratives_narratives
+       WHERE submission_package_id = @submissionPackageId
+         AND id <> @id
+       LIMIT 1`,
+      { submissionPackageId: next.submissionPackageId, id: next.id },
+    );
+    if (duplicate) {
+      throw new ValidationError(`Narrative submissionPackageId must be unique (existing: ${duplicate.id})`);
+    }
+  }
+
+  #assertFinalizedNarrativeUnchanged(existing, next) {
+    const persisted = this.#rehydrate(existing);
+    if (JSON.stringify(toNarrativeSnapshot(persisted)) !== JSON.stringify(toNarrativeSnapshot(next))) {
+      throw new ValidationError('Narrative cannot be modified after finalization');
     }
   }
 }

@@ -47,3 +47,63 @@ export class SnapshotSubmissionPackageCommand {
     return this.service.snapshotSubmissionPackage(submissionPackageId, options);
   }
 }
+
+export class CreateNarrativeCommand {
+  constructor(service) {
+    this.service = service;
+  }
+
+  async execute(input) {
+    return this.service.createNarrative(input);
+  }
+}
+
+export class AddNarrativeSectionCommand {
+  constructor(service) {
+    this.service = service;
+  }
+
+  async execute(narrativeId, input) {
+    return this.service.addNarrativeSection(narrativeId, input);
+  }
+}
+
+export class LinkNarrativeSectionEvidenceCommand {
+  constructor(service) {
+    this.service = service;
+  }
+
+  async execute(narrativeId, sectionId, input) {
+    return this.service.linkNarrativeSectionEvidence(narrativeId, sectionId, input);
+  }
+}
+
+export class LinkNarrativeSectionToPackageItemCommand {
+  constructor(service) {
+    this.service = service;
+  }
+
+  async execute(narrativeId, sectionId, input) {
+    return this.service.linkNarrativeSectionToPackageItem(narrativeId, sectionId, input);
+  }
+}
+
+export class SubmitNarrativeForReviewCommand {
+  constructor(service) {
+    this.service = service;
+  }
+
+  async execute(narrativeId) {
+    return this.service.submitNarrativeForReview(narrativeId);
+  }
+}
+
+export class FinalizeNarrativeCommand {
+  constructor(service) {
+    this.service = service;
+  }
+
+  async execute(narrativeId) {
+    return this.service.finalizeNarrative(narrativeId);
+  }
+}

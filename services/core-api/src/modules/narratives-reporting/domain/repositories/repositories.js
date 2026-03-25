@@ -15,3 +15,21 @@ export class SubmissionPackageRepository {
     throw new Error('SubmissionPackageRepository.getByCycleAndScope not implemented');
   }
 }
+
+export class NarrativeRepository {
+  async save(_narrative) {
+    throw new Error('NarrativeRepository.save not implemented');
+  }
+
+  async getById(_id) {
+    throw new Error('NarrativeRepository.getById not implemented');
+  }
+
+  async findByFilter(_filter) {
+    throw new Error('NarrativeRepository.findByFilter not implemented');
+  }
+
+  async getBySubmissionPackageId(_submissionPackageId) {
+    throw new Error('NarrativeRepository.getBySubmissionPackageId not implemented');
+  }
+}

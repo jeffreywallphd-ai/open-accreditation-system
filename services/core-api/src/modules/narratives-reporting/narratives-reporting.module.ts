@@ -8,10 +8,14 @@ import { WF_SERVICE, WorkflowApprovalsModule } from '../workflow-approvals/workf
 import { NarrativesReportingController } from './api/narratives-reporting.controller.js';
 import { NarrativesReportingService } from './application/narratives-reporting-service.js';
 import { WorkflowApprovalsSubmissionContractsAdapter } from './infrastructure/adapters/workflow-approvals-submission-contracts-adapter.js';
-import { SqliteSubmissionPackageRepository } from './infrastructure/persistence/sqlite-narratives-reporting-repositories.js';
+import {
+  SqliteNarrativeRepository,
+  SqliteSubmissionPackageRepository,
+} from './infrastructure/persistence/sqlite-narratives-reporting-repositories.js';
 
 export const NARR_REPOSITORY_TOKENS = {
   submissionPackages: Symbol('NARR_SUBMISSION_PACKAGE_REPOSITORY'),
+  narratives: Symbol('NARR_NARRATIVE_REPOSITORY'),
   workflowContracts: Symbol('NARR_WORKFLOW_CONTRACTS'),
 };
 
@@ -32,15 +36,22 @@ export const NARR_SERVICE = Symbol('NARR_SERVICE');
       useFactory: (workflowApprovals) => new WorkflowApprovalsSubmissionContractsAdapter(workflowApprovals),
     },
     {
+      provide: NARR_REPOSITORY_TOKENS.narratives,
+      inject: [DATABASE_CONNECTION],
+      useFactory: (database) => new SqliteNarrativeRepository(database),
+    },
+    {
       provide: NARR_SERVICE,
       inject: [
         NARR_REPOSITORY_TOKENS.submissionPackages,
+        NARR_REPOSITORY_TOKENS.narratives,
         NARR_REPOSITORY_TOKENS.workflowContracts,
         EVID_WORKFLOW_READINESS,
       ],
-      useFactory: (submissionPackages, workflowContracts, evidenceReadiness) =>
+      useFactory: (submissionPackages, narratives, workflowContracts, evidenceReadiness) =>
         new NarrativesReportingService({
           submissionPackages,
+          narratives,
           reviewCycles: workflowContracts,
           workflowTargets: workflowContracts,
           evidenceReadiness,

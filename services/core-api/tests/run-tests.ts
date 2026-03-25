@@ -13,8 +13,11 @@ import { runTests as runWorkflowEvidenceReadinessContractTests } from './unit/wo
 import { runTests as runWorkflowApprovalsPersistenceTests } from './integration/workflow-approvals-persistence.integration.test.js';
 import { runTests as runNarrativesReportingDomainTests } from './unit/narratives-reporting-domain-slice.test.js';
 import { runTests as runNarrativesReportingApplicationTests } from './unit/narratives-reporting-application-slice.test.js';
+import { runTests as runNarrativeDomainFoundationTests } from './unit/narratives-reporting-narrative-domain-slice.test.js';
+import { runTests as runNarrativeApplicationFoundationTests } from './unit/narratives-reporting-narrative-application-slice.test.js';
 import { runTests as runNarrativesReportingPersistenceTests } from './integration/narratives-reporting-persistence.integration.test.js';
 import { runTests as runNarrativesReportingHttpTests } from './integration/narratives-reporting-http.integration.test.js';
+import { runTests as runNarrativePersistenceFoundationTests } from './integration/narratives-reporting-narrative-persistence.integration.test.js';
 
 const suites: Array<[string, () => Promise<void>]> = [
   ['domain invariants', runDomainTests],
@@ -25,6 +28,8 @@ const suites: Array<[string, () => Promise<void>]> = [
   ['workflow approvals application slice', runWorkflowApprovalsApplicationTests],
   ['narratives reporting domain slice', runNarrativesReportingDomainTests],
   ['narratives reporting application slice', runNarrativesReportingApplicationTests],
+  ['narratives reporting narrative domain foundation', runNarrativeDomainFoundationTests],
+  ['narratives reporting narrative application foundation', runNarrativeApplicationFoundationTests],
   ['workflow evidence readiness contract', runWorkflowEvidenceReadinessContractTests],
   ['persistence integration', runPersistenceTests],
   ['http integration', runHttpTests],
@@ -33,6 +38,7 @@ const suites: Array<[string, () => Promise<void>]> = [
   ['evidence management persistence integration', runEvidenceManagementPersistenceTests],
   ['workflow approvals persistence integration', runWorkflowApprovalsPersistenceTests],
   ['narratives reporting persistence integration', runNarrativesReportingPersistenceTests],
+  ['narratives reporting narrative persistence integration', runNarrativePersistenceFoundationTests],
   ['narratives reporting http integration', runNarrativesReportingHttpTests],
 ];
 
