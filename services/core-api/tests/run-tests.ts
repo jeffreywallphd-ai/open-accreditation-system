@@ -15,6 +15,7 @@ import { runTests as runNarrativesReportingDomainTests } from './unit/narratives
 import { runTests as runNarrativesReportingApplicationTests } from './unit/narratives-reporting-application-slice.test.js';
 import { runTests as runNarrativeDomainFoundationTests } from './unit/narratives-reporting-narrative-domain-slice.test.js';
 import { runTests as runNarrativeApplicationFoundationTests } from './unit/narratives-reporting-narrative-application-slice.test.js';
+import { runTests as runNarrativesReportingCompatibilityTests } from './unit/narratives-reporting-service-compatibility.test.js';
 import { runTests as runNarrativesReportingPersistenceTests } from './integration/narratives-reporting-persistence.integration.test.js';
 import { runTests as runNarrativesReportingHttpTests } from './integration/narratives-reporting-http.integration.test.js';
 import { runTests as runNarrativePersistenceFoundationTests } from './integration/narratives-reporting-narrative-persistence.integration.test.js';
@@ -30,6 +31,7 @@ const suites: Array<[string, () => Promise<void>]> = [
   ['narratives reporting application slice', runNarrativesReportingApplicationTests],
   ['narratives reporting narrative domain foundation', runNarrativeDomainFoundationTests],
   ['narratives reporting narrative application foundation', runNarrativeApplicationFoundationTests],
+  ['narratives reporting compatibility facade', runNarrativesReportingCompatibilityTests],
   ['workflow evidence readiness contract', runWorkflowEvidenceReadinessContractTests],
   ['persistence integration', runPersistenceTests],
   ['http integration', runHttpTests],

@@ -6,7 +6,7 @@ import { createCoreApiApp } from '../../src/bootstrap/create-core-api-app.js';
 import { ORG_SERVICE } from '../../src/modules/organization-registry/organization-registry.module.js';
 import { WF_SERVICE } from '../../src/modules/workflow-approvals/workflow-approvals.module.js';
 import { EVID_SERVICE } from '../../src/modules/evidence-management/evidence-management.module.js';
-import { NARR_SERVICE } from '../../src/modules/narratives-reporting/narratives-reporting.module.js';
+import { NARR_APPLICATION_TOKENS } from '../../src/modules/narratives-reporting/narratives-reporting.module.js';
 import {
   reviewWorkflowState,
   workflowActorRole,
@@ -33,7 +33,7 @@ export async function runTests(): Promise<void> {
     const org = app.get(ORG_SERVICE);
     const workflow = app.get(WF_SERVICE);
     const evidence = app.get(EVID_SERVICE);
-    const narratives = app.get(NARR_SERVICE);
+    const submissionPackages = app.get(NARR_APPLICATION_TOKENS.submissionPackages);
 
     const institution = await org.createInstitution({
       name: 'Narratives Persistence University',
@@ -79,7 +79,7 @@ export async function runTests(): Promise<void> {
       workflowActorRole.REVIEWER,
     );
 
-    const submissionPackage = await narratives.createSubmissionPackage({
+    const submissionPackage = await submissionPackages.createSubmissionPackage({
       reviewCycleId: cycle.id,
       scopeType: 'report-bundle',
       scopeId: 'package_np_1',
@@ -87,7 +87,7 @@ export async function runTests(): Promise<void> {
     });
     packageId = submissionPackage.id;
 
-    const withSection = await narratives.addSubmissionPackageItem(packageId, {
+    const withSection = await submissionPackages.addSubmissionPackageItem(packageId, {
       itemType: 'report-section',
       targetType: 'report-section',
       targetId: 'section_5_1',
@@ -98,7 +98,7 @@ export async function runTests(): Promise<void> {
     });
     itemId = withSection.items[0].id;
 
-    const withEvidence = await narratives.addSubmissionPackageItem(packageId, {
+    const withEvidence = await submissionPackages.addSubmissionPackageItem(packageId, {
       itemType: 'evidence-item',
       targetType: 'evidence-item',
       targetId: evidenceItem.id,
@@ -106,7 +106,7 @@ export async function runTests(): Promise<void> {
     });
     assert.equal(withEvidence.items.length, 2);
 
-    const snapshot = await narratives.snapshotSubmissionPackage(packageId, {
+    const snapshot = await submissionPackages.snapshotSubmissionPackage(packageId, {
       milestoneLabel: 'checkpoint-1',
       actorId: 'person_reviewer_1',
     });
@@ -118,7 +118,7 @@ export async function runTests(): Promise<void> {
       workflowActorRole.ADMIN,
     );
 
-    const finalized = await narratives.snapshotSubmissionPackage(packageId, {
+    const finalized = await submissionPackages.snapshotSubmissionPackage(packageId, {
       milestoneLabel: 'final',
       actorId: 'person_admin_1',
       finalize: true,
@@ -126,7 +126,7 @@ export async function runTests(): Promise<void> {
     assert.equal(finalized.finalized, true);
 
     await assert.rejects(
-      () => narratives.reorderSubmissionPackageItem(packageId, itemId, 1),
+      () => submissionPackages.reorderSubmissionPackageItem(packageId, itemId, 1),
       ValidationError,
       'finalized package should reject reorder through persistence-backed repository',
     );
@@ -136,9 +136,9 @@ export async function runTests(): Promise<void> {
 
   const secondApp = await createCoreApiApp({ port: 0, databasePath });
   try {
-    const narratives = secondApp.get(NARR_SERVICE);
+    const submissionPackages = secondApp.get(NARR_APPLICATION_TOKENS.submissionPackages);
 
-    const restored = await narratives.getSubmissionPackageById(packageId);
+    const restored = await submissionPackages.getSubmissionPackageById(packageId);
     assert.ok(restored);
     assert.equal(restored?.items.length, 2);
     assert.equal(restored?.items[0].id, itemId);
@@ -148,7 +148,7 @@ export async function runTests(): Promise<void> {
     assert.equal(restored?.snapshots[1].finalized, true);
     assert.equal(restored?.status, 'finalized');
 
-    const context = await narratives.getSubmissionPackageWithItemContext(packageId);
+    const context = await submissionPackages.getSubmissionPackageWithItemContext(packageId);
     assert.equal(context.itemContext.length, 2);
     assert.equal(context.itemContext[0].workflowState, 'submitted');
     assert.equal(context.assembly.sections.length, 1);
@@ -156,11 +156,11 @@ export async function runTests(): Promise<void> {
     assert.equal(context.assembly.assemblyRoleCounts.governedSection, 1);
     assert.equal(context.assembly.assemblyRoleCounts.evidenceInclusion, 1);
 
-    const tampered = await narratives.getSubmissionPackageById(packageId);
+    const tampered = await submissionPackages.getSubmissionPackageById(packageId);
     assert.ok(tampered);
     tampered!.snapshots[0].milestoneLabel = 'tampered';
     await assert.rejects(
-      () => narratives.submissionPackages.save(tampered!),
+      () => submissionPackages.submissionPackages.save(tampered!),
       ValidationError,
       'snapshot rows should remain append-only during repository save',
     );

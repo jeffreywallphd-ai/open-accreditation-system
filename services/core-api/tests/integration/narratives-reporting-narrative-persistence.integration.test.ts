@@ -7,7 +7,7 @@ import { DATABASE_CONNECTION } from '../../src/infrastructure/persistence/persis
 import { ORG_SERVICE } from '../../src/modules/organization-registry/organization-registry.module.js';
 import { WF_SERVICE } from '../../src/modules/workflow-approvals/workflow-approvals.module.js';
 import { EVID_SERVICE } from '../../src/modules/evidence-management/evidence-management.module.js';
-import { NARR_SERVICE } from '../../src/modules/narratives-reporting/narratives-reporting.module.js';
+import { NARR_APPLICATION_TOKENS } from '../../src/modules/narratives-reporting/narratives-reporting.module.js';
 import {
   reviewWorkflowState,
   workflowActorRole,
@@ -41,7 +41,8 @@ export async function runTests(): Promise<void> {
     const org = app.get(ORG_SERVICE);
     const workflow = app.get(WF_SERVICE);
     const evidence = app.get(EVID_SERVICE);
-    const narratives = app.get(NARR_SERVICE);
+    const submissionPackages = app.get(NARR_APPLICATION_TOKENS.submissionPackages);
+    const narratives = app.get(NARR_APPLICATION_TOKENS.narratives);
 
     const institution = await org.createInstitution({
       name: 'Narrative Persistence University',
@@ -87,13 +88,13 @@ export async function runTests(): Promise<void> {
       workflowActorRole.REVIEWER,
     );
 
-    const submissionPackage = await narratives.createSubmissionPackage({
+    const submissionPackage = await submissionPackages.createSubmissionPackage({
       reviewCycleId: cycle.id,
       scopeType: 'report-bundle',
       scopeId: 'narrative-persistence-package',
       name: 'Narrative persistence package',
     });
-    const packageWithSection = await narratives.addSubmissionPackageItem(submissionPackage.id, {
+    const packageWithSection = await submissionPackages.addSubmissionPackageItem(submissionPackage.id, {
       itemType: 'report-section',
       targetType: 'report-section',
       targetId: 'persist_sec_1',
@@ -148,7 +149,7 @@ export async function runTests(): Promise<void> {
 
   const secondApp = await createCoreApiApp({ port: 0, databasePath });
   try {
-    const narratives = secondApp.get(NARR_SERVICE);
+    const narratives = secondApp.get(NARR_APPLICATION_TOKENS.narratives);
     const database = secondApp.get(DATABASE_CONNECTION);
 
     const restored = await narratives.getNarrativeById(narrativeId);

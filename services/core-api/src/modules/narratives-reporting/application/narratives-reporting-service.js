@@ -1,32 +1,17 @@
 import { ValidationError } from '../../shared/kernel/errors.js';
-import { NarrativeApplicationService } from './narrative-application-service.js';
-import { SubmissionPackageApplicationService } from './submission-package-application-service.js';
 
 export class NarrativesReportingService {
   constructor(deps) {
-    this.submissionPackageService =
-      deps.submissionPackageService ??
-      new SubmissionPackageApplicationService({
-        submissionPackages: deps.submissionPackages,
-        reviewCycles: deps.reviewCycles,
-        workflowTargets: deps.workflowTargets,
-        evidenceReadiness: deps.evidenceReadiness,
-      });
-
-    this.narrativeService =
-      deps.narrativeService ??
-      new NarrativeApplicationService({
-        narratives: deps.narratives,
-        submissionPackages: deps.submissionPackages,
-        evidenceReadiness: deps.evidenceReadiness,
-      });
+    this.submissionPackageService = deps.submissionPackageService;
+    this.narrativeService = deps.narrativeService;
 
     if (!this.submissionPackageService || !this.narrativeService) {
       throw new ValidationError('NarrativesReportingService requires submissionPackageService and narrativeService');
     }
 
-    // Compatibility for existing integration tests and cross-context consumers.
+    // Compatibility facade for legacy consumers that still resolve NARR_SERVICE.
     this.narratives = this.narrativeService.narratives;
+    this.submissionPackages = this.submissionPackageService.submissionPackages;
   }
 
   async createSubmissionPackage(input) {
