@@ -240,30 +240,28 @@ Defined contexts:
 
 **Owns**
 
-- workflow templates, runtime submissions, assignments, and decisions
-- workflow comments, delegations, escalation events, and immutable submission snapshots/packages
-- approval routing and review auditability
+- review-cycle orchestration and target-scoped review workflow state
+- workflow transition policies and role-governed state transitions
+- minimal immutable transition history for auditability and reconstruction
 
 **Depends on**
 
 - identity and organization scoping
-- evidence, reporting, assessment, and accreditation-cycle targets
+- evidence readiness contracts and evidence-set/scoped references
+- reporting and accreditation target references
 
 **Aggregate model**
 
-- Aggregate roots: `WorkflowTemplate`, `Submission`
+- Aggregate roots: `ReviewCycle`, `ReviewWorkflow`
 - Owned children:
-  - `WorkflowTemplate` owns `WorkflowStep`
-  - `Submission` owns `WorkflowAssignment`, `WorkflowDecision`, `WorkflowComment`, `WorkflowDelegation`, `WorkflowEscalationEvent`, and `SubmissionSnapshot`
-  - `SubmissionSnapshot` owns `SubmissionPackageItem`
+  - `ReviewWorkflow` owns append-only `WorkflowTransitionRecord` entries
 - External referencing rules:
-  - `Submission` and `SubmissionSnapshot` may be referenced externally by ID
-  - child records may be cited for auditability but are not independent write targets
+  - `ReviewCycle` and `ReviewWorkflow` may be referenced externally by ID
+  - transition records may be cited for auditability but are not independent write targets
 - Mutability rules:
-  - `WorkflowTemplate` and `WorkflowStep` are mutable draft definitions, versioned when published for runtime use
-  - `WorkflowAssignment` is append-only for reassignment history
-  - `WorkflowDecision`, `WorkflowComment`, `WorkflowDelegation`, and `WorkflowEscalationEvent` are append-only facts
-  - `SubmissionSnapshot` and `SubmissionPackageItem` are immutable after creation
+  - `ReviewCycle` is mutable in place while respecting lifecycle and critical-field immutability after `completed`/`archived`
+  - `ReviewWorkflow` is mutable in place through governed transitions only
+  - `WorkflowTransitionRecord` is append-only in aggregate, repository, and storage layers
 
 **Current implementation note (Phase 3 inner-layer foundation)**
 
@@ -290,6 +288,7 @@ Defined contexts:
   - `createReviewCycle`
   - `startReviewCycle`
   - `completeReviewCycle`
+  - `archiveReviewCycle`
   - `createWorkflowInstance`
   - `transitionWorkflowState`
   - `getWorkflowState` (cycle-wide and cycle-target variants)
@@ -300,27 +299,53 @@ Defined contexts:
 
 **Owns**
 
-- narrative sections, report assembly state, export packages, and rendering jobs
-- section-level alignment to standards, criteria, or criterion elements
+- governed submission/report assembly packages anchored to a `ReviewCycle`
+- package item composition and ordering for review/submission scope targets
+- immutable package snapshots used for submission milestones and audit reconstruction
 
 **Depends on**
 
-- approved evidence and workflow package state
+- eligible workflow targets from `workflow-approvals`
+- evidence readiness from `evidence-management`
 - optional AI draft suggestions (advisory only)
 
 **Aggregate model**
 
-- Aggregate roots: `Narrative`, `ReportPackage`, `ExportJob`
+- Aggregate roots: `SubmissionPackage` (Phase 4 inner slice), `Narrative`, `ReportPackage`, `ExportJob`
 - Owned children:
+  - `SubmissionPackage` owns mutable `SubmissionPackageItem` (while draft)
+  - `SubmissionPackage` owns immutable `SubmissionPackageSnapshot`
+  - `SubmissionPackageSnapshot` owns immutable `SubmissionPackageSnapshotItem`
   - `Narrative` owns `NarrativeSection`
 - External referencing rules:
-  - `Narrative` and `NarrativeSection` may be targeted by evidence references and workflow packages
+  - `SubmissionPackage` and `SubmissionPackageSnapshot` may be referenced by evidence/workflow/audit flows
+  - `Narrative` and `NarrativeSection` may be targeted by evidence references and submission-package items
   - `NarrativeSection` is externally referencable by stable ID but remains owned by `Narrative`
 - Mutability rules:
+  - `SubmissionPackage` is mutable only while `status=draft`
+  - `SubmissionPackageItem` supports governed add/remove/reorder while package is draft
+  - `SubmissionPackageSnapshot` and `SubmissionPackageSnapshotItem` are append-only immutable history records
+  - `SubmissionPackage status=finalized` requires a finalizing snapshot and blocks future item mutation
   - `Narrative` is mutable in place for current authoring state
   - `NarrativeSection` is mutable while drafting and supersedable/version-captured once submitted or snapshot-bound
   - `ReportPackage` is mutable until finalized
   - `ExportJob` is append-only per execution attempt
+
+**Current implementation note (Phase 4 inner-layer submission assembly foundation)**
+
+- `SubmissionPackage` is now implemented as a governed aggregate in `narratives-reporting`, anchored to `reviewCycleId` and scope (`scopeType`, `scopeId`) with uniqueness enforced per cycle+scope.
+- Package lifecycle is explicit (`draft`, `finalized`) and intentionally separate from `ReviewWorkflow` lifecycle.
+- Package items are explicit domain children with stable sequence ordering and typed target references (`targetType`, `targetId`) plus optional workflow/evidence linkage metadata.
+- Item assembly is governed by application orchestration that requires an eligible workflow target (`approved`/`submitted`) through the `workflow-approvals` contract.
+- Evidence integration remains contract-based through `evaluateWorkflowEvidenceReadiness` and validates referenced evidence presence/scope on assembly, with stricter usable/current checks on finalization snapshots.
+- Snapshot/version semantics are implemented via append-only `SubmissionPackageSnapshot` + `SubmissionPackageSnapshotItem`, with immutable persistence guards and repository append-only validation.
+- Phase 4 application use cases now include:
+  - `createSubmissionPackage`
+  - `addSubmissionPackageItem`
+  - `removeSubmissionPackageItem`
+  - `reorderSubmissionPackageItem`
+  - `snapshotSubmissionPackage` (checkpoint and finalization modes)
+  - `getSubmissionPackageWithItemContext`
 
 ### `faculty-intelligence`
 

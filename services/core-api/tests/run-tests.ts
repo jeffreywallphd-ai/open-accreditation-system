@@ -11,6 +11,9 @@ import { runTests as runWorkflowApprovalsDomainTests } from './unit/workflow-app
 import { runTests as runWorkflowApprovalsApplicationTests } from './unit/workflow-approvals-application-slice.test.js';
 import { runTests as runWorkflowEvidenceReadinessContractTests } from './unit/workflow-evidence-readiness-contract.test.js';
 import { runTests as runWorkflowApprovalsPersistenceTests } from './integration/workflow-approvals-persistence.integration.test.js';
+import { runTests as runNarrativesReportingDomainTests } from './unit/narratives-reporting-domain-slice.test.js';
+import { runTests as runNarrativesReportingApplicationTests } from './unit/narratives-reporting-application-slice.test.js';
+import { runTests as runNarrativesReportingPersistenceTests } from './integration/narratives-reporting-persistence.integration.test.js';
 
 const suites: Array<[string, () => Promise<void>]> = [
   ['domain invariants', runDomainTests],
@@ -19,6 +22,8 @@ const suites: Array<[string, () => Promise<void>]> = [
   ['evidence management application slice', runEvidenceManagementApplicationTests],
   ['workflow approvals domain slice', runWorkflowApprovalsDomainTests],
   ['workflow approvals application slice', runWorkflowApprovalsApplicationTests],
+  ['narratives reporting domain slice', runNarrativesReportingDomainTests],
+  ['narratives reporting application slice', runNarrativesReportingApplicationTests],
   ['workflow evidence readiness contract', runWorkflowEvidenceReadinessContractTests],
   ['persistence integration', runPersistenceTests],
   ['http integration', runHttpTests],
@@ -26,6 +31,7 @@ const suites: Array<[string, () => Promise<void>]> = [
   ['accreditation frameworks http integration', runAccreditationFrameworkHttpTests],
   ['evidence management persistence integration', runEvidenceManagementPersistenceTests],
   ['workflow approvals persistence integration', runWorkflowApprovalsPersistenceTests],
+  ['narratives reporting persistence integration', runNarrativesReportingPersistenceTests],
 ];
 
 let failed = 0;

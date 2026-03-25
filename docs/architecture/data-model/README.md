@@ -43,11 +43,6 @@ This is a **logical data model**, not a finalized physical database schema. It i
     - [`BenchmarkTarget`](#benchmarktarget)
     - [`ImprovementClosureReview`](#improvementclosurereview)
   - [`workflow-approvals`](#workflow-approvals)
-    - [`WorkflowComment`](#workflowcomment)
-    - [`WorkflowDelegation`](#workflowdelegation)
-    - [`WorkflowEscalationEvent`](#workflowescalationevent)
-    - [`SubmissionSnapshot`](#submissionsnapshot)
-    - [`SubmissionPackageItem`](#submissionpackageitem)
   - [`narratives-reporting`](#narratives-reporting)
   - [`faculty-intelligence`](#faculty-intelligence)
     - [`FacultyAppointment`](#facultyappointment)
@@ -70,6 +65,7 @@ This is a **logical data model**, not a finalized physical database schema. It i
 - [Implementation-ready accreditation invariants (Epic 1 slice)](#implementation-ready-accreditation-invariants-epic-1-slice)
 - [Implementation-ready evidence invariants (Epic 2 Phase 1 foundation)](#implementation-ready-evidence-invariants-epic-2-phase-1-foundation)
 - [Implementation-ready workflow invariants (Phase 3 foundation)](#implementation-ready-workflow-invariants-phase-3-foundation)
+- [Implementation-ready submission-package invariants (Phase 4 inner foundation)](#implementation-ready-submission-package-invariants-phase-4-inner-foundation)
 - [Implementation-ready curriculum linkage invariants (Epic 2 Phase 0 groundwork)](#implementation-ready-curriculum-linkage-invariants-epic-2-phase-0-groundwork)
 - [Key cross-context relationships](#key-cross-context-relationships)
   - [Person, identity, and reviewer/faculty relationships](#person-identity-and-reviewerfaculty-relationships)
@@ -83,7 +79,7 @@ This is a **logical data model**, not a finalized physical database schema. It i
   - [Why evidence uses a governed polymorphic reference](#why-evidence-uses-a-governed-polymorphic-reference)
   - [Why assessment is decomposed further](#why-assessment-is-decomposed-further)
   - [Why faculty qualification stays accreditor-agnostic](#why-faculty-qualification-stays-accreditor-agnostic)
-  - [Why workflow snapshots are explicit](#why-workflow-snapshots-are-explicit)
+  - [Why submission package snapshots are explicit](#why-submission-package-snapshots-are-explicit)
 - [Deferred / Later-Phase Entities](#deferred-later-phase-entities)
 
 ## Modeling conventions
@@ -118,6 +114,8 @@ Unless a module has a stronger reason to do otherwise, prefer these platform-wid
 - Structured graph exchange: `docs/architecture/diagrams/open-accreditation-entity-relationship.graphml`
 - AI coding context: `docs/architecture/data-model/entities.ai-context.json`
 
+Current implementation note: the diagram artifacts still include deferred workflow-submission entities from pre-Phase-4 planning. Treat the bounded-context sections below plus `entities.ai-context.json` as the canonical source for implemented Phase 3/Phase 4 inner-layer semantics.
+
 ![Open Accreditation System logical ERD](../diagrams/open-accreditation-entity-relationship.svg)
 
 ## Coverage summary by bounded context
@@ -130,8 +128,8 @@ Unless a module has a stronger reason to do otherwise, prefer these platform-wid
 | `evidence-management` | `EvidenceItem`, `EvidenceCollection`, `EvidenceRequest`, `EvidenceRetentionPolicy` | `EvidenceArtifact`, `EvidenceReference`, `EvidenceReview` | Evidence metadata is mutable; artifacts/references/reviews preserve append-only lineage. |
 | `curriculum-mapping` | `Program`, `Course`, `CourseSection`, `AcademicTerm`, `LearningOutcome`, `Competency` | `ProgramOutcomeMap`, `CourseOutcomeMap`, `StandardsAlignment` | Canonical academic structure is mutable current state; mappings are supersedable for traceability. |
 | `assessment-improvement` | `AssessmentPlan`, `AssessmentInstrument`, `AssessmentResult`, `Finding`, `ActionPlan` | `AssessmentMeasure`, `BenchmarkTarget`, `ActionPlanTask`, `ImprovementClosureReview` | Plans/measures/targets are supersedable; results/findings/closure reviews preserve historical execution facts. |
-| `workflow-approvals` | `WorkflowTemplate`, `Submission`, `ReviewCycle`, `ReviewWorkflow` | `WorkflowStep`, `WorkflowAssignment`, `WorkflowDecision`, `WorkflowComment`, `WorkflowDelegation`, `WorkflowEscalationEvent`, `SubmissionSnapshot`, `SubmissionPackageItem`, `WorkflowTransitionRecord` | Runtime workflow history is append-only; snapshots/packages are immutable; review-cycle orchestration and role-governed state transitions remain explicit aggregates. |
-| `narratives-reporting` | `Narrative`, `ReportPackage`, `ExportJob` | `NarrativeSection` | Draft narrative content is mutable; submitted/package-bound versions must remain reproducible. |
+| `workflow-approvals` | `ReviewCycle`, `ReviewWorkflow` | `WorkflowTransitionRecord` | Review cycle lifecycle and role-governed workflow transitions are explicit; transition history is append-only and sequence-validated. |
+| `narratives-reporting` | `SubmissionPackage`, `Narrative`, `ReportPackage`, `ExportJob` | `SubmissionPackageItem`, `SubmissionPackageSnapshot`, `SubmissionPackageSnapshotItem`, `NarrativeSection` | Submission packages are governed aggregates with mutable draft assembly and immutable snapshot history; narrative/export concerns remain compatible extensions. |
 | `faculty-intelligence` | `FacultyProfile`, `FacultyQualification` | `FacultyAppointment`, `FacultyDeployment`, `FacultyActivity`, `QualificationBasis`, `QualificationReview` | Faculty projections are mutable current state; appointments/deployments/qualification evidence are effective-dated or append-only. |
 | `compliance-audit` | `AuditEvent`, `ControlAttestation`, `PolicyException` | none in this phase | Audit events are append-only; attestations/exceptions supersede by new records. |
 | supporting boundary | `SourceSystem`, `IntegrationMapping`, `SyncJob`, `Notification`, `AIArtifact` | none in this phase | Supporting service and integration records; not substitutes for core domain aggregates. |
@@ -293,7 +291,7 @@ Own accreditor-agnostic framework structure and accreditation engagement operati
   - `status` should capture draft, active, narrowed, withdrawn, completed, or historical.
   - `rationale` should explain why the scope segment exists, especially when it excludes otherwise related programs or units.
 - **Lifecycle notes:** owned by `AccreditationCycle`; mutable while planning, then effective-dated/supersedable once officially adopted.
-- **Relationship notes:** owns `AccreditationScopeProgram` and `AccreditationScopeOrganizationUnit`; may be referenced by `AssessmentPlan`, `EvidenceRequest`, `Submission`, and reviewer coordination.
+- **Relationship notes:** owns `AccreditationScopeProgram` and `AccreditationScopeOrganizationUnit`; may be referenced by `AssessmentPlan`, `EvidenceRequest`, `SubmissionPackage`, and reviewer coordination.
 
 - `AccreditationScopeProgram`: join entity from scope to `Program`.
 - `AccreditationScopeOrganizationUnit`: join entity from scope to `OrganizationUnit`.
@@ -307,7 +305,7 @@ Own accreditor-agnostic framework structure and accreditation engagement operati
   - `status` should include not-started, at-risk, on-track, completed, waived, cancelled, or superseded.
   - `blockingFlag` identifies milestones that must be satisfied before downstream workflow transitions.
 - **Lifecycle notes:** effective-dated/supersedable. Preserve milestone history instead of overwriting schedule commitments.
-- **Relationship notes:** may drive `WorkflowEscalationEvent`, `ReviewEvent` scheduling, evidence calls, and report package deadlines.
+- **Relationship notes:** may drive `ReviewWorkflow` transition timing, `ReviewEvent` scheduling, evidence calls, and report package deadlines.
 
 #### `ReportingPeriod`
 
@@ -583,94 +581,28 @@ See also: [bounded-context ownership rules](../03-bounded-contexts.md#workflow-a
 
 **Purpose**
 
-Own governed submission workflows, assignments, decisions, comments, delegations, escalations, and immutable submission packages.
+Own governed review-cycle and target-workflow orchestration with explicit lifecycle/state transitions and append-only transition attribution.
 
 **Aggregate roots**
 
-- `WorkflowTemplate`
-- `Submission`
 - `ReviewCycle`
 - `ReviewWorkflow`
 
 **Owned entities**
 
-- `WorkflowStep`
-- `WorkflowAssignment`
-- `WorkflowDecision`
-- `WorkflowComment`
-- `WorkflowDelegation`
-- `WorkflowEscalationEvent`
-- `SubmissionSnapshot`
-- `SubmissionPackageItem`
 - `WorkflowTransitionRecord`
 
 **Aggregate notes**
 
-- All runtime workflow history beneath `Submission` is append-only for auditability.
-- `SubmissionSnapshot` is the canonical answer to “what exactly was reviewed at that moment?”
 - `ReviewCycle` is a distinct lifecycle container for workflow orchestration over a bounded institutional scope (`not-started`, `active`, `completed`, `archived`).
 - `ReviewWorkflow` carries explicit state-machine and role policy behavior (`faculty`, `reviewer`, `admin`) without embedding workflow state into `EvidenceItem`.
+- `WorkflowTransitionRecord` history is append-only, contiguous by sequence, and includes actor-role/actor-id attribution plus evidence-readiness summary.
 
 **Entity baseline**
 
-- `WorkflowTemplate`: reusable workflow definition for submissions.
-- `WorkflowStep`: ordered step definition with routing semantics.
-- `Submission`: runtime submission against a workflow and business target.
 - `ReviewCycle`: workflow-governed cycle container with explicit date bounds, scope anchors (`programIds`, `organizationUnitIds`), and evidence-set linkage metadata.
 - `ReviewWorkflow`: workflow instance bound to a cycle and domain target (for example report section or evidence grouping), with governed transitions (`draft`, `in-review`, `revision-required`, `approved`, `submitted`).
 - `WorkflowTransitionRecord`: append-only transition fact for actor role, state change, rationale, and evidence-readiness snapshot.
-- `WorkflowAssignment`: current or historical assignment record for a step.
-- `WorkflowDecision`: approval, rejection, request-change, or acknowledgement decision.
-
-#### `WorkflowComment`
-
-- **Purpose:** auditable comment tied to a submission, step, decision, or package review context.
-- **Key fields:** `submissionId`, `workflowStepId`, `workflowDecisionId`, `authorPersonId`, `commentType`, `body`, `visibilityScope`, `pinnedFlag`, `createdAt`.
-- **Field guidance:**
-  - `commentType` should distinguish general-comment, reviewer-note, change-request-note, rationale, escalation-note, or internal-staff-note.
-  - `visibilityScope` should remain governed: all-participants, approvers-only, internal-admin, or committee-only.
-- **Lifecycle notes:** append-only; edits should be modeled as correction records or explicit edit metadata if ever allowed.
-- **Relationship notes:** owned by `Submission`; can reference workflow decisions but does not replace them.
-
-#### `WorkflowDelegation`
-
-- **Purpose:** recorded delegation of workflow authority within allowed policy bounds.
-- **Key fields:** `submissionId`, `workflowStepId`, `delegatedFromPersonId`, `delegatedToPersonId`, `delegationReason`, `scopeType`, `effectiveStartAt`, `effectiveEndAt`, `approvedByPersonId`, `status`, `revokedAt`.
-- **Field guidance:**
-  - `scopeType` should distinguish single-step, submission-window, temporary-absence, or emergency-delegation.
-  - `approvedByPersonId` is optional when policy allows automatic delegation; otherwise required.
-- **Lifecycle notes:** append-only fact plus revocation/expiration metadata; never rewrite who delegated to whom.
-- **Relationship notes:** owned by `Submission`; later workflow decisions may cite a delegation record for authority.
-
-#### `WorkflowEscalationEvent`
-
-- **Purpose:** escalation record triggered by deadline risk, policy breach, missing action, or manual intervention.
-- **Key fields:** `submissionId`, `workflowStepId`, `escalationType`, `triggeredAt`, `triggerReason`, `targetPersonId`, `targetCommitteeId`, `relatedCycleMilestoneId`, `resolutionStatus`, `resolvedAt`, `resolutionNotes`.
-- **Field guidance:**
-  - `escalationType` should distinguish overdue, blocked-dependency, policy-exception, quorum-risk, missing-evidence, or manual-escalation.
-  - `targetCommitteeId` supports committee governance routing without requiring full committee roster modeling in v1.
-- **Lifecycle notes:** append-only event with mutable resolution metadata.
-- **Relationship notes:** owned by `Submission`; may be triggered by `CycleMilestone`, workflow policy, or operational review needs.
-
-#### `SubmissionSnapshot`
-
-- **Purpose:** immutable capture of the reviewed package at a specific submission or resubmission moment.
-- **Key fields:** `submissionId`, `snapshotNumber`, `snapshotType`, `capturedAt`, `capturedByPersonId`, `hashSummary`, `summary`, `sourceDecisionId`.
-- **Field guidance:**
-  - `snapshotType` should distinguish initial-submit, resubmit, committee-packet, final-approved, or archival-capture.
-  - `hashSummary` is optional but strongly preferred for tamper-evident export/package reconstruction.
-- **Lifecycle notes:** immutable after creation.
-- **Relationship notes:** owns `SubmissionPackageItem`; may be referenced by evidence, reporting, audit, and accreditation decision workflows.
-
-#### `SubmissionPackageItem`
-
-- **Purpose:** individual governed item included in a submission snapshot.
-- **Key fields:** `submissionSnapshotId`, `itemType`, `targetEntityType`, `targetEntityId`, `displayLabel`, `itemOrder`, `requiredFlag`, `includedByPersonId`, `anchorPath`, `contentVersionSummary`.
-- **Field guidance:**
-  - `targetEntityType` should use the same canonical vocabulary style as `EvidenceReference`, but only for allowed submission-package contents.
-  - `anchorPath` is optional and should identify sub-structure within a narrative/exported file only when needed for reproducibility.
-- **Lifecycle notes:** immutable after the snapshot is created.
-- **Relationship notes:** owned by `SubmissionSnapshot`; may point to evidence, narrative sections, findings, action plans, decision records, or other approved packageable content.
 
 ### `narratives-reporting`
 
@@ -678,20 +610,35 @@ See also: [bounded-context ownership rules](../03-bounded-contexts.md#narratives
 
 **Purpose**
 
-Own narrative authoring, section structure, report assembly, and export generation while keeping narrative claims traceable to governed evidence and workflow state.
+Own governed submission-package assembly and snapshot history, plus narrative/report artifacts that will later feed exports and reviewer delivery.
 
 **Aggregate roots**
 
+- `SubmissionPackage`
 - `Narrative`
 - `ReportPackage`
 - `ExportJob`
 
 **Owned entities**
 
+- `SubmissionPackageItem`
+- `SubmissionPackageSnapshot`
+- `SubmissionPackageSnapshotItem`
 - `NarrativeSection`
+
+**Aggregate notes**
+
+- `SubmissionPackage` is anchored to a `ReviewCycle` and scoped by (`scopeType`, `scopeId`) with one package per cycle+scope.
+- Package lifecycle is intentionally separate from workflow lifecycle: `SubmissionPackage.status` (`draft`, `finalized`) does not mirror `ReviewWorkflow.state`.
+- Package items are mutable only while draft, with explicit sequencing and stable target references.
+- Snapshots are immutable append-only records; finalization requires a finalizing snapshot and blocks further item mutation.
 
 **Entity baseline**
 
+- `SubmissionPackage`: governed package root with `reviewCycleId`, scope anchors, lifecycle status, mutable draft items, and immutable snapshots.
+- `SubmissionPackageItem`: ordered package child representing a governed target inclusion (`itemType`, `targetType`, `targetId`) with optional workflow/evidence linkage metadata.
+- `SubmissionPackageSnapshot`: immutable package capture (`versionNumber`, `milestoneLabel`, `actorId`, `finalized`) for checkpoint/final submission milestones.
+- `SubmissionPackageSnapshotItem`: immutable snapshot copy of package-item structure and evidence/workflow linkage state at capture time.
 - `Narrative`: report narrative for a cycle, self-study, interim report, or focused response.
 - `NarrativeSection`: structured section with required status, owner, alignment target, and drafted/final content metadata.
 - `ReportPackage`: governed package of sections and supporting artifacts for export or reviewer delivery.
@@ -818,7 +765,7 @@ These are supporting or integration-boundary records rather than core business a
 
 ### Entity-specific expectations
 
-- `NarrativeSection`: mutable while drafting; once referenced by a `SubmissionSnapshot` or finalized `ReportPackage`, preserve the submitted version through snapshot/package capture or explicit section versioning rather than overwriting history.
+- `NarrativeSection`: mutable while drafting; once referenced by a `SubmissionPackageSnapshot` or finalized `ReportPackage`, preserve the submitted version through snapshot/package capture or explicit section versioning rather than overwriting history.
 - `AssessmentPlan`: supersedable/versioned once approved; draft edits may be in-place before governance or linked results exist.
 - `AssessmentMeasure`: supersedable/versioned once any `AssessmentResult` exists or the measure is used in a governed review cycle.
 - `DecisionRecord`: append-only after issuance; corrections or changed outcomes create linked successor records.
@@ -829,7 +776,7 @@ These are supporting or integration-boundary records rather than core business a
 - `ReviewTeamMembership`: effective-dated; preserve roster history and conflict-state changes with successor records when the service window changes materially.
 - `CycleMilestone`: effective-dated/supersedable; keep replanning history rather than replacing past commitments.
 - `EvidenceReview`: append-only; new reviews record changed judgment.
-- `SubmissionSnapshot`: immutable forever after creation.
+- `SubmissionPackageSnapshot`: immutable forever after creation.
 
 ## EvidenceReference contract
 
@@ -865,8 +812,9 @@ The initial canonical list is:
 - `Narrative`
 - `NarrativeSection`
 - `ReportPackage`
-- `Submission`
-- `SubmissionSnapshot`
+- `SubmissionPackage`
+- `SubmissionPackageSnapshot`
+- `SubmissionPackageSnapshotItem`
 - `SubmissionPackageItem`
 - `FacultyProfile`
 - `FacultyQualification`
@@ -1080,6 +1028,28 @@ Implementation note (current `core-api` slice): the `workflow-approvals` module 
   - evidence sufficiency summary persisted on transition history records for inspection/audit
 - Phase 3 behavioral validation now includes domain, application, and persistence/integration coverage for lifecycle/state transitions, role restrictions, evidence-gated approvals/submissions, round-trip reconstruction, and invalid persisted-history rejection.
 
+## Implementation-ready submission-package invariants (Phase 4 inner foundation)
+
+Implementation note (current `core-api` slice): `narratives-reporting` now includes a `SubmissionPackage` aggregate to assemble governed submission/report content from workflow/evidence-ready targets, with append-only snapshot history.
+
+### SubmissionPackage invariants
+
+- `SubmissionPackage.status` is constrained to `draft`, `finalized`.
+- `SubmissionPackage` is anchored to one `ReviewCycle` and one scope tuple (`scopeType`, `scopeId`); only one package is allowed per (`reviewCycleId`, `scopeType`, `scopeId`).
+- `SubmissionPackage` lifecycle is distinct from `ReviewWorkflow.state`; package finalization does not mutate workflow state.
+- `SubmissionPackageItem` is an explicit child model with ordered sequence, target references (`targetType`, `targetId`), and optional workflow/evidence linkage metadata.
+- `SubmissionPackageItem.sequence` is contiguous (`1..n`) and maintained through governed reorder/removal operations.
+- Duplicate package targets (`itemType` + `targetType` + `targetId`) are rejected.
+- Item mutation (`add/remove/reorder`) is allowed only while package `status=draft`.
+- Item inclusion requires an eligible workflow target through contract lookup (`approved` or `submitted` in the owning `ReviewCycle`).
+- Referenced evidence for item inclusion is validated through `evaluateWorkflowEvidenceReadiness` using presence-level policy.
+- `SubmissionPackageSnapshot` and `SubmissionPackageSnapshotItem` are immutable append-only records.
+- Snapshot versions are contiguous (`versionNumber=1..n`) and snapshot items preserve contiguous ordering.
+- Finalization requires creating a finalizing snapshot (`finalized=true`), sets `SubmissionPackage.status=finalized`, and blocks future item mutation.
+- Finalization evaluates stricter referenced-evidence readiness (`usable` + current where required).
+- Persistence enforces snapshot append-only behavior and rejects in-place mutation/deletion of persisted snapshot records.
+- Phase 4 behavioral validation now includes domain, application, and persistence/integration coverage for package lifecycle invariants, governed item assembly/reordering, snapshot/finalization semantics, workflow/evidence contract constraints, and repository round-trip reconstruction.
+
 ## Implementation-ready curriculum linkage invariants (Epic 2 Phase 0 groundwork)
 
 Implementation note (current `core-api` slice): to support early evidence traceability before the full `assessment-improvement` bounded-context implementation, the current curriculum module includes minimal linkage entities (`Course`, `LearningOutcome`, `CourseOutcomeMap`, `Assessment`, `AssessmentOutcomeLink`, and `AssessmentArtifact`) with strict ownership and scope invariants.
@@ -1161,18 +1131,13 @@ Implementation note (current `core-api` slice): to support early evidence tracea
 - `EvidenceItem 1:N EvidenceReview`
 - `EvidenceRetentionPolicy 1:N EvidenceItem`
 - `EvidenceRequest 1:N EvidenceItem` for requested responses or revisions
-- `WorkflowTemplate 1:N WorkflowStep`
-- `WorkflowTemplate 1:N Submission`
 - `ReviewCycle 1:N ReviewWorkflow`
 - `ReviewWorkflow 1:N WorkflowTransitionRecord`
 - `ReviewWorkflow N:M EvidenceItem` via referenced `evidenceItemIds` linkage
-- `Submission 1:N WorkflowAssignment`
-- `Submission 1:N WorkflowDecision`
-- `Submission 1:N WorkflowComment`
-- `Submission 1:N WorkflowDelegation`
-- `Submission 1:N WorkflowEscalationEvent`
-- `Submission 1:N SubmissionSnapshot`
-- `SubmissionSnapshot 1:N SubmissionPackageItem`
+- `ReviewCycle 1:N SubmissionPackage`
+- `SubmissionPackage 1:N SubmissionPackageItem`
+- `SubmissionPackage 1:N SubmissionPackageSnapshot`
+- `SubmissionPackageSnapshot 1:N SubmissionPackageSnapshotItem`
 - `Narrative 1:N NarrativeSection`
 - `ReportPackage 1:N ExportJob`
 
@@ -1202,9 +1167,9 @@ Real assessment practice separates planning, measure design, instruments, benchm
 
 The platform must support AACSB-like qualification and sufficiency analysis without assuming AACSB terminology is the universal core language. `FacultyQualification`, `QualificationBasis`, and `QualificationReview` remain accreditor-agnostic; framework-version mappings and rule metadata express accreditor-specific categories and calculations.
 
-### Why workflow snapshots are explicit
+### Why submission package snapshots are explicit
 
-Accreditation reviews frequently need to prove exactly what was submitted, when, by whom, and with what comments or delegated authority. `SubmissionSnapshot` and `SubmissionPackageItem` make the reviewed package immutable and auditable even as the underlying evidence or narratives continue to evolve later.
+Accreditation reviews frequently need to prove exactly what was assembled, when, and by whom at each governed milestone. `SubmissionPackageSnapshot` and `SubmissionPackageSnapshotItem` preserve immutable package-history integrity even as underlying evidence or narratives evolve later.
 
 ## Deferred / Later-Phase Entities
 
@@ -1222,3 +1187,4 @@ The following concepts are acknowledged but intentionally not expanded in the cu
 - institution-to-institution benchmarking exchanges and shared-review consortia models
 
 These can be added later once the first implementation wave establishes the core bounded-context aggregates above.
+
