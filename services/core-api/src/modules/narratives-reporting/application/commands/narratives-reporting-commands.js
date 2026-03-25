@@ -68,6 +68,36 @@ export class AddNarrativeSectionCommand {
   }
 }
 
+export class UpdateNarrativeSectionCommand {
+  constructor(service) {
+    this.service = service;
+  }
+
+  async execute(narrativeId, sectionId, input) {
+    return this.service.updateNarrativeSection(narrativeId, sectionId, input);
+  }
+}
+
+export class RemoveNarrativeSectionCommand {
+  constructor(service) {
+    this.service = service;
+  }
+
+  async execute(narrativeId, sectionId) {
+    return this.service.removeNarrativeSection(narrativeId, sectionId);
+  }
+}
+
+export class ReorderNarrativeSectionCommand {
+  constructor(service) {
+    this.service = service;
+  }
+
+  async execute(narrativeId, sectionId, newPosition) {
+    return this.service.reorderNarrativeSection(narrativeId, sectionId, newPosition);
+  }
+}
+
 export class LinkNarrativeSectionEvidenceCommand {
   constructor(service) {
     this.service = service;
@@ -75,6 +105,16 @@ export class LinkNarrativeSectionEvidenceCommand {
 
   async execute(narrativeId, sectionId, input) {
     return this.service.linkNarrativeSectionEvidence(narrativeId, sectionId, input);
+  }
+}
+
+export class UnlinkNarrativeSectionEvidenceCommand {
+  constructor(service) {
+    this.service = service;
+  }
+
+  async execute(narrativeId, sectionId, linkId) {
+    return this.service.unlinkNarrativeSectionEvidence(narrativeId, sectionId, linkId);
   }
 }
 
@@ -88,6 +128,16 @@ export class LinkNarrativeSectionToPackageItemCommand {
   }
 }
 
+export class UnlinkNarrativeSectionFromPackageItemCommand {
+  constructor(service) {
+    this.service = service;
+  }
+
+  async execute(narrativeId, sectionId, submissionPackageItemId) {
+    return this.service.unlinkNarrativeSectionFromPackageItem(narrativeId, sectionId, submissionPackageItemId);
+  }
+}
+
 export class SubmitNarrativeForReviewCommand {
   constructor(service) {
     this.service = service;
@@ -95,6 +145,16 @@ export class SubmitNarrativeForReviewCommand {
 
   async execute(narrativeId) {
     return this.service.submitNarrativeForReview(narrativeId);
+  }
+}
+
+export class ReturnNarrativeToDraftCommand {
+  constructor(service) {
+    this.service = service;
+  }
+
+  async execute(narrativeId) {
+    return this.service.returnNarrativeToDraft(narrativeId);
   }
 }
 

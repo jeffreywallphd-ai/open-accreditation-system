@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createCoreApiApp } from '../../src/bootstrap/create-core-api-app.js';
+import { DATABASE_CONNECTION } from '../../src/infrastructure/persistence/persistence.tokens.js';
 import { ORG_SERVICE } from '../../src/modules/organization-registry/organization-registry.module.js';
 import { WF_SERVICE } from '../../src/modules/workflow-approvals/workflow-approvals.module.js';
 import { EVID_SERVICE } from '../../src/modules/evidence-management/evidence-management.module.js';
@@ -34,6 +35,7 @@ export async function runTests(): Promise<void> {
   let narrativeId = '';
   let sectionId = '';
   let evidenceLinkId = '';
+  let submissionPackageItemId = '';
 
   try {
     const org = app.get(ORG_SERVICE);
@@ -99,6 +101,7 @@ export async function runTests(): Promise<void> {
       sectionTitle: 'Persistence section',
       evidenceItemIds: [evidenceItem.id],
     });
+    submissionPackageItemId = packageWithSection.items[0].id;
 
     const narrative = await narratives.createNarrative({
       submissionPackageId: submissionPackage.id,
@@ -121,7 +124,7 @@ export async function runTests(): Promise<void> {
     evidenceLinkId = withEvidenceLink.sections[0].evidenceLinks[0].id;
 
     const withPackageLink = await narratives.linkNarrativeSectionToPackageItem(narrative.id, sectionId, {
-      submissionPackageItemId: packageWithSection.items[0].id,
+      submissionPackageItemId,
       linkType: narrativePackageLinkType.GOVERNING_SECTION,
     });
     assert.equal(withPackageLink.sections[0].packageLinks.length, 1);
@@ -146,6 +149,7 @@ export async function runTests(): Promise<void> {
   const secondApp = await createCoreApiApp({ port: 0, databasePath });
   try {
     const narratives = secondApp.get(NARR_SERVICE);
+    const database = secondApp.get(DATABASE_CONNECTION);
 
     const restored = await narratives.getNarrativeById(narrativeId);
     assert.ok(restored);
@@ -158,6 +162,47 @@ export async function runTests(): Promise<void> {
 
     const listed = await narratives.listNarratives({ status: 'finalized' });
     assert.equal(listed.length, 1);
+
+    const now = new Date().toISOString();
+    const duplicateSectionId = 'narrative_persistence_duplicate_section';
+    database.run(
+      `INSERT INTO narratives_narrative_sections
+        (id, narrative_id, section_sequence, section_type, section_key, parent_section_key, title, content, owner_id, created_at, updated_at)
+       VALUES
+        (@id, @narrativeId, @sequence, @sectionType, @sectionKey, @parentSectionKey, @title, @content, @ownerId, @createdAt, @updatedAt)`,
+      {
+        id: duplicateSectionId,
+        narrativeId,
+        sequence: 2,
+        sectionType: 'report-section',
+        sectionKey: 'persistence-duplicate',
+        parentSectionKey: null,
+        title: 'Persistence duplicate section',
+        content: null,
+        ownerId: null,
+        createdAt: now,
+        updatedAt: now,
+      },
+    );
+    assert.throws(
+      () =>
+        database.run(
+          `INSERT INTO narratives_narrative_section_package_links
+            (id, section_id, narrative_id, submission_package_item_id, link_type, created_at)
+           VALUES
+            (@id, @sectionId, @narrativeId, @submissionPackageItemId, @linkType, @createdAt)`,
+          {
+            id: 'narrative_persistence_duplicate_pkg_link',
+            sectionId: duplicateSectionId,
+            narrativeId,
+            submissionPackageItemId,
+            linkType: 'included-item',
+            createdAt: now,
+          },
+        ),
+      /UNIQUE constraint failed/,
+      'narrative-level package item links should be unique in persistence',
+    );
 
     const tampered = await narratives.getNarrativeById(narrativeId);
     assert.ok(tampered);

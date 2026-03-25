@@ -557,6 +557,13 @@ export class NarrativesReportingService {
 
   #assertSectionPackageLinkSemantics(section, packageItem, linkType) {
     if (
+      linkType === narrativePackageLinkType.INCLUDED_ITEM &&
+      packageItem.assemblyRole === submissionPackageItemAssemblyRole.GOVERNED_SECTION
+    ) {
+      throw new ValidationError('NarrativeSection included-item links cannot target governed-section package items');
+    }
+
+    if (
       linkType === narrativePackageLinkType.GOVERNING_SECTION &&
       packageItem.assemblyRole !== submissionPackageItemAssemblyRole.GOVERNED_SECTION
     ) {
@@ -568,6 +575,13 @@ export class NarrativesReportingService {
       section.sectionType !== packageItem.targetType
     ) {
       throw new ValidationError('NarrativeSection governing-section links require matching section and package target types');
+    }
+
+    if (
+      linkType === narrativePackageLinkType.GOVERNING_SECTION &&
+      section.sectionKey !== packageItem.sectionKey
+    ) {
+      throw new ValidationError('NarrativeSection governing-section links require matching sectionKey alignment');
     }
   }
 
