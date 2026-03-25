@@ -337,10 +337,13 @@ Defined contexts:
 - Package lifecycle is explicit (`draft`, `finalized`) and intentionally separate from `ReviewWorkflow` lifecycle.
 - Package items now carry explicit assembly semantics (`assemblyRole`) to distinguish governed sections, workflow-backed targets, and evidence inclusions in a single package aggregate.
 - Section-oriented package items are explicitly modeled (`sectionKey`, `sectionTitle`, optional `parentSectionKey`) and validated for governed ordering/hierarchy integrity while preserving contiguous item sequencing.
+- Section-aware ordering is explicit: parent sections must appear earlier than child sections, and section-bound non-section items must appear after their governing section.
+- Canonical item typing is enforced (`report-section`/`narrative-section` -> `governed-section`, `workflow-target` -> `workflow-target`, `evidence-item` -> `evidence-inclusion`) to prevent ambiguous assembly semantics.
 - Item assembly remains governed by application orchestration: workflow-backed targets require eligible workflow state (`approved`/`submitted`) through the `workflow-approvals` contract, while direct evidence inclusions remain evidence-governed through readiness validation.
 - Evidence integration remains contract-based through `evaluateWorkflowEvidenceReadiness` and validates referenced evidence presence/scope on assembly, with stricter usable/current checks on finalization snapshots.
 - Snapshot/version semantics are implemented via append-only `SubmissionPackageSnapshot` + `SubmissionPackageSnapshotItem`, with immutable persistence guards and repository append-only validation.
 - A thin NestJS transport layer is now implemented for `narratives-reporting` with package creation, retrieval/listing, item add/remove/reorder, snapshot capture/finalization, and package-context assembly endpoints.
+- Outer assembly support now includes section-aware package context projections (`orderedItems`, section set, root section ordering, section tree, assembly-role counts, and unsectioned item IDs) for downstream report assembly consumers.
 - Phase 4 application use cases now include:
   - `createSubmissionPackage`
   - `addSubmissionPackageItem`

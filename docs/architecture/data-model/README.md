@@ -1040,6 +1040,8 @@ Implementation note (current `core-api` slice): `narratives-reporting` now inclu
 - `SubmissionPackageItem` is an explicit child model with ordered sequence, target references (`targetType`, `targetId`), explicit assembly role (`governed-section` | `workflow-target` | `evidence-inclusion`), and optional workflow/evidence linkage metadata.
 - Governed-section items require explicit section metadata (`sectionKey`, `sectionTitle`, optional `parentSectionKey`) and a section target (`report-section` or `narrative-section`).
 - Section metadata is governed: section keys are unique within a package, parent references must resolve to existing governed sections, and non-section items may only reference existing section keys.
+- Section ordering is governed: parent sections must appear earlier than their children, and section-bound non-section items must appear after the section they reference.
+- Canonical item semantics are explicit: `report-section`/`narrative-section` items use `assemblyRole=governed-section`, `workflow-target` items use `assemblyRole=workflow-target`, and `evidence-item` items use `assemblyRole=evidence-inclusion`.
 - `SubmissionPackageItem.sequence` is contiguous (`1..n`) and maintained through governed reorder/removal operations.
 - Duplicate package targets (`itemType` + `targetType` + `targetId`) are rejected.
 - Item mutation (`add/remove/reorder`) is allowed only while package `status=draft`.
@@ -1050,6 +1052,7 @@ Implementation note (current `core-api` slice): `narratives-reporting` now inclu
 - Finalization requires creating a finalizing snapshot (`finalized=true`), sets `SubmissionPackage.status=finalized`, and blocks future item mutation.
 - Finalization evaluates stricter referenced-evidence readiness (`usable` + current where required).
 - Persistence enforces snapshot append-only behavior and rejects in-place mutation/deletion of persisted snapshot records.
+- Outer assembly retrieval exposes section-aware ordered projections (`orderedItems`, flat sections, root section keys, section tree, and assembly-role counts) for report/submission consumers.
 - Phase 4 behavioral validation now includes domain, application, persistence, and HTTP transport coverage for package lifecycle invariants, section-aware assembly semantics, governed item assembly/reordering, snapshot/finalization semantics, workflow/evidence contract constraints, and repository round-trip reconstruction.
 
 ## Implementation-ready curriculum linkage invariants (Epic 2 Phase 0 groundwork)
